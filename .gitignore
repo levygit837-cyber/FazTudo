@@ -16,6 +16,7 @@ out/
 .env.test.local
 .env.production.local
 .env.*
+!.env.example
 
 # Database files
 *.db
@@ -54,6 +55,9 @@ temp/
 *.key
 credentials.json
 service-account.json
+
+# Payment credentials
+VARIAVEIS/
 
 # Agent files
 AGENTS.md
