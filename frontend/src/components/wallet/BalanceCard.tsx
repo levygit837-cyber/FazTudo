@@ -12,7 +12,7 @@ import { Skeleton } from "../common/Skeleton";
 import type { WalletSummary } from "../../types";
 
 interface BalanceCardProps {
-  summary: WalletSummary | null;
+  summary: WalletSummary;
   loading: boolean;
   isProfessional: boolean;
   onRequestWithdrawal?: () => void;
@@ -38,8 +38,6 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
       </div>
     );
   }
-
-  if (!summary) return null;
 
   return (
     <div className="card bg-gradient-to-br from-primary-600 to-primary-800 text-white p-6 relative overflow-hidden">

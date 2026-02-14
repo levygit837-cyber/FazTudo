@@ -21,16 +21,18 @@ const Wallet: React.FC = () => {
   const { isProfessional } = useAuth();
 
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<WalletSummary | null>(null);
+  const [summary, setSummary] = useState<WalletSummary>({ balance: 0, pendingInEscrow: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [typeFilter, setTypeFilter] = useState<TransactionType | undefined>();
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [summaryError, setSummaryError] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setSummaryError(false);
       const [summaryData, txData] = await Promise.all([
         walletService.getSummary().catch(() => null),
         walletService.getTransactions({ page: 1, limit: 20 }).catch(() => ({
@@ -39,7 +41,11 @@ const Wallet: React.FC = () => {
         })),
       ]);
 
-      if (summaryData) setSummary(summaryData);
+      if (summaryData) {
+        setSummary(summaryData);
+      } else {
+        setSummaryError(true);
+      }
       setTransactions(txData.transactions);
       setTotalPages(txData.pagination.totalPages);
       setPage(1);
@@ -84,14 +90,11 @@ const Wallet: React.FC = () => {
   const handleWithdrawal = async (amount: number) => {
     const result = await walletService.requestWithdrawal({ amount });
 
-    // Update summary with new balance
-    if (summary) {
-      setSummary({
-        ...summary,
-        balance: result.newBalance,
-        totalWithdrawn: (summary.totalWithdrawn || 0) + amount,
-      });
-    }
+    setSummary({
+      ...summary,
+      balance: result.newBalance,
+      totalWithdrawn: (summary.totalWithdrawn || 0) + amount,
+    });
 
     // Reload transactions to show the new withdrawal
     await loadTransactions(1, typeFilter);
@@ -126,57 +129,70 @@ const Wallet: React.FC = () => {
             <SkeletonStatsCard key={i} />
           ))}
         </div>
-      ) : summary ? (
-        isProfessional ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-grid">
-            <StatsCard
-              title="Ganhos Totais"
-              value={formatCurrency(summary.totalEarned || 0)}
-              icon={<DollarSign className="w-6 h-6" />}
-              color="green"
-            />
-            <StatsCard
-              title="Pendente em Escrow"
-              value={formatCurrency(summary.pendingInEscrow)}
-              icon={<Clock className="w-6 h-6" />}
-              color="yellow"
-            />
-            <StatsCard
-              title="Ja Sacado"
-              value={formatCurrency(summary.totalWithdrawn || 0)}
-              icon={<ArrowUpCircle className="w-6 h-6" />}
-              color="blue"
-            />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-grid">
-            <StatsCard
-              title="Total Gasto"
-              value={formatCurrency(summary.totalSpent || 0)}
-              icon={<Receipt className="w-6 h-6" />}
-              color="blue"
-            />
-            <StatsCard
-              title="Em Escrow"
-              value={formatCurrency(summary.pendingInEscrow)}
-              icon={<Clock className="w-6 h-6" />}
-              color="yellow"
-            />
-            <StatsCard
-              title="Reembolsos"
-              value={formatCurrency(summary.totalRefunded || 0)}
-              icon={<ArrowDownCircle className="w-6 h-6" />}
-              color="green"
-            />
-            <StatsCard
-              title="Saldo Atual"
-              value={formatCurrency(summary.balance)}
-              icon={<WalletIcon className="w-6 h-6" />}
-              color="primary"
-            />
-          </div>
-        )
-      ) : null}
+      ) : (
+        <>
+          {summaryError && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-700 dark:text-amber-300">
+              <span>Nao foi possivel carregar os dados financeiros. Os valores podem estar desatualizados.</span>
+              <button
+                onClick={loadData}
+                className="ml-auto text-amber-600 dark:text-amber-400 hover:underline font-medium whitespace-nowrap"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          )}
+          {isProfessional ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-grid">
+              <StatsCard
+                title="Ganhos Totais"
+                value={formatCurrency(summary.totalEarned || 0)}
+                icon={<DollarSign className="w-6 h-6" />}
+                color="green"
+              />
+              <StatsCard
+                title="Pendente em Escrow"
+                value={formatCurrency(summary.pendingInEscrow)}
+                icon={<Clock className="w-6 h-6" />}
+                color="yellow"
+              />
+              <StatsCard
+                title="Ja Sacado"
+                value={formatCurrency(summary.totalWithdrawn || 0)}
+                icon={<ArrowUpCircle className="w-6 h-6" />}
+                color="blue"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-grid">
+              <StatsCard
+                title="Total Gasto"
+                value={formatCurrency(summary.totalSpent || 0)}
+                icon={<Receipt className="w-6 h-6" />}
+                color="blue"
+              />
+              <StatsCard
+                title="Em Escrow"
+                value={formatCurrency(summary.pendingInEscrow)}
+                icon={<Clock className="w-6 h-6" />}
+                color="yellow"
+              />
+              <StatsCard
+                title="Reembolsos"
+                value={formatCurrency(summary.totalRefunded || 0)}
+                icon={<ArrowDownCircle className="w-6 h-6" />}
+                color="green"
+              />
+              <StatsCard
+                title="Saldo Atual"
+                value={formatCurrency(summary.balance)}
+                icon={<WalletIcon className="w-6 h-6" />}
+                color="primary"
+              />
+            </div>
+          )}
+        </>
+      )}
 
       {/* Transactions */}
       <TransactionList
@@ -196,7 +212,7 @@ const Wallet: React.FC = () => {
           isOpen={showWithdrawalModal}
           onClose={() => setShowWithdrawalModal(false)}
           onConfirm={handleWithdrawal}
-          balance={summary?.balance || 0}
+          balance={summary.balance}
         />
       )}
     </div>
