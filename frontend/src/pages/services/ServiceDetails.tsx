@@ -13,6 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize2,
+  Award,
+  Briefcase,
 } from "lucide-react";
 import { Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -26,6 +28,7 @@ import AvailabilityCalendar from "../../components/orders/AvailabilityCalendar";
 import { formatCurrency, formatRating, formatReviewCount } from "../../utils/formatters";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useFavorites } from "../../hooks/useFavorites";
 
 const ServiceDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +41,7 @@ const ServiceDetails: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [hiring, setHiring] = useState(false);
   const [hireError, setHireError] = useState<string | null>(null);
   const toast = useToast();
@@ -67,10 +70,12 @@ const ServiceDetails: React.FC = () => {
     }
   };
 
-  // Favorite toggle
+  // Favorite toggle (persisted in localStorage)
   const handleFavorite = () => {
-    setIsFavorited(!isFavorited);
-    if (!isFavorited) {
+    if (!service) return;
+    const wasFavorite = isFavorite(service.id);
+    toggleFavorite(service.id);
+    if (!wasFavorite) {
       toast.success("Servico salvo nos favoritos");
     } else {
       toast.info("Servico removido dos favoritos");
@@ -310,10 +315,10 @@ const ServiceDetails: React.FC = () => {
                   <button
                     onClick={handleFavorite}
                     className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                    aria-label={isFavorited ? "Remover dos favoritos" : "Salvar nos favoritos"}
-                    title={isFavorited ? "Remover dos favoritos" : "Salvar nos favoritos"}
+                    aria-label={service && isFavorite(service.id) ? "Remover dos favoritos" : "Salvar nos favoritos"}
+                    title={service && isFavorite(service.id) ? "Remover dos favoritos" : "Salvar nos favoritos"}
                   >
-                    <Heart className={`w-5 h-5 transition-colors ${isFavorited ? "text-red-500 fill-red-500" : "text-slate-400 dark:text-slate-500"}`} />
+                    <Heart className={`w-5 h-5 transition-colors ${service && isFavorite(service.id) ? "text-red-500 fill-red-500" : "text-slate-400 dark:text-slate-500"}`} />
                   </button>
                 </div>
               </div>
@@ -426,6 +431,68 @@ const ServiceDetails: React.FC = () => {
                 </div>
               </div>
 
+              {/* Bio do profissional */}
+              {service.professional.bio && (
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {service.professional.bio}
+                  </p>
+                </div>
+              )}
+
+              {/* Categorias e experiência */}
+              {service.professional.categories && service.professional.categories.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5" />
+                    Experiencia
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {service.professional.categories.map((cat) => (
+                      <span
+                        key={cat.id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800/50"
+                      >
+                        {cat.category.name}
+                        {cat.experienceYears > 0 && (
+                          <span className="font-semibold">
+                            {cat.experienceYears} {cat.experienceYears === 1 ? "ano" : "anos"}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Certificações */}
+              {service.professional.certifications && service.professional.certifications.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5" />
+                    Certificacoes
+                  </h4>
+                  <div className="space-y-2">
+                    {service.professional.certifications.map((cert) => (
+                      <div
+                        key={cert.id}
+                        className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 px-3 py-2"
+                      >
+                        <Award className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                            {cert.title}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {cert.issuer}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Botão de contato */}
               <button
                 onClick={handleContactProfessional}
@@ -506,7 +573,7 @@ const ServiceDetails: React.FC = () => {
                 </button>
               </div>
 
-              {/* Aviso de segurança */}
+              {/* Aviso de segurança - Fluxo de pagamento */}
               <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div className="flex gap-3">
                   <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
@@ -514,9 +581,20 @@ const ServiceDetails: React.FC = () => {
                     <p className="text-sm font-medium text-blue-900 dark:text-blue-300">
                       Pagamento seguro
                     </p>
-                    <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                      O pagamento fica retido ate o servico ser concluido e confirmado por voce.
-                    </p>
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex items-start gap-2 text-xs text-blue-700 dark:text-blue-400">
+                        <span className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center text-[10px] font-bold">1</span>
+                        <span>Voce paga e o valor fica protegido na plataforma</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-blue-700 dark:text-blue-400">
+                        <span className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center text-[10px] font-bold">2</span>
+                        <span>O profissional executa o servico</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-blue-700 dark:text-blue-400">
+                        <span className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center text-[10px] font-bold">3</span>
+                        <span>Voce confirma e o profissional recebe</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -524,24 +602,152 @@ const ServiceDetails: React.FC = () => {
           </div>
         </div>
 
-        {/* Avaliações (placeholder) */}
+        {/* Avaliações */}
         <div className="mt-8">
           <div className="card">
             <h3 className="text-lg font-semibold mb-4">
               Avaliacoes ({service.professional.totalReviews})
             </h3>
-            {service.professional.totalReviews === 0 ? (
-              <EmptyState
-                icon="question"
-                title="Sem avaliacoes ainda"
-                description="Este servico ainda nao possui avaliacoes."
-                className="py-8"
-              />
-            ) : (
-              <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-                Carregando avaliacoes...
-              </p>
-            )}
+            {(() => {
+              // Extract all reviews from service orders
+              const allReviews = (service.serviceOrders || []).flatMap(
+                (order) => order.reviews || []
+              );
+
+              if (allReviews.length === 0 && service.professional.totalReviews === 0) {
+                return (
+                  <EmptyState
+                    icon="question"
+                    title="Sem avaliacoes ainda"
+                    description="Este servico ainda nao possui avaliacoes."
+                    className="py-8"
+                  />
+                );
+              }
+
+              if (allReviews.length === 0 && service.professional.totalReviews > 0) {
+                return (
+                  <div className="text-center py-6">
+                    <div className="flex items-center justify-center gap-1 mb-2">
+                      <Star className="w-5 h-5 text-yellow-500 fill-current" />
+                      <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                        {formatRating(service.professional.ratingAverage)}
+                      </span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400 ml-1">
+                        ({service.professional.totalReviews} {service.professional.totalReviews === 1 ? "avaliacao" : "avaliacoes"})
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Avaliacoes disponiveis no perfil do profissional.
+                    </p>
+                  </div>
+                );
+              }
+
+              // Calculate rating distribution
+              const ratingDistribution = [5, 4, 3, 2, 1].map((star) => ({
+                star,
+                count: allReviews.filter((r) => r.rating === star).length,
+                percent: allReviews.length > 0
+                  ? (allReviews.filter((r) => r.rating === star).length / allReviews.length) * 100
+                  : 0,
+              }));
+
+              return (
+                <div className="space-y-6">
+                  {/* Rating summary */}
+                  <div className="flex items-start gap-6 pb-6 border-b border-slate-200 dark:border-slate-700">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                        {formatRating(service.professional.ratingAverage)}
+                      </div>
+                      <div className="flex items-center gap-0.5 mt-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-4 h-4 ${
+                              s <= Math.round(service.professional.ratingAverage)
+                                ? "text-yellow-500 fill-current"
+                                : "text-slate-300 dark:text-slate-600"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        {allReviews.length} {allReviews.length === 1 ? "avaliacao" : "avaliacoes"}
+                      </p>
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      {ratingDistribution.map(({ star, count, percent }) => (
+                        <div key={star} className="flex items-center gap-2">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 w-3">{star}</span>
+                          <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                          <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-yellow-500 rounded-full transition-all duration-300"
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 w-5 text-right">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Individual reviews */}
+                  <div className="space-y-4">
+                    {allReviews.map((review) => (
+                      <div key={review.id} className="flex gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex-shrink-0">
+                          {review.author.profileImage ? (
+                            <img
+                              src={review.author.profileImage}
+                              alt={review.author.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-sm font-medium text-slate-400 dark:text-slate-500">
+                              {review.author.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                              {review.author.name}
+                            </span>
+                            <div className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`w-3 h-3 ${
+                                    s <= review.rating
+                                      ? "text-yellow-500 fill-current"
+                                      : "text-slate-300 dark:text-slate-600"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          {review.comment && (
+                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                              {review.comment}
+                            </p>
+                          )}
+                          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                            {new Date(review.createdAt).toLocaleDateString("pt-BR", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -661,6 +867,15 @@ const ServiceDetails: React.FC = () => {
 
       {/* Sticky Mobile CTA Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="flex items-center gap-2 mb-2 text-xs text-slate-500 dark:text-slate-400">
+          <Star className="w-3 h-3 text-yellow-500 fill-current" />
+          <span>{formatRating(service.professional.ratingAverage)}</span>
+          <span className="text-slate-300 dark:text-slate-600">|</span>
+          <span>{service.completedOrdersCount || service.completedOrders || 0} servicos</span>
+          <span className="text-slate-300 dark:text-slate-600">|</span>
+          <CheckCircle className="w-3 h-3 text-green-500" />
+          <span>Verificado</span>
+        </div>
         <div className="flex items-center justify-between gap-4">
           <div>
             <span className="text-xl font-bold text-primary-600">

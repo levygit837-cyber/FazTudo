@@ -295,12 +295,12 @@ const Register: React.FC = () => {
                   className={clsx(
                     "flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
                     formData.role === "CLIENT"
-                      ? "border-primary-500 bg-primary-50"
+                      ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30"
                       : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600",
                   )}
                 >
-                  <Users className="w-6 h-6 mb-2" />
-                  <span className="font-medium">Cliente</span>
+                  <Users className={clsx("w-6 h-6 mb-2", formData.role === "CLIENT" && "text-primary-600 dark:text-primary-400")} />
+                  <span className={clsx("font-medium", formData.role === "CLIENT" && "text-primary-700 dark:text-primary-300")}>Cliente</span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Contratar serviços
                   </span>
@@ -311,12 +311,12 @@ const Register: React.FC = () => {
                   className={clsx(
                     "flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
                     formData.role === "PROFESSIONAL"
-                      ? "border-secondary-500 bg-secondary-50"
+                      ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30"
                       : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600",
                   )}
                 >
-                  <Briefcase className="w-6 h-6 mb-2" />
-                  <span className="font-medium">Profissional</span>
+                  <Briefcase className={clsx("w-6 h-6 mb-2", formData.role === "PROFESSIONAL" && "text-primary-600 dark:text-primary-400")} />
+                  <span className={clsx("font-medium", formData.role === "PROFESSIONAL" && "text-primary-700 dark:text-primary-300")}>Profissional</span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Oferecer serviços
                   </span>
@@ -607,12 +607,7 @@ const Register: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading || success}
-              className={clsx(
-                "btn w-full py-3 text-base font-semibold relative",
-                formData.role === "PROFESSIONAL"
-                  ? "btn-secondary"
-                  : "btn-primary",
-              )}
+              className="btn btn-primary w-full py-3 text-base font-semibold relative"
             >
               {isLoading ? (
                 <>

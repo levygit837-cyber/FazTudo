@@ -145,12 +145,18 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             <Clock className="w-4 h-4" />
             Horários — {new Date(selectedDate + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
           </h4>
-          {loadingSlots ? (
+          {loadingSlots && slots.length === 0 ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-primary-500" /></div>
-          ) : slots.length === 0 ? (
+          ) : slots.length === 0 && !loadingSlots ? (
             <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-3">Sem horários disponíveis nesta data</p>
           ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+            <div className="relative">
+              {loadingSlots && (
+                <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 z-10 flex items-center justify-center rounded-xl">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
+                </div>
+              )}
+              <div className={`grid grid-cols-4 sm:grid-cols-6 gap-2 ${loadingSlots ? "opacity-50 pointer-events-none" : ""}`}>
               {slots.map((slot) => (
                 <button
                   key={slot.time}
@@ -168,6 +174,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                   {slot.time}
                 </button>
               ))}
+              </div>
             </div>
           )}
         </div>

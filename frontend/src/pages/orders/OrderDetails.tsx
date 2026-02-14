@@ -730,12 +730,6 @@ const OrderDetails: React.FC = () => {
                     <span className="font-medium">{formatDate(activePayment.paidAt)}</span>
                   </div>
                 )}
-                {activePayment.heldUntil && activePayment.status === "HELD" && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Retido ate</span>
-                    <span className="font-medium">{formatDate(activePayment.heldUntil)}</span>
-                  </div>
-                )}
                 {activePayment.releasedAt && (
                   <div className="flex justify-between">
                     <span className="text-slate-500 dark:text-slate-400">Liberado em</span>
@@ -743,6 +737,18 @@ const OrderDetails: React.FC = () => {
                   </div>
                 )}
               </div>
+              {/* Payment status explanation */}
+              {activePayment.status === "HELD" && (
+                <div className="mt-3 p-2.5 bg-amber-50 dark:bg-amber-900/10 rounded-lg text-xs text-amber-700 dark:text-amber-400">
+                  Pagamento recebido. Sera liberado ao profissional quando voce confirmar a conclusao do servico.
+                </div>
+              )}
+              {activePayment.status === "RELEASED" && (
+                <div className="mt-3 p-2.5 bg-green-50 dark:bg-green-900/10 rounded-lg text-xs text-green-700 dark:text-green-400 flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  Pagamento liberado para o profissional.
+                </div>
+              )}
             </div>
           )}
 

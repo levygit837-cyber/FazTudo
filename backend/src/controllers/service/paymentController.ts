@@ -317,16 +317,7 @@ export const releasePayment = async (
       return;
     }
 
-    // Verificar se período de espera já passou (ou admin pode liberar)
     const now = new Date();
-    if (payment.heldUntil && now < payment.heldUntil && !isAdmin) {
-      res.status(400).json({
-        success: false,
-        message: `Payment cannot be released yet. Available after: ${payment.heldUntil.toISOString()}`,
-        data: { heldUntil: payment.heldUntil },
-      });
-      return;
-    }
 
     // Calcular valores
     const platformFeePercentage = env.PLATFORM_FEE_PERCENTAGE;

@@ -129,8 +129,8 @@ function getEnvConfig(): EnvConfig {
     BODY_SIZE_LIMIT: process.env.BODY_SIZE_LIMIT || '10kb',
 
     // Escrow System
-    DEFAULT_ESCROW_HOLD_DAYS: parseInt(process.env.DEFAULT_ESCROW_HOLD_DAYS || '7', 10),
-    ESCROW_AUTO_RELEASE_DAYS: parseInt(process.env.ESCROW_AUTO_RELEASE_DAYS || '2', 10),
+    DEFAULT_ESCROW_HOLD_DAYS: parseInt(process.env.DEFAULT_ESCROW_HOLD_DAYS || '0', 10),
+    ESCROW_AUTO_RELEASE_DAYS: parseInt(process.env.ESCROW_AUTO_RELEASE_DAYS || '0', 10),
     PLATFORM_FEE_PERCENTAGE: parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '10.0'),
 
     // MercadoPago

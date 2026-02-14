@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { Star, Clock, Heart, BadgeCheck, Briefcase, TrendingUp, Zap } from "lucide-react";
 import { formatCurrency, formatRating } from "../../utils/formatters";
+import { useFavorites } from "../../hooks/useFavorites";
 
 interface ServiceCardProps {
   id: number;
@@ -44,7 +45,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   avgResponseTimeHours,
   className = "",
 }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const imageUrl =
     images && images.length > 0 ? images[0] : "/placeholder-service.jpg";
@@ -52,8 +53,10 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsFavorite((prev) => !prev);
+    toggleFavorite(id);
   };
+
+  const favorited = isFavorite(id);
 
   return (
     <Link
@@ -84,11 +87,11 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
         <button
           onClick={handleFavoriteClick}
           className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/50 transition-colors"
-          aria-label={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          aria-label={favorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
         >
           <Heart
             className={`h-4 w-4 transition-all ${
-              isFavorite ? "fill-red-500 text-red-500 scale-110" : "fill-transparent"
+              favorited ? "fill-red-500 text-red-500 scale-110" : "fill-transparent"
             }`}
           />
         </button>

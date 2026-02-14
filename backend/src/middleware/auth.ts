@@ -290,9 +290,25 @@ export const authLogger = (
   next: NextFunction,
 ): void => {
   const startTime = Date.now();
+
+  // Rotas publicas conhecidas que nao precisam de autenticacao
+  const publicPaths = [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/verify-email",
+  ];
+  const isPublicRoute = publicPaths.some(
+    (p) => req.path === p || req.path.endsWith(p),
+  );
+  const isPublicGet = req.method === "GET" && !req.headers.authorization;
+
   const userInfo = req.user
     ? `[User: ${req.user.id}, Role: ${req.user.role}]`
-    : "[Unauthenticated]";
+    : isPublicRoute || isPublicGet
+      ? "[Public]"
+      : "[Unauthenticated]";
 
   console.log(`🔐 ${userInfo} ${req.method} ${req.path}`);
 

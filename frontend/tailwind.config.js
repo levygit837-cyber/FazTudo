@@ -6,14 +6,22 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          "Satoshi",
           "Inter",
           "-apple-system",
           "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
-          "Arial",
           "sans-serif",
+        ],
+        display: [
+          "Cabinet Grotesk",
+          "Satoshi",
+          "sans-serif",
+        ],
+        mono: [
+          "DM Mono",
+          "JetBrains Mono",
+          "Fira Code",
+          "monospace",
         ],
       },
       colors: {
@@ -70,6 +78,11 @@ export default {
         "fade-in": "fade-in 0.5s ease-out",
         "slide-up": "slide-up 0.5s ease-out",
         shimmer: "shimmer 2s linear infinite",
+        "count-up": "count-up 0.8s ease-out",
+        "draw-in": "draw-in 1.2s ease-out forwards",
+        "ring-fill": "ring-fill 1s ease-out forwards",
+        "pulse-soft": "pulse-soft 2s ease-in-out infinite",
+        "slide-in-right": "slide-in-right 0.3s ease-out",
       },
       keyframes: {
         "glow-pulse": {
@@ -91,6 +104,26 @@ export default {
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
+        },
+        "count-up": {
+          from: { opacity: "0", transform: "translateY(10px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "draw-in": {
+          from: { strokeDashoffset: "1" },
+          to: { strokeDashoffset: "0" },
+        },
+        "ring-fill": {
+          from: { strokeDashoffset: "251.2" },
+          to: { strokeDashoffset: "var(--ring-target)" },
+        },
+        "pulse-soft": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.7" },
+        },
+        "slide-in-right": {
+          from: { opacity: "0", transform: "translateX(12px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
         },
       },
     },

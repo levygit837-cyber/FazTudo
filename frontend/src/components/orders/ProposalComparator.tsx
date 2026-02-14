@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Star,
   Clock,
@@ -9,6 +9,7 @@ import {
   Zap,
   TrendingDown,
   Loader2,
+  ArrowUpDown,
 } from "lucide-react";
 import { getProposals, acceptProposal, rejectProposal } from "../../services/serviceService";
 import { useToast } from "../../context/ToastContext";
@@ -48,6 +49,7 @@ const ProposalComparator: React.FC<ProposalComparatorProps> = ({
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<"price" | "rating" | "deadline" | null>(null);
 
   const loadProposals = async () => {
     try {
@@ -105,6 +107,29 @@ const ProposalComparator: React.FC<ProposalComparatorProps> = ({
     return null; // Don't show if no proposals
   }
 
+  // Sort proposals
+  const sortedProposals = useMemo(() => {
+    if (!sortBy) return proposals;
+    const sorted = [...proposals];
+    sorted.sort((a, b) => {
+      // Always put pending first
+      if (a.status === "PENDING" && b.status !== "PENDING") return -1;
+      if (a.status !== "PENDING" && b.status === "PENDING") return 1;
+
+      switch (sortBy) {
+        case "price":
+          return a.price - b.price;
+        case "rating":
+          return b.professional.ratingAverage - a.professional.ratingAverage;
+        case "deadline":
+          return (a.estimatedDays || 999) - (b.estimatedDays || 999);
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  }, [proposals, sortBy]);
+
   // Calculate badges
   const lowestPrice = pendingProposals.length > 0 ? Math.min(...pendingProposals.map((p) => p.price)) : 0;
   const fastestDays = pendingProposals.filter((p) => p.estimatedDays).length > 0
@@ -125,13 +150,38 @@ const ProposalComparator: React.FC<ProposalComparatorProps> = ({
         )}
       </div>
 
+      {/* Sort controls */}
+      {pendingProposals.length > 1 && (
+        <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+          <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-xs text-slate-500 dark:text-slate-400">Ordenar:</span>
+          {([
+            { key: "price" as const, label: "Preco" },
+            { key: "rating" as const, label: "Avaliacao" },
+            { key: "deadline" as const, label: "Prazo" },
+          ]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setSortBy(sortBy === key ? null : key)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                sortBy === key
+                  ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {proposals.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
           Nenhuma proposta recebida ainda. Aguarde profissionais responderem.
         </p>
       ) : (
         <div className="space-y-4">
-          {proposals.map((proposal) => {
+          {sortedProposals.map((proposal) => {
             const isPending = proposal.status === "PENDING";
             const isCheapest = isPending && proposal.price === lowestPrice && pendingProposals.length > 1;
             const isFastest = isPending && fastestDays && proposal.estimatedDays === fastestDays && pendingProposals.length > 1;

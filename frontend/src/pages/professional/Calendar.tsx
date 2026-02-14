@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -19,6 +19,8 @@ import {
 } from "../../services/calendarService";
 import { formatCurrency, formatOrderStatus } from "../../utils/formatters";
 
+const DAY_DETAIL_CACHE = new Map<string, CalendarDayDetail>();
+
 const WEEKDAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
@@ -31,6 +33,7 @@ const ProfessionalCalendar: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayDetail, setDayDetail] = useState<CalendarDayDetail | null>(null);
   const [dayLoading, setDayLoading] = useState(false);
+  const pendingRequestRef = useRef<string | null>(null);
 
   const now = new Date();
   const [currentMonth, setCurrentMonth] = useState(
@@ -56,15 +59,36 @@ const ProfessionalCalendar: React.FC = () => {
   }, [currentMonth, loadOverview]);
 
   const handleDayClick = async (day: CalendarDay) => {
+    if (day.date === selectedDay) return;
+
+    const cachedDetail = DAY_DETAIL_CACHE.get(day.date);
+    if (cachedDetail) {
+      setSelectedDay(day.date);
+      setDayDetail(cachedDetail);
+      return;
+    }
+
+    const requestId = day.date;
+    pendingRequestRef.current = requestId;
+
     setSelectedDay(day.date);
     setDayLoading(true);
+
     try {
       const detail = await getCalendarDayDetail(day.date);
-      setDayDetail(detail);
+      if (pendingRequestRef.current === requestId) {
+        DAY_DETAIL_CACHE.set(day.date, detail);
+        setDayDetail(detail);
+      }
     } catch (error) {
-      console.error("Erro ao carregar detalhe do dia:", error);
+      if (pendingRequestRef.current === requestId) {
+        console.error("Erro ao carregar detalhe do dia:", error);
+        setDayDetail(null);
+      }
     } finally {
-      setDayLoading(false);
+      if (pendingRequestRef.current === requestId) {
+        setDayLoading(false);
+      }
     }
   };
 
@@ -193,98 +217,107 @@ const ProfessionalCalendar: React.FC = () => {
         </div>
 
         {/* Day Detail Sidebar */}
-        <div className="card">
+        <div className="card min-h-[400px]">
           {!selectedDay ? (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400">
               <CalendarIcon className="w-12 h-12 mb-3 text-slate-300 dark:text-slate-600" />
               <p className="text-sm">Selecione um dia para ver os agendamentos</p>
             </div>
-          ) : dayLoading ? (
+          ) : dayLoading && !dayDetail ? (
             <div className="flex items-center justify-center py-12">
               <div className="w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : dayDetail ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                  {new Date(selectedDay + "T12:00:00").toLocaleDateString("pt-BR", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  })}
-                </h3>
-                <span className="text-sm text-slate-500">
-                  {dayDetail.totalOrders} agendamento{dayDetail.totalOrders !== 1 ? "s" : ""}
-                </span>
-              </div>
-
-              {!dayDetail.isAvailable ? (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500">
-                  <XCircle className="w-5 h-5" />
-                  <span className="text-sm">Dia indisponivel na sua agenda</span>
-                </div>
-              ) : dayDetail.slots.length === 0 ? (
-                <p className="text-sm text-slate-500">Nenhum horario configurado</p>
-              ) : (
-                <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                  {dayDetail.slots.map((slot) => (
-                    <div
-                      key={slot.time}
-                      className={`
-                        p-3 rounded-lg border text-sm
-                        ${slot.order
-                          ? "border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/10"
-                          : slot.blockReason
-                            ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10"
-                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
-                        }
-                      `}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Clock className="w-4 h-4 text-slate-400" />
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
-                          {slot.time}
-                        </span>
-                        {slot.order && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
-                            {formatOrderStatus(slot.order.status)}
-                          </span>
-                        )}
-                      </div>
-
-                      {slot.order ? (
-                        <div className="ml-6 space-y-1">
-                          <Link
-                            to={`/professional/services/${slot.order.id}`}
-                            className="font-medium text-primary-600 hover:underline"
-                          >
-                            {slot.order.title}
-                          </Link>
-                          <div className="flex items-center gap-1 text-slate-500">
-                            <User className="w-3 h-3" />
-                            {slot.order.client.name}
-                          </div>
-                          {slot.order.address && (
-                            <div className="flex items-center gap-1 text-slate-500">
-                              <MapPin className="w-3 h-3" />
-                              {slot.order.address.street}, {slot.order.address.number} - {slot.order.address.neighborhood}
-                            </div>
-                          )}
-                          <p className="font-medium text-emerald-600">
-                            {formatCurrency(slot.order.price)}
-                          </p>
-                        </div>
-                      ) : slot.blockReason ? (
-                        <p className="ml-6 text-red-600 dark:text-red-400 text-xs">
-                          Bloqueado: {slot.blockReason}
-                        </p>
-                      ) : (
-                        <p className="ml-6 text-slate-400 text-xs">Disponivel</p>
-                      )}
-                    </div>
-                  ))}
+            <div className="relative">
+              {dayLoading && (
+                <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 z-10 flex items-center justify-center rounded-xl">
+                  <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
+              <div className={dayLoading ? "opacity-50 pointer-events-none" : ""}>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                      {new Date(selectedDay + "T12:00:00").toLocaleDateString("pt-BR", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      })}
+                    </h3>
+                    <span className="text-sm text-slate-500">
+                      {dayDetail.totalOrders} agendamento{dayDetail.totalOrders !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  {!dayDetail.isAvailable ? (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500">
+                      <XCircle className="w-5 h-5" />
+                      <span className="text-sm">Dia indisponivel na sua agenda</span>
+                    </div>
+                  ) : dayDetail.slots.length === 0 ? (
+                    <p className="text-sm text-slate-500">Nenhum horario configurado</p>
+                  ) : (
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                      {dayDetail.slots.map((slot) => (
+                        <div
+                          key={slot.time}
+                          className={`
+                            p-3 rounded-lg border text-sm
+                            ${slot.order
+                              ? "border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/10"
+                              : slot.blockReason
+                                ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10"
+                                : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock className="w-4 h-4 text-slate-400" />
+                            <span className="font-medium text-slate-700 dark:text-slate-300">
+                              {slot.time}
+                            </span>
+                            {slot.order && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+                                {formatOrderStatus(slot.order.status)}
+                              </span>
+                            )}
+                          </div>
+
+                          {slot.order ? (
+                            <div className="ml-6 space-y-1">
+                              <Link
+                                to={`/professional/services/${slot.order.id}`}
+                                className="font-medium text-primary-600 hover:underline"
+                              >
+                                {slot.order.title}
+                              </Link>
+                              <div className="flex items-center gap-1 text-slate-500">
+                                <User className="w-3 h-3" />
+                                {slot.order.client.name}
+                              </div>
+                              {slot.order.address && (
+                                <div className="flex items-center gap-1 text-slate-500">
+                                  <MapPin className="w-3 h-3" />
+                                  {slot.order.address.street}, {slot.order.address.number} - {slot.order.address.neighborhood}
+                                </div>
+                              )}
+                              <p className="font-medium text-emerald-600">
+                                {formatCurrency(slot.order.price)}
+                              </p>
+                            </div>
+                          ) : slot.blockReason ? (
+                            <p className="ml-6 text-red-600 dark:text-red-400 text-xs">
+                              Bloqueado: {slot.blockReason}
+                            </p>
+                          ) : (
+                            <p className="ml-6 text-slate-400 text-xs">Disponivel</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           ) : null}
         </div>

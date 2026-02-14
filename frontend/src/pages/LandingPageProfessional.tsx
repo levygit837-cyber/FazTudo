@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import clsx from "clsx";
 import {
   ArrowRight,
   BadgeCheck,
@@ -14,7 +15,7 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import PageTransition from "../components/navigation/PageTransition";
+
 import RegisterPromptClient from "../components/landing/RegisterPromptClient";
 import RegisterPromptProfessional from "../components/landing/RegisterPromptProfessional";
 import FixedSwitchCard from "../components/landing/FixedSwitchCard";
@@ -23,11 +24,17 @@ import { useAuth } from "../context/AuthContext";
 
 const LandingPageProfessional: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, isAuthenticated, isProfessional, isAdmin, logout } = useAuth();
   const [isRegisterPromptOpen, setIsRegisterPromptOpen] = useState(false);
   const [registerRole, setRegisterRole] = useState<"CLIENT" | "PROFESSIONAL">("PROFESSIONAL");
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const handleLandingSwitch = (path: string) => {
+    if (isLeaving) return;
+    setIsLeaving(true);
+    setTimeout(() => navigate(path), 200);
+  };
 
   const dashboardPath = isAdmin
     ? "/admin"
@@ -78,8 +85,8 @@ const LandingPageProfessional: React.FC = () => {
   };
 
   return (
-    <PageTransition routeKey={location.pathname}>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <>
+      <div className={clsx("min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 animate-fadeIn", isLeaving && "landing-exit")}>
 
         {/* ─── HEADER ─── */}
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800/50">
@@ -98,11 +105,6 @@ const LandingPageProfessional: React.FC = () => {
               <a href="#perfil" className="text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 no-underline">
                 Seu perfil
               </a>
-              {!isAuthenticated && (
-                <Link to="/login" className="text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 no-underline">
-                  Entrar
-                </Link>
-              )}
               {isAuthenticated && (
                 <Link to={dashboardPath} className="text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 no-underline">
                   Dashboard
@@ -113,6 +115,12 @@ const LandingPageProfessional: React.FC = () => {
             <div className="inline-flex items-center gap-2">
               {!isAuthenticated ? (
                 <>
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:px-4 sm:text-sm text-white bg-primary-600 hover:bg-primary-700 shadow-glow-blue no-underline"
+                  >
+                    Entrar
+                  </Link>
                   <button
                     className="inline-flex items-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:px-4 sm:text-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800"
                     onClick={() => openRegisterPrompt("PROFESSIONAL")}
@@ -120,13 +128,6 @@ const LandingPageProfessional: React.FC = () => {
                     <span className="sm:hidden">Conta</span>
                     <span className="hidden sm:inline">Criar conta</span>
                   </button>
-                  <Link
-                    to="/"
-                    className="inline-flex items-center rounded-lg px-3 py-2 text-xs font-semibold transition-all sm:px-4 sm:text-sm bg-primary-600 text-white hover:bg-primary-700 shadow-glow-blue no-underline"
-                  >
-                    <span className="sm:hidden">Cliente</span>
-                    <span className="hidden sm:inline">Quero ser cliente</span>
-                  </Link>
                 </>
               ) : (
                 <div className="relative">
@@ -212,9 +213,12 @@ const LandingPageProfessional: React.FC = () => {
                         Comecar agora
                         <ArrowRight className="h-4 w-4" />
                       </button>
-                      <Link to="/login" className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 no-underline text-[0.9375rem]">
-                        Ja tenho conta
-                      </Link>
+                      <button
+                        onClick={() => handleLandingSwitch("/")}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 text-[0.9375rem]"
+                      >
+                        Sou cliente
+                      </button>
                     </>
                   )}
                 </div>
@@ -458,7 +462,7 @@ const LandingPageProfessional: React.FC = () => {
           </div>
         </footer>
 
-        <FixedSwitchCard onGoToClients={() => navigate("/")} />
+        <FixedSwitchCard onGoToClients={() => handleLandingSwitch("/")} />
       </div>
 
       {registerRole === "PROFESSIONAL" ? (
@@ -474,7 +478,7 @@ const LandingPageProfessional: React.FC = () => {
           onSwitchToProfessional={() => setRegisterRole("PROFESSIONAL")}
         />
       )}
-    </PageTransition>
+    </>
   );
 };
 

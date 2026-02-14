@@ -17,22 +17,65 @@ export interface ServiceListParams {
   sortOrder?: "asc" | "desc";
 }
 
+export interface ProfessionalCertification {
+  id: number;
+  title: string;
+  issuer: string;
+  issueDate?: string;
+  expiryDate?: string;
+  credentialId?: string;
+  verificationUrl?: string;
+}
+
+export interface ProfessionalCategoryInfo {
+  id: number;
+  experienceYears: number;
+  hourlyRate?: number;
+  isPrimary: boolean;
+  category: {
+    id: number;
+    name: string;
+    icon?: string;
+  };
+}
+
+export interface ServiceReview {
+  id: number;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  author: {
+    id: number;
+    name: string;
+    profileImage?: string;
+  };
+}
+
+export interface ServiceOrderWithReviews {
+  id: number;
+  reviews: ServiceReview[];
+}
+
 export interface ServiceListingWithProfessional extends Omit<
   ServiceListing,
-  "professional" | "category"
+  "professional" | "category" | "serviceOrders"
 > {
   professional: {
     id: number;
     name: string;
     profileImage?: string;
+    bio?: string;
     ratingAverage: number;
     totalReviews: number;
+    certifications?: ProfessionalCertification[];
+    categories?: ProfessionalCategoryInfo[];
   };
   category: {
     id: number;
     name: string;
     icon?: string;
   };
+  serviceOrders?: ServiceOrderWithReviews[];
   completedOrders?: number;
   completedOrdersCount?: number;
 }

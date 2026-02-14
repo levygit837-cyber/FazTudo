@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  Home,
   Search,
   Briefcase,
   User,
@@ -17,12 +16,12 @@ import {
   FileText,
   Shield,
   Users,
-  Award,
   Calendar,
   Star,
+  LayoutGrid,
 } from "lucide-react";
 import clsx from "clsx";
-import PageTransition from "./navigation/PageTransition";
+
 import { getUnreadCount } from "../services/notificationService";
 
 /* -- Focus-trap helper -- */
@@ -135,7 +134,6 @@ const Layout: React.FC = () => {
   };
 
   const navLinks = [
-    { path: "/", label: "Inicio", icon: <Home size={20} />, visible: true },
     {
       path: "/services",
       label: "Servicos",
@@ -175,13 +173,13 @@ const Layout: React.FC = () => {
           },
           {
             path: "/professional/services",
-            label: "Meus Servicos",
+            label: "Pedidos Recebidos",
             icon: <FileText size={20} />,
           },
           {
             path: "/professional/catalog",
-            label: "Catalogo",
-            icon: <Award size={20} />,
+            label: "Meus Servicos",
+            icon: <LayoutGrid size={20} />,
           },
           {
             path: "/professional/carteira",
@@ -523,9 +521,7 @@ const Layout: React.FC = () => {
 
       {/* Main content */}
       <main id="main-content" className="flex-1 container-responsive py-8">
-        <PageTransition routeKey={location.pathname}>
-          <Outlet />
-        </PageTransition>
+        <Outlet />
       </main>
 
       {/* Footer */}
@@ -594,34 +590,10 @@ const Layout: React.FC = () => {
                 <ul className="space-y-2">
                   <li>
                     <Link
-                      to="/terms"
-                      className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
-                    >
-                      Termos de Uso
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/privacy"
-                      className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
-                    >
-                      Politica de Privacidade
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
                       to="/seguranca"
                       className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
                     >
                       Seguranca
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/cookies"
-                      className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
-                    >
-                      Cookies
                     </Link>
                   </li>
                 </ul>
@@ -630,39 +602,31 @@ const Layout: React.FC = () => {
               {/* Support */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 uppercase tracking-wider mb-4">
-                  Suporte
+                  Conta
                 </h3>
                 <ul className="space-y-2">
                   <li>
                     <Link
-                      to="/help"
+                      to="/login"
                       className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
                     >
-                      Central de Ajuda
+                      Entrar
                     </Link>
                   </li>
                   <li>
                     <Link
-                      to="/contact"
+                      to="/register"
                       className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
                     >
-                      Contato
+                      Criar Conta
                     </Link>
                   </li>
                   <li>
                     <Link
-                      to="/faq"
+                      to="/profissionais"
                       className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
                     >
-                      FAQ
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/disputes"
-                      className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
-                    >
-                      Resolucao de Disputas
+                      Seja um Profissional
                     </Link>
                   </li>
                 </ul>
@@ -678,28 +642,16 @@ const Layout: React.FC = () => {
                 </p>
                 <div className="flex items-center space-x-6">
                   <Link
-                    to="/about"
+                    to="/services"
                     className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
                   >
-                    Sobre nos
+                    Explorar Servicos
                   </Link>
                   <Link
-                    to="/press"
+                    to="/seguranca"
                     className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
                   >
-                    Imprensa
-                  </Link>
-                  <Link
-                    to="/careers"
-                    className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
-                  >
-                    Carreiras
-                  </Link>
-                  <Link
-                    to="/blog"
-                    className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
-                  >
-                    Blog
+                    Seguranca
                   </Link>
                 </div>
               </div>

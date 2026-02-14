@@ -5,17 +5,18 @@ import {
   Clock,
   CheckCircle,
   Search,
-  Bell,
   ArrowRight,
-  Calendar,
   DollarSign,
   Lightbulb,
   Sun,
   Sunrise,
   Moon,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { StatsCard } from "../../components/dashboard/StatsCard";
+import { ActivityTimeline, ActivityItem } from "../../components/dashboard/ActivityTimeline";
+import { CategoryPills, CategoryPillItem } from "../../components/dashboard/CategoryPills";
 import { OrderCard } from "../../components/orders/OrderCard";
 import { ServiceCard } from "../../components/services/ServiceCard";
 import { SkeletonDashboard } from "../../components/common/Skeleton";
@@ -46,13 +47,73 @@ const TIPS = [
   { text: "Compare precos e descricoes antes de contratar. Cada profissional tem um diferencial unico!", cta: "Buscar servicos", to: "/services" },
 ];
 
-function getGreeting(): { text: string; icon: React.ReactNode } {
+const CATEGORY_ICONS: Record<string, string> = {
+  "Eletrica": "⚡",
+  "Encanamento": "🔧",
+  "Jardinagem": "🌿",
+  "Limpeza": "✨",
+  "Pintura": "🎨",
+  "Marcenaria": "🪵",
+  "Ar Condicionado": "❄️",
+  "Mudancas": "📦",
+};
+
+function getGreeting(): { text: string; icon: React.ReactNode; period: string } {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12)
-    return { text: "Bom dia", icon: <Sunrise className="w-6 h-6 text-amber-500" /> };
+    return { text: "Bom dia", icon: <Sunrise className="w-7 h-7 text-amber-500" />, period: "morning" };
   if (hour >= 12 && hour < 18)
-    return { text: "Boa tarde", icon: <Sun className="w-6 h-6 text-orange-500" /> };
-  return { text: "Boa noite", icon: <Moon className="w-6 h-6 text-indigo-400" /> };
+    return { text: "Boa tarde", icon: <Sun className="w-7 h-7 text-orange-500" />, period: "afternoon" };
+  return { text: "Boa noite", icon: <Moon className="w-7 h-7 text-indigo-400" />, period: "evening" };
+}
+
+function buildActivityItems(orders: ServiceOrder[]): ActivityItem[] {
+  return orders.slice(0, 5).map((order) => {
+    const typeMap: Record<string, ActivityItem["type"]> = {
+      PENDING: "order",
+      ACCEPTED: "order",
+      IN_PROGRESS: "order",
+      COMPLETED: "payment",
+      CANCELLED: "system",
+    };
+    const statusMap: Record<string, ActivityItem["status"]> = {
+      PENDING: "warning",
+      ACCEPTED: "info",
+      IN_PROGRESS: "info",
+      COMPLETED: "success",
+      CANCELLED: "error",
+    };
+    const titleMap: Record<string, string> = {
+      PENDING: "Pedido aguardando resposta",
+      ACCEPTED: "Pedido aceito",
+      IN_PROGRESS: "Servico em andamento",
+      COMPLETED: "Servico concluido",
+      CANCELLED: "Pedido cancelado",
+    };
+
+    return {
+      id: String(order.id),
+      title: titleMap[order.status] || order.title,
+      description: order.title,
+      time: formatTimeAgo(order.createdAt),
+      type: typeMap[order.status] || "system",
+      status: statusMap[order.status] || "info",
+    };
+  });
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}min`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "Ontem";
+  if (diffDays < 7) return `${diffDays}d`;
+  return `${Math.floor(diffDays / 7)}sem`;
 }
 
 const ClientDashboard: React.FC = () => {
@@ -60,9 +121,7 @@ const ClientDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
-  const [recommendations, setRecommendations] = useState<RecommendedService[]>(
-    [],
-  );
+  const [recommendations, setRecommendations] = useState<RecommendedService[]>([]);
   const [categories, setCategories] = useState<CategoryWithCounts[]>([]);
   const [tipIndex, setTipIndex] = useState(0);
   const [stats, setStats] = useState<ClientDashboardStats>({
@@ -78,6 +137,7 @@ const ClientDashboard: React.FC = () => {
 
   const greeting = useMemo(() => getGreeting(), []);
   const currentTip = TIPS[tipIndex];
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Auto-rotate tips every 8 seconds
   useEffect(() => {
@@ -115,27 +175,64 @@ const ClientDashboard: React.FC = () => {
     loadDashboardData();
   }, []);
 
+  const activityItems = useMemo(() => buildActivityItems(orders), [orders]);
+
+  const categoryPills: CategoryPillItem[] = useMemo(
+    () =>
+      categories.slice(0, 8).map((cat) => ({
+        id: String(cat.id),
+        name: cat.name,
+        count: cat._count?.serviceListings || 0,
+        icon: CATEGORY_ICONS[cat.name] || undefined,
+      })),
+    [categories],
+  );
+
   if (loading) {
     return <SkeletonDashboard />;
   }
 
+  const activeOrders = stats.pendingOrders + stats.inProgressOrders;
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        {greeting.icon}
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {greeting.text}, {user?.name?.split(" ")[0]}!
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Bem-vindo ao seu painel. Aqui voce pode gerenciar seus servicos.
-          </p>
+    <div className="space-y-8 animate-fadeIn">
+      {/* ──────── HERO ZONE ──────── */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
+            {greeting.icon}
+          </div>
+          <div>
+            <h1 className="font-display text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+              {greeting.text}, {user?.name?.split(" ")[0]}!
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
+              O que precisa resolver hoje?
+            </p>
+          </div>
         </div>
+
+        {/* CTA Principal */}
+        <Link
+          to="/services"
+          className="
+            group inline-flex items-center gap-3 px-6 py-3.5
+            bg-gradient-to-r from-primary-600 to-primary-700
+            hover:from-primary-700 hover:to-primary-800
+            text-white font-semibold rounded-2xl
+            shadow-lg shadow-primary-600/25 hover:shadow-xl hover:shadow-primary-600/30
+            transition-all duration-300 hover:-translate-y-0.5
+            active:translate-y-0 active:shadow-md
+          "
+        >
+          <Search className="w-5 h-5" />
+          <span>Buscar Servico</span>
+          <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+        </Link>
       </div>
 
-      {/* Cards de estatísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-grid">
+      {/* ──────── STAT STRIP — Assimétrico ──────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-grid">
         <StatsCard
           title="Total de Pedidos"
           value={stats.totalOrders}
@@ -144,9 +241,11 @@ const ClientDashboard: React.FC = () => {
         />
         <StatsCard
           title="Em Andamento"
-          value={stats.pendingOrders + stats.inProgressOrders}
+          value={activeOrders}
+          subtitle={`${stats.pendingOrders} pendente${stats.pendingOrders !== 1 ? "s" : ""}`}
           icon={<Clock className="w-6 h-6" />}
           color="yellow"
+          highlight={activeOrders > 0}
         />
         <StatsCard
           title="Concluidos"
@@ -159,213 +258,186 @@ const ClientDashboard: React.FC = () => {
           value={formatCurrency(stats.totalSpent)}
           icon={<DollarSign className="w-6 h-6" />}
           color="blue"
+          sparklineData={[40, 65, 50, 80, 70, 95, 85, 110]}
         />
       </div>
 
-      {/* Ações rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-grid">
-        <Link
-          to="/services"
-          className="card card-hover flex items-center gap-4 p-6"
-        >
-          <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-            <Search className="w-6 h-6 text-primary-600" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-              Buscar Servicos
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
-              Encontre profissionais qualificados
-            </p>
-          </div>
-          <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
-        </Link>
-
-        <Link
-          to="/client/orders"
-          className="card card-hover flex items-center gap-4 p-6"
-        >
-          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-            <Calendar className="w-6 h-6 text-blue-600" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-              Meus Pedidos
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Acompanhe seus servicos</p>
-          </div>
-          <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
-        </Link>
-
-        <Link
-          to="/client/notifications"
-          className="card card-hover flex items-center gap-4 p-6"
-        >
-          <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-            <Bell className="w-6 h-6 text-green-600" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-              Notificacoes
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Veja suas atualizacoes</p>
-          </div>
-          <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
-        </Link>
-      </div>
-
-      {/* Recomendações */}
+      {/* ──────── RECOMENDAÇÕES — Scroll horizontal ──────── */}
       {recommendations.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Recomendados para Voce
-            </h2>
+        <section>
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary-500" />
+              <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100">
+                Recomendados para Voce
+              </h2>
+            </div>
             <Link
               to="/services"
-              className="text-sm text-primary-600 hover:underline"
+              className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1 group"
             >
               Ver mais
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger-grid">
-            {recommendations.map((rec) => (
-              <div key={rec.service.id} className="relative">
-                <ServiceCard
-                  id={rec.service.id}
-                  title={rec.service.title}
-                  description={rec.service.description}
-                  price={rec.service.price}
-                  estimatedHours={rec.service.estimatedHours}
-                  images={rec.service.images}
-                  professional={rec.service.professional}
-                  category={rec.service.category}
-                />
-                {rec.reasons.length > 0 && (
-                  <div className="absolute top-2 right-2 z-10">
-                    <span className="badge bg-green-100 dark:bg-green-900/30 text-green-700 text-xs">
-                      {rec.reasons[0]}
-                    </span>
-                  </div>
-                )}
+
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-4 overflow-x-auto scroll-snap-x scrollbar-hide pb-2 -mx-1 px-1"
+          >
+            {recommendations.map((rec, idx) => (
+              <div
+                key={rec.service.id}
+                className="min-w-[280px] max-w-[320px] flex-shrink-0"
+                style={{
+                  animation: `staggerFadeIn 250ms ease-out both`,
+                  animationDelay: `${idx * 60}ms`,
+                }}
+              >
+                <div className="relative">
+                  <ServiceCard
+                    id={rec.service.id}
+                    title={rec.service.title}
+                    description={rec.service.description}
+                    price={rec.service.price}
+                    estimatedHours={rec.service.estimatedHours}
+                    images={rec.service.images}
+                    professional={rec.service.professional}
+                    category={rec.service.category}
+                  />
+                  {rec.reasons.length > 0 && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <span className="badge bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold shadow-sm">
+                        {rec.reasons[0]}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
+      {/* ──────── CONTENT ZONE — 2/3 + 1/3 ──────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Pedidos recentes */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Pedidos Recentes
-            </h2>
-            <Link
-              to="/client/orders"
-              className="text-sm text-primary-600 hover:underline"
-            >
-              Ver todos
-            </Link>
-          </div>
-
-          {orders.length === 0 ? (
-            <EmptyState
-              icon="package"
-              title="Nenhum pedido ainda"
-              description="Voce ainda nao fez nenhum pedido. Que tal buscar um servico?"
-              action={{
-                label: "Buscar servicos",
-                onClick: () => navigate("/services"),
-              }}
-            />
-          ) : (
-            <div className="space-y-4">
-              {orders.map((order) => (
-                <OrderCard
-                  key={order.id}
-                  id={order.id}
-                  title={order.title}
-                  status={order.status}
-                  price={order.price}
-                  scheduledDate={order.scheduledDate || undefined}
-                  deadlineDate={order.deadlineDate || undefined}
-                  createdAt={order.createdAt}
-                  professional={
-                    order.professional
-                      ? {
-                          id: order.professional.id,
-                          name: order.professional.name,
-                          profileImage:
-                            order.professional.profileImage || undefined,
-                        }
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <div className="card">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">
-              Categorias Populares
-            </h3>
-            <div className="space-y-2">
-              {categories.slice(0, 6).map((category) => (
-                <Link
-                  key={category.id}
-                  to={`/services?category=${category.id}`}
-                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                >
-                  <span className="text-sm text-slate-700 dark:text-slate-300">
-                    {category.name}
-                  </span>
-                  <span className="text-xs text-slate-400 dark:text-slate-500">
-                    {category._count?.serviceListings || 0}
-                  </span>
-                </Link>
-              ))}
-            </div>
-            <Link
-              to="/services"
-              className="block text-center text-sm text-primary-600 hover:underline mt-4"
-            >
-              Ver todas as categorias
-            </Link>
-          </div>
-
-          <div className="card bg-gradient-to-br from-primary-500 to-primary-600 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <Lightbulb className="w-5 h-5 text-primary-200" />
-              <h3 className="font-semibold">Dica do FazTudo</h3>
-            </div>
-            <p className="text-sm text-primary-100 mb-4 min-h-[3rem] transition-opacity duration-300">
-              {currentTip.text}
-            </p>
-            <div className="flex items-center justify-between">
+        {/* Coluna principal — Pedidos recentes */}
+        <div className="lg:col-span-2 space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100">
+                Pedidos Recentes
+              </h2>
               <Link
-                to={currentTip.to}
-                className="inline-block text-sm font-medium hover:underline"
+                to="/client/orders"
+                className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 flex items-center gap-1 group"
               >
-                {currentTip.cta}
+                Ver todos
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
-              <div className="flex gap-1.5">
-                {TIPS.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setTipIndex(idx)}
-                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                      idx === tipIndex
-                        ? "bg-white w-4"
-                        : "bg-primary-300 hover:bg-primary-200"
-                    }`}
-                    aria-label={`Dica ${idx + 1}`}
+            </div>
+
+            {orders.length === 0 ? (
+              <EmptyState
+                icon="package"
+                title="Nenhum pedido ainda"
+                description="Voce ainda nao fez nenhum pedido. Que tal buscar um servico?"
+                action={{
+                  label: "Buscar servicos",
+                  onClick: () => navigate("/services"),
+                }}
+              />
+            ) : (
+              <div className="space-y-3 stagger-grid">
+                {orders.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    id={order.id}
+                    title={order.title}
+                    status={order.status}
+                    price={order.price}
+                    scheduledDate={order.scheduledDate || undefined}
+                    deadlineDate={order.deadlineDate || undefined}
+                    createdAt={order.createdAt}
+                    professional={
+                      order.professional
+                        ? {
+                            id: order.professional.id,
+                            name: order.professional.name,
+                            profileImage:
+                              order.professional.profileImage || undefined,
+                          }
+                        : undefined
+                    }
                   />
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ──────── SIDEBAR ──────── */}
+        <div className="space-y-6">
+          {/* Atividade Recente */}
+          {activityItems.length > 0 && (
+            <div className="card">
+              <h3 className="font-display font-bold text-slate-900 dark:text-slate-100 mb-4">
+                Atividade Recente
+              </h3>
+              <ActivityTimeline items={activityItems} maxItems={5} />
+            </div>
+          )}
+
+          {/* Categorias como Pills */}
+          {categoryPills.length > 0 && (
+            <div className="card">
+              <h3 className="font-display font-bold text-slate-900 dark:text-slate-100 mb-4">
+                Explorar Categorias
+              </h3>
+              <CategoryPills categories={categoryPills} maxItems={8} />
+            </div>
+          )}
+
+          {/* Dica do FazTudo — redesigned */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-indigo-600 text-white p-6 shadow-lg shadow-primary-600/20">
+            {/* Decorative shapes */}
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/5" />
+            <div className="absolute -bottom-6 -left-6 w-20 h-20 rounded-full bg-white/5" />
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
+                  <Lightbulb className="w-4 h-4 text-primary-100" />
+                </div>
+                <h3 className="font-display font-bold text-sm uppercase tracking-wider text-primary-100">
+                  Dica do FazTudo
+                </h3>
+              </div>
+              <p className="text-sm text-white/90 leading-relaxed mb-4 min-h-[3.5rem] transition-opacity duration-300">
+                {currentTip.text}
+              </p>
+              <div className="flex items-center justify-between">
+                <Link
+                  to={currentTip.to}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-white hover:text-white/90 transition-colors group"
+                >
+                  {currentTip.cta}
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+                <div className="flex gap-1.5">
+                  {TIPS.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setTipIndex(idx)}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        idx === tipIndex
+                          ? "bg-white w-5"
+                          : "bg-white/30 w-1.5 hover:bg-white/50"
+                      }`}
+                      aria-label={`Dica ${idx + 1}`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </div>

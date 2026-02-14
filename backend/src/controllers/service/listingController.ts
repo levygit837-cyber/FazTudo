@@ -37,6 +37,14 @@ const errorResponse = (message: string, statusCode: number = 400) => ({
   statusCode,
 });
 
+// Helper para parsear campos JSON do SQLite
+const parseJsonField = (value: any): any => {
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch { return value; }
+  }
+  return value;
+};
+
 // Listar todos os serviços disponíveis (com filtros)
 export const listServices = async (
   req: Request,
@@ -100,8 +108,8 @@ export const listServices = async (
       whereClause = {
         ...filters,
         OR: [
-          { title: { contains: search as string, mode: "insensitive" } },
-          { description: { contains: search as string, mode: "insensitive" } },
+          { title: { contains: search as string } },
+          { description: { contains: search as string } },
         ],
       };
     }
@@ -150,6 +158,8 @@ export const listServices = async (
     // Adicionar contagem de serviços completados
     const servicesWithStats = services.map((service: any) => ({
       ...service,
+      images: parseJsonField(service.images),
+      tags: parseJsonField(service.tags),
       completedOrders: service.serviceOrders?.length || 0,
       serviceOrders: undefined, // Remover array original
     }));
@@ -255,6 +265,8 @@ export const getService = async (
 
     const serviceWithStats = {
       ...service,
+      images: parseJsonField(service.images),
+      tags: parseJsonField(service.tags),
       completedOrdersCount,
     };
 

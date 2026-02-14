@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { OrderCard } from "./OrderCard";
 import { SkeletonOrderCard } from "../common/Skeleton";
@@ -54,11 +54,13 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
   const config = roleConfigs[role];
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
+  const isInitialLoad = useRef(true);
 
   const statusTabs = [
     { id: "all", label: "Todos" },
@@ -72,7 +74,11 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
 
   const loadOrders = async () => {
     try {
-      setLoading(true);
+      if (isInitialLoad.current || orders.length === 0) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
       const params: any = { page, limit: 10 };
       if (role === "professional") params.role = "professional";
       if (activeTab !== "all") params.status = activeTab;
@@ -84,6 +90,8 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
       console.error("Erro ao carregar pedidos:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
+      isInitialLoad.current = false;
     }
   };
 
@@ -129,13 +137,13 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
       </div>
 
       {/* Lista */}
-      {loading ? (
+      {loading && orders.length === 0 ? (
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <SkeletonOrderCard key={i} />
           ))}
         </div>
-      ) : filteredOrders.length === 0 ? (
+      ) : filteredOrders.length === 0 && !refreshing ? (
         <EmptyState
           icon="package"
           title="Nenhum pedido encontrado"
@@ -146,8 +154,14 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
           }}
         />
       ) : (
-        <div className="space-y-4">
-          {filteredOrders.map((order) => (
+        <div className="relative">
+          {refreshing && (
+            <div className="absolute top-0 left-0 right-0 h-1 bg-primary-100 dark:bg-primary-900/30 rounded-full overflow-hidden z-10">
+              <div className="h-full bg-primary-500 rounded-full animate-pulse" style={{ width: "60%" }} />
+            </div>
+          )}
+          <div className={`space-y-4 ${refreshing ? "opacity-60 pointer-events-none" : ""}`}>
+            {filteredOrders.map((order) => (
             <OrderCard
               key={order.id}
               id={order.id}
@@ -179,6 +193,7 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
                   })}
             />
           ))}
+          </div>
         </div>
       )}
 

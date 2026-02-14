@@ -309,36 +309,8 @@ const Profile: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Cover Banner */}
-      <div className="relative rounded-xl overflow-hidden mb-16 h-40 sm:h-48 bg-gradient-to-r from-primary-500 via-primary-600 to-indigo-600">
+      <div className="relative rounded-xl overflow-hidden h-40 sm:h-48 bg-gradient-to-r from-primary-500 via-primary-600 to-indigo-600">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAyMGgyME0yMCAwdjIwTTIwIDIwaDIwTTIwIDIwdjIwIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIi8+PC9zdmc+')] opacity-30" />
-
-        {/* Avatar overlapping the banner */}
-        <div className="absolute -bottom-12 left-6 sm:left-8">
-          <div className="relative group">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white dark:border-slate-900 bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center shadow-lg overflow-hidden">
-              {profile.profileImage ? (
-                <img
-                  src={profile.profileImage}
-                  alt={profile.name}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-3xl sm:text-4xl font-bold text-primary-600 dark:text-primary-400">
-                  {initials}
-                </span>
-              )}
-            </div>
-            {/* Camera overlay for upload prep */}
-            <button
-              type="button"
-              onClick={() => toast.info("Upload de avatar sera habilitado em breve.")}
-              className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors duration-200 cursor-pointer"
-              aria-label="Alterar foto de perfil"
-            >
-              <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-            </button>
-          </div>
-        </div>
 
         {/* Edit button on banner */}
         {!isEditing && (
@@ -350,6 +322,33 @@ const Profile: React.FC = () => {
             Editar perfil
           </button>
         )}
+      </div>
+
+      {/* Avatar positioned inside container */}
+      <div className="relative -mt-12 px-6 sm:px-8 mb-4">
+        <div className="relative group inline-block">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white dark:border-slate-900 bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center shadow-lg overflow-hidden">
+            {profile.profileImage ? (
+              <img
+                src={profile.profileImage}
+                alt={profile.name}
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              <span className="text-3xl sm:text-4xl font-bold text-primary-600 dark:text-primary-400">
+                {initials}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => toast.info("Upload de avatar sera habilitado em breve.")}
+            className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors duration-200 cursor-pointer"
+            aria-label="Alterar foto de perfil"
+          >
+            <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+          </button>
+        </div>
       </div>
 
       {/* Profile header info (below banner, offset for avatar) */}

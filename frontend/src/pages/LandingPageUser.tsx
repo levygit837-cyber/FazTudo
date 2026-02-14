@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import clsx from "clsx";
 import {
   ArrowRight,
   Briefcase,
@@ -20,7 +21,7 @@ import {
   Leaf,
   Monitor,
 } from "lucide-react";
-import PageTransition from "../components/navigation/PageTransition";
+
 import RegisterPromptClient from "../components/landing/RegisterPromptClient";
 import RegisterPromptProfessional from "../components/landing/RegisterPromptProfessional";
 import { TrustBadge } from "../components/common/TrustBadge";
@@ -28,11 +29,18 @@ import { formatCurrency } from "../utils/formatters";
 import { useAuth } from "../context/AuthContext";
 
 const LandingPageUser: React.FC = () => {
-  const location = useLocation();
+  const navigate = useNavigate();
   const { user, isAuthenticated, isProfessional, isAdmin, logout } = useAuth();
   const [isRegisterPromptOpen, setIsRegisterPromptOpen] = useState(false);
   const [registerRole, setRegisterRole] = useState<"CLIENT" | "PROFESSIONAL">("CLIENT");
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const handleLandingSwitch = (path: string) => {
+    if (isLeaving) return;
+    setIsLeaving(true);
+    setTimeout(() => navigate(path), 200);
+  };
 
   const dashboardPath = isAdmin
     ? "/admin"
@@ -101,8 +109,8 @@ const LandingPageUser: React.FC = () => {
   };
 
   return (
-    <PageTransition routeKey={location.pathname}>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <>
+      <div className={clsx("min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 animate-fadeIn", isLeaving && "landing-exit")}>
 
         {/* ─── HEADER ─── */}
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800/50">
@@ -127,14 +135,6 @@ const LandingPageUser: React.FC = () => {
               >
                 Categorias
               </a>
-              {!isAuthenticated && (
-                <Link
-                  to="/login"
-                  className="text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 no-underline"
-                >
-                  Entrar
-                </Link>
-              )}
               {isAuthenticated && (
                 <Link
                   to={dashboardPath}
@@ -156,20 +156,25 @@ const LandingPageUser: React.FC = () => {
             <div className="inline-flex items-center gap-2">
               {!isAuthenticated ? (
                 <>
+                  <Link
+                    to="/login"
+                    className="hidden rounded-lg px-4 py-2 text-sm font-semibold transition-colors sm:block text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 no-underline"
+                  >
+                    Entrar
+                  </Link>
                   <button
-                    className="hidden rounded-lg px-4 py-2 text-sm font-semibold transition-colors sm:block text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    className="hidden rounded-lg px-4 py-2 text-sm font-semibold transition-colors sm:block text-white bg-primary-600 hover:bg-primary-700 shadow-glow-blue"
                     onClick={() => openRegisterPrompt("CLIENT")}
                   >
                     Criar conta
                   </button>
-                  <Link
-                    to="/profissionais"
-                    className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all bg-primary-600 text-white hover:bg-primary-700 shadow-glow-blue no-underline"
+                  <button
+                    onClick={() => handleLandingSwitch("/profissionais")}
+                    className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 sm:hidden"
                   >
                     <Briefcase className="h-4 w-4" />
-                    <span className="hidden sm:inline">Oferecer servicos</span>
-                    <span className="sm:hidden">Pro</span>
-                  </Link>
+                    <span>Pro</span>
+                  </button>
                 </>
               ) : (
                 <div className="relative">
@@ -264,12 +269,12 @@ const LandingPageUser: React.FC = () => {
                       Ir ao Dashboard
                     </Link>
                   ) : (
-                    <Link
-                      to="/profissionais"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 no-underline text-[0.9375rem]"
+                    <button
+                      onClick={() => handleLandingSwitch("/profissionais")}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 text-[0.9375rem]"
                     >
                       Oferecer servicos
-                    </Link>
+                    </button>
                   )}
                 </div>
 
@@ -515,12 +520,12 @@ const LandingPageUser: React.FC = () => {
                       >
                         Criar conta de cliente
                       </button>
-                      <Link
-                        to="/profissionais"
-                        className="inline-flex items-center justify-center rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 no-underline"
+                      <button
+                        onClick={() => handleLandingSwitch("/profissionais")}
+                        className="inline-flex items-center justify-center rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50"
                       >
                         Quero oferecer servicos
-                      </Link>
+                      </button>
                     </>
                   )}
                 </div>
@@ -558,9 +563,12 @@ const LandingPageUser: React.FC = () => {
                   </Link>
                 </>
               )}
-              <Link to="/profissionais" className="font-medium transition-colors text-sm text-slate-500 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 no-underline">
+              <button
+                onClick={() => handleLandingSwitch("/profissionais")}
+                className="font-medium transition-colors text-sm text-slate-500 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400"
+              >
                 Area de Profissionais
-              </Link>
+              </button>
             </div>
           </div>
         </footer>
@@ -579,7 +587,7 @@ const LandingPageUser: React.FC = () => {
           onSwitchToClient={() => setRegisterRole("CLIENT")}
         />
       )}
-    </PageTransition>
+    </>
   );
 };
 

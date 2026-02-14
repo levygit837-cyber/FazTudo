@@ -883,8 +883,11 @@ export const confirmServiceOrderCompletion = async (
     }
 
     const now = new Date();
-    const releaseDate = new Date(now);
-    releaseDate.setDate(releaseDate.getDate() + env.ESCROW_AUTO_RELEASE_DAYS);
+
+    // Calculate professional amount (deduct platform fee)
+    const platformFeePercentage = env.PLATFORM_FEE_PERCENTAGE;
+    const platformFee = (activePayment.amount * platformFeePercentage) / 100;
+    const professionalAmount = activePayment.amount - platformFee;
 
     const [updatedOrder] = await prisma.$transaction([
       prisma.serviceOrder.update({
@@ -910,10 +913,33 @@ export const confirmServiceOrderCompletion = async (
           },
         },
       }),
+      // Release payment immediately
       prisma.payment.update({
         where: { id: activePayment.id },
         data: {
-          heldUntil: releaseDate,
+          status: "RELEASED",
+          releasedAt: now,
+        },
+      }),
+      // Credit professional balance
+      prisma.user.update({
+        where: { id: serviceOrder.professionalId! },
+        data: {
+          balance: {
+            increment: professionalAmount,
+          },
+        },
+      }),
+      // Create credit transaction for the professional
+      prisma.transaction.create({
+        data: {
+          type: "PAYMENT",
+          amount: professionalAmount,
+          description: `Pagamento liberado para pedido #${orderId}`,
+          balanceBefore: 0,
+          balanceAfter: 0,
+          userId: serviceOrder.professionalId!,
+          paymentId: activePayment.id,
         },
       }),
     ]);
@@ -921,11 +947,18 @@ export const confirmServiceOrderCompletion = async (
     if (serviceOrder.professionalId) {
       await createNotification(
         serviceOrder.professionalId,
-        NotificationType.ORDER_COMPLETED,
-        "Conclusão confirmada",
-        `O cliente confirmou a conclusão do serviço "${serviceOrder.title}". O pagamento poderá ser liberado após o período de revisão.`,
+        NotificationType.PAYMENT_RELEASED,
+        "Pagamento liberado",
+        `O pagamento de R$${professionalAmount.toFixed(2)} foi liberado para sua conta.`,
         orderId,
-        { clientId: req.user.id, clientName: req.user.name },
+        {
+          clientId: req.user.id,
+          clientName: req.user.name,
+          totalAmount: activePayment.amount,
+          platformFee,
+          professionalAmount,
+          releasedAt: now.toISOString(),
+        },
       );
     }
 

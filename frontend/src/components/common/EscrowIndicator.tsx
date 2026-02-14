@@ -118,8 +118,8 @@ export const EscrowIndicator: React.FC<EscrowIndicatorProps> = ({
       {isExpanded && (
         <div className="mt-3 rounded-lg bg-white/50 dark:bg-slate-900/50 p-3 text-xs text-slate-600 dark:text-slate-400 space-y-2">
           <p>
-            <strong className="text-slate-700 dark:text-slate-300">1.</strong> O
-            pagamento e retido de forma segura na plataforma.
+            <strong className="text-slate-700 dark:text-slate-300">1.</strong> Voce
+            paga e o valor fica protegido na plataforma.
           </p>
           <p>
             <strong className="text-slate-700 dark:text-slate-300">2.</strong> O
@@ -127,7 +127,7 @@ export const EscrowIndicator: React.FC<EscrowIndicatorProps> = ({
           </p>
           <p>
             <strong className="text-slate-700 dark:text-slate-300">3.</strong>{" "}
-            Voce confirma a conclusao e o pagamento e liberado.
+            Voce confirma a conclusao e o pagamento e liberado imediatamente para o profissional.
           </p>
         </div>
       )}
