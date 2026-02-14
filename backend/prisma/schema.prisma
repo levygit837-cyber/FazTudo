@@ -116,6 +116,10 @@ model User {
   paymentsAsProfessional Payment[]      @relation("PaymentProfessional")
   files                  File[]
   verificationSubmissions VerificationSubmission[]
+  proposals              Proposal[]     @relation("ProposalProfessional")
+  schedule               ProfessionalSchedule[] @relation("ProfessionalSchedule")
+  scheduleBlocks         ScheduleBlock[]        @relation("ScheduleBlocks")
+  disputesInitiated      Dispute[]      @relation("DisputeInitiator")
 
   @@index([email])
   @@index([role])
@@ -133,6 +137,7 @@ model ServiceCategory {
   subcategories          ServiceCategory[]      @relation("CategoryHierarchy")
   serviceListings        ServiceListing[]
   professionalCategories ProfessionalCategory[]
+  orderBriefs            OrderBrief[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -218,6 +223,10 @@ model ServiceOrder {
   notifications Notification[]
   messages      Message[]
   files         File[]
+  brief         OrderBrief?
+  proposals     Proposal[]
+  scheduleBlock ScheduleBlock?
+  disputes      Dispute[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -475,4 +484,104 @@ model SystemConfig {
   updatedAt DateTime @updatedAt
 
   @@index([key])
+}
+
+// ============================================
+// SMART BRIEF, PROPOSALS, SCHEDULING, DISPUTES
+// ============================================
+
+model OrderBrief {
+  id             Int      @id @default(autoincrement())
+  serviceOrderId Int      @unique
+  categoryId     Int?
+  urgencyLevel   String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  priceRangeMin  Float?
+  priceRangeMax  Float?
+  briefData      Json     // Category-specific form data as JSON
+  mediaUrls      Json?    // Array of photo/video URLs
+  notes          String?
+
+  serviceOrder ServiceOrder     @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  category     ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serviceOrderId])
+  @@index([categoryId])
+}
+
+model Proposal {
+  id              Int      @id @default(autoincrement())
+  serviceOrderId  Int
+  professionalId  Int
+  price           Float
+  estimatedDays   Int?
+  estimatedHours  Int?
+  description     String
+  guaranteeDays   Int?     // Warranty period in days
+  status          String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, WITHDRAWN
+  metadata        Json?
+
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  professional User         @relation("ProposalProfessional", fields: [professionalId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceOrderId, professionalId])
+  @@index([serviceOrderId])
+  @@index([professionalId])
+  @@index([status])
+}
+
+model ProfessionalSchedule {
+  id              Int      @id @default(autoincrement())
+  professionalId  Int
+  dayOfWeek       Int      // 0=Sunday, 6=Saturday
+  startTime       String   // "08:00"
+  endTime         String   // "18:00"
+  isAvailable     Boolean  @default(true)
+
+  professional User @relation("ProfessionalSchedule", fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@unique([professionalId, dayOfWeek])
+  @@index([professionalId])
+}
+
+model ScheduleBlock {
+  id              Int      @id @default(autoincrement())
+  professionalId  Int
+  startDateTime   DateTime
+  endDateTime     DateTime
+  reason          String?  // "Pedido #123", "Folga", etc.
+  serviceOrderId  Int?     @unique
+
+  professional   User          @relation("ScheduleBlocks", fields: [professionalId], references: [id], onDelete: Cascade)
+  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+
+  @@index([professionalId])
+  @@index([startDateTime, endDateTime])
+}
+
+model Dispute {
+  id              Int      @id @default(autoincrement())
+  serviceOrderId  Int
+  initiatorId     Int
+  reason          String
+  description     String
+  status          String   @default("OPEN") // OPEN, UNDER_REVIEW, RESOLVED, CLOSED
+  resolution      String?
+  attachments     Json?    // Array of file URLs
+  metadata        Json?
+
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  initiator    User         @relation("DisputeInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serviceOrderId])
+  @@index([initiatorId])
+  @@index([status])
 }
