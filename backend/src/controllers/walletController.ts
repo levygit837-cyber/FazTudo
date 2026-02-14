@@ -324,3 +324,89 @@ export const requestWithdrawal = async (
     res.status(500).json(errorResponse("Erro interno do servidor", 500));
   }
 };
+
+/**
+ * GET /api/wallet/professional/overview
+ * Enhanced financial overview with forecast
+ */
+export const getProfessionalFinancialOverview = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+    if (req.user.role !== "PROFESSIONAL") {
+      res.status(403).json(errorResponse("Only professionals can access financial overview"));
+      return;
+    }
+
+    const userId = req.user.id;
+
+    const [user, heldPayments, earnedAgg, withdrawnAgg, feeAgg, escrowConfig] =
+      await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { balance: true },
+        }),
+        prisma.payment.findMany({
+          where: { professionalId: userId, status: "HELD" },
+          select: { amount: true, heldUntil: true, serviceOrderId: true },
+          orderBy: { heldUntil: "asc" },
+        }),
+        prisma.transaction.aggregate({
+          where: { userId, type: "PAYMENT" },
+          _sum: { amount: true },
+        }),
+        prisma.transaction.aggregate({
+          where: { userId, type: "WITHDRAWAL" },
+          _sum: { amount: true },
+        }),
+        prisma.transaction.aggregate({
+          where: { userId, type: "FEE" },
+          _sum: { amount: true },
+        }),
+        prisma.escrowConfig.findFirst({ where: { name: "default" } }),
+      ]);
+
+    const feePercentage = escrowConfig?.platformFeePercentage ?? 10;
+    const pendingInEscrow = heldPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    // Build release forecast
+    const releaseForecast = heldPayments.map((p) => ({
+      grossAmount: p.amount,
+      netAmount: p.amount * (1 - feePercentage / 100),
+      platformFee: p.amount * (feePercentage / 100),
+      releaseDate: p.heldUntil,
+      serviceOrderId: p.serviceOrderId,
+    }));
+
+    // Get recent transactions (last 30)
+    const recentTransactions = await prisma.transaction.findMany({
+      where: { userId },
+      include: {
+        payment: { select: { id: true, status: true, serviceOrderId: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    });
+
+    res.status(200).json(
+      successResponse({
+        balance: user?.balance || 0,
+        totalEarned: earnedAgg._sum.amount || 0,
+        totalWithdrawn: withdrawnAgg._sum.amount || 0,
+        totalFees: feeAgg._sum.amount || 0,
+        pendingInEscrow,
+        feePercentage,
+        releaseForecast,
+        recentTransactions,
+      }, "Professional financial overview retrieved"),
+    );
+  } catch (error) {
+    console.error("Professional financial overview error:", error);
+    res.status(500).json(errorResponse("Erro interno do servidor", 500));
+  }
+};
