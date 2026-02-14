@@ -59,6 +59,9 @@ service-account.json
 # Payment credentials
 VARIAVEIS/
 
+# Worktrees
+.worktrees/
+
 # Agent files
 AGENTS.md
 CLAUDE.md
