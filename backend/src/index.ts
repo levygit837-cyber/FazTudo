@@ -5,6 +5,7 @@ import { env } from "./config/env";
 import prisma from "./lib/prisma";
 import { errorHandler, notFoundHandler } from "./middleware/error";
 import { generalLimiter } from "./middleware/rateLimiter";
+import { xssSanitizer } from "./middleware/sanitize";
 import authRoutes from "./routes/authRoutes";
 import serviceRoutes from "./routes/serviceRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
@@ -66,6 +67,9 @@ app.use(
 // Body parsing with size limits
 app.use(express.json({ limit: env.BODY_SIZE_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: env.BODY_SIZE_LIMIT }));
+
+// XSS sanitization for all incoming data
+app.use(xssSanitizer);
 
 // ============================================
 // HEALTH CHECKS
