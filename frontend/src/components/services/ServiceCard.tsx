@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Star, Clock, Heart, BadgeCheck, Briefcase } from "lucide-react";
+import { Star, Clock, Heart, BadgeCheck, Briefcase, TrendingUp, Zap } from "lucide-react";
 import { formatCurrency, formatRating } from "../../utils/formatters";
 
 interface ServiceCardProps {
@@ -24,6 +24,8 @@ interface ServiceCardProps {
   };
   isVerified?: boolean;
   completedJobs?: number;
+  completionRate?: number;
+  avgResponseTimeHours?: number;
   className?: string;
 }
 
@@ -38,6 +40,8 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   category,
   isVerified = false,
   completedJobs,
+  completionRate,
+  avgResponseTimeHours,
   className = "",
 }) => {
   const [isFavorite, setIsFavorite] = useState(false);
@@ -147,6 +151,24 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Trust signals */}
+        {(completionRate != null || avgResponseTimeHours != null) && (
+          <div className="flex flex-wrap gap-1.5">
+            {completionRate != null && completionRate > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20">
+                <TrendingUp className="w-3 h-3" />
+                {completionRate}% concluídos
+              </span>
+            )}
+            {avgResponseTimeHours != null && avgResponseTimeHours > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20">
+                <Zap className="w-3 h-3" />
+                Responde em ~{avgResponseTimeHours}h
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Rodape */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800/50">
