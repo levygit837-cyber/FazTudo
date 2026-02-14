@@ -436,7 +436,7 @@ export const mercadoPagoWebhook = async (
 
     // Extrair orderId do external_reference (formato: "order-{id}-{timestamp}")
     const refParts = mpPayment.externalReference.split("-");
-    const orderId = parseInt(refParts[1], 10);
+    const orderId = parseInt(refParts[1] || "", 10);
 
     if (isNaN(orderId)) {
       console.error("Invalid external_reference:", mpPayment.externalReference);

@@ -67,7 +67,7 @@ export const getBriefTemplate = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { categorySlug } = req.params;
+    const categorySlug = String(req.params.categorySlug || "default");
     const template = BRIEF_TEMPLATES[categorySlug.toLowerCase()] || BRIEF_TEMPLATES.default;
     res.status(200).json(successResponse({ template, categorySlug }));
   } catch (error) {

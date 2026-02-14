@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import prisma from "../../config/database";
+import prisma from "../../lib/prisma";
 
 const DISPUTE_REASONS = [
   "Serviço não entregue",
@@ -16,7 +16,7 @@ const DISPUTE_REASONS = [
 export const createDispute = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user?.id;
-    const orderId = parseInt(req.params.orderId);
+    const orderId = parseInt(String(req.params.orderId), 10);
     const { reason, description, attachments } = req.body;
 
     if (!reason || !description) {
@@ -90,10 +90,10 @@ export const createDispute = async (req: Request, res: Response): Promise<void> 
       await prisma.notification.create({
         data: {
           userId: otherUserId,
-          type: "DISPUTE_OPENED",
+          type: "SYSTEM_ALERT",
           title: "Disputa aberta",
           message: `Uma disputa foi aberta no pedido #${orderId}: ${reason}`,
-          data: { orderId, disputeId: dispute.id },
+          metadata: { orderId, disputeId: dispute.id },
         },
       });
     }
@@ -116,7 +116,7 @@ export const createDispute = async (req: Request, res: Response): Promise<void> 
 export const getOrderDisputes = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user?.id;
-    const orderId = parseInt(req.params.orderId);
+    const orderId = parseInt(String(req.params.orderId), 10);
 
     // Verify the order exists and user is involved
     const order = await prisma.serviceOrder.findUnique({

@@ -183,8 +183,11 @@ export const getAvailableSlots = async (
     });
 
     // Gerar slots de 1 hora
-    const [startH, startM] = startTime.split(":").map(Number);
-    const [endH] = endTime.split(":").map(Number);
+    const startParts = startTime.split(":").map(Number);
+    const endParts = endTime.split(":").map(Number);
+    const startH = startParts[0] ?? 8;
+    const startM = startParts[1] ?? 0;
+    const endH = endParts[0] ?? 18;
     const slots: { time: string; available: boolean; reason?: string }[] = [];
 
     for (let h = startH; h < endH; h++) {
