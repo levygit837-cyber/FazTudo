@@ -2,6 +2,7 @@ import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { NotificationType } from "@prisma/client";
+import { filterChatContent, getBlockedContentMessage } from "../../middleware/chatFilter";
 
 // Tipos para request bodies
 interface SendMessageBody {
@@ -85,6 +86,13 @@ export const sendMessage = async (
       return;
     }
 
+    // Filter personal contact information
+    const filterResult = filterChatContent(content.trim());
+    const filteredContent = filterResult.sanitized;
+    const filterWarning = filterResult.clean
+      ? undefined
+      : getBlockedContentMessage(filterResult.blockedTypes);
+
     // Buscar pedido
     const serviceOrder = await prisma.serviceOrder.findUnique({
       where: { id: orderId },
@@ -126,7 +134,7 @@ export const sendMessage = async (
     // Criar mensagem
     const message = await prisma.message.create({
       data: {
-        content: content.trim(),
+        content: filteredContent,
         senderId,
         recipientId,
         serviceOrderId: orderId,
@@ -168,7 +176,10 @@ export const sendMessage = async (
 
     res
       .status(201)
-      .json(successResponse({ message }, "Message sent successfully"));
+      .json(successResponse(
+        { message, filterWarning },
+        filterWarning ? "Message sent with content filtered" : "Message sent successfully",
+      ));
   } catch (error) {
     console.error("Send message error:", error);
     res.status(500).json(errorResponse("Internal server error", 500));
