@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, AlertTriangle, Loader2 } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
+import { createDispute } from "../../services/serviceService";
 
 const DISPUTE_REASONS = [
   "Serviço não entregue",
@@ -41,8 +42,6 @@ const DisputeModal: React.FC<DisputeModalProps> = ({
 
     try {
       setSubmitting(true);
-
-      const { createDispute } = await import("../../services/serviceService");
       await createDispute(orderId, { reason, description: description.trim() });
 
       toast.success("Disputa aberta com sucesso. Nossa equipe irá analisar.");
