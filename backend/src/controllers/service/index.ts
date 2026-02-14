@@ -4,3 +4,4 @@ export * from './paymentController';
 export * from './reviewController';
 export * from './messageController';
 export * from './notificationController';
+export * from './briefController';

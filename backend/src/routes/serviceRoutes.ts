@@ -38,6 +38,22 @@ router.post(
 );
 
 // ============================================
+// SMART BRIEF ROUTES
+// ============================================
+
+// Brief templates (público)
+router.get("/briefs/templates/:categorySlug", serviceController.getBriefTemplate);
+
+// Create order with brief (clientes verificados)
+router.post(
+  "/orders/with-brief",
+  verifyToken,
+  requireRole("CLIENT"),
+  requireVerified,
+  serviceController.createOrderWithBrief,
+);
+
+// ============================================
 // ROTAS DE SERVICE ORDERS (PEDIDOS)
 // ============================================
 
