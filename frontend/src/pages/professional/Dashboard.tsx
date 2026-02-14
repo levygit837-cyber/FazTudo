@@ -7,8 +7,6 @@ import {
   Star,
   ArrowRight,
   FileText,
-  Award,
-  Bell,
   Wallet,
   AlertTriangle,
   Sun,
@@ -200,53 +198,58 @@ const ProfessionalDashboard: React.FC = () => {
       </div>
 
       {/* Ações rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-grid">
-        <Link
-          to="/professional/services"
-          className="card card-hover flex items-center gap-4 p-6"
-        >
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 stagger-grid">
+        <Link to="/professional/services" className="card card-hover flex items-center gap-4 p-6">
           <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
             <FileText className="w-6 h-6 text-primary-600" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-              Meus Servicos
-            </h3>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">Meus Pedidos</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Gerencie seus pedidos</p>
           </div>
           <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
         </Link>
 
-        <Link
-          to="/professional/catalog"
-          className="card card-hover flex items-center gap-4 p-6"
-        >
-          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-            <Award className="w-6 h-6 text-blue-600" />
+        <Link to="/professional/crm" className="card card-hover flex items-center gap-4 p-6">
+          <div className="w-12 h-12 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-6 h-6 text-cyan-600" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-              Meu Catalogo
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
-              Gerencie seus servicos oferecidos
-            </p>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">CRM</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Pedidos e faturamento</p>
           </div>
           <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
         </Link>
 
-        <Link
-          to="/professional/notifications"
-          className="card card-hover flex items-center gap-4 p-6"
-        >
-          <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-            <Bell className="w-6 h-6 text-green-600" />
+        <Link to="/professional/agenda" className="card card-hover flex items-center gap-4 p-6">
+          <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
+            <Clock className="w-6 h-6 text-violet-600" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-              Notificacoes
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Veja suas atualizacoes</p>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">Agenda</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Calendario operacional</p>
+          </div>
+          <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+        </Link>
+
+        <Link to="/professional/financeiro" className="card card-hover flex items-center gap-4 p-6">
+          <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+            <Wallet className="w-6 h-6 text-green-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">Financeiro</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Ganhos e saques</p>
+          </div>
+          <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+        </Link>
+
+        <Link to="/professional/reputacao" className="card card-hover flex items-center gap-4 p-6">
+          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+            <Star className="w-6 h-6 text-amber-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">Reputacao</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Avaliacoes e ranking</p>
           </div>
           <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
         </Link>
