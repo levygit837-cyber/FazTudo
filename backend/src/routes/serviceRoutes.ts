@@ -110,6 +110,15 @@ router.post(
 );
 
 // ============================================
+// MERCADOPAGO WEBHOOK (público — validado por assinatura)
+// ============================================
+
+router.post(
+  "/payments/webhook",
+  serviceController.mercadoPagoWebhook,
+);
+
+// ============================================
 // ROTAS DE PAGAMENTOS
 // ============================================
 
