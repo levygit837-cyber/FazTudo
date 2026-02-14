@@ -15,6 +15,8 @@ import {
   resetPasswordSchema,
   changePasswordSchema,
   updateProfileSchema,
+  documentVerificationSchema,
+  facialVerificationSchema,
 } from "../middleware/validation";
 
 const router = Router();
@@ -36,11 +38,13 @@ router.post("/change-password", verifyToken, sensitiveLimiter, validateBody(chan
 router.post(
   "/verification/document",
   verifyToken,
+  validateBody(documentVerificationSchema),
   authController.submitDocumentVerification,
 );
 router.post(
   "/verification/facial",
   verifyToken,
+  validateBody(facialVerificationSchema),
   authController.submitFacialVerification,
 );
 router.get(

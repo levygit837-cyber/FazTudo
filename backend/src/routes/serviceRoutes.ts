@@ -8,6 +8,13 @@ import {
   authLogger,
 } from "../middleware/auth";
 import { financialLimiter } from "../middleware/rateLimiter";
+import { validateBody } from "../middleware/validate";
+import {
+  createOrderSchema,
+  createPaymentSchema,
+  sendMessageSchema,
+  createReviewSchema,
+} from "../middleware/validation";
 
 const router = Router();
 
@@ -40,6 +47,7 @@ router.post(
   verifyToken,
   requireRole("CLIENT"),
   requireVerified,
+  validateBody(createOrderSchema),
   serviceController.createServiceOrder,
 );
 
@@ -112,6 +120,7 @@ router.post(
   requireRole("CLIENT"),
   requireVerified,
   financialLimiter,
+  validateBody(createPaymentSchema),
   serviceController.createPayment,
 );
 
@@ -132,6 +141,7 @@ router.post(
   "/orders/:orderId/reviews",
   verifyToken,
   requireVerified,
+  validateBody(createReviewSchema),
   serviceController.createReview,
 );
 
@@ -144,6 +154,7 @@ router.post(
   "/orders/:orderId/messages",
   verifyToken,
   requireVerified,
+  validateBody(sendMessageSchema),
   serviceController.sendMessage,
 );
 

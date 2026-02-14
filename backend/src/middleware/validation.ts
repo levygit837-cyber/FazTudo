@@ -160,6 +160,65 @@ export const createOrderSchema = z.object({
   scheduledDate: z.string().datetime({ message: 'Data invalida' }).optional(),
 });
 
+// ============================================
+// PAYMENT SCHEMAS
+// ============================================
+
+export const createPaymentSchema = z.object({
+  paymentMethod: z.enum(['PIX', 'CREDIT_CARD', 'DEBIT_CARD', 'BOLETO'], {
+    error: 'Metodo de pagamento invalido. Use: PIX, CREDIT_CARD, DEBIT_CARD ou BOLETO',
+  }),
+  transactionId: z.string().max(200).optional(),
+});
+
+// ============================================
+// MESSAGE SCHEMAS
+// ============================================
+
+export const sendMessageSchema = z.object({
+  content: sanitizedString
+    .pipe(z.string().min(1, 'Mensagem nao pode ser vazia').max(2000, 'Mensagem muito longa')),
+});
+
+// ============================================
+// REVIEW SCHEMAS
+// ============================================
+
+export const createReviewSchema = z.object({
+  rating: z.number().int().min(1, 'Nota minima e 1').max(5, 'Nota maxima e 5'),
+  comment: sanitizedString
+    .pipe(z.string().max(1000, 'Comentario muito longo'))
+    .optional(),
+});
+
+// ============================================
+// VERIFICATION SCHEMAS
+// ============================================
+
+export const documentVerificationSchema = z.object({
+  documentType: z.enum(['CPF', 'CNPJ', 'RG'], {
+    error: 'Tipo de documento invalido',
+  }),
+  documentNumber: z.string().min(1).max(20).optional(),
+  documentImageUrl: z.string().url('URL de imagem invalida').optional(),
+});
+
+export const facialVerificationSchema = z.object({
+  selfieImageUrl: z.string().url('URL de selfie invalida'),
+});
+
+// ============================================
+// ID PARAM SCHEMAS
+// ============================================
+
+export const idParamSchema = z.object({
+  id: z.coerce.number().int().positive('ID invalido'),
+});
+
+export const orderIdParamSchema = z.object({
+  orderId: z.coerce.number().int().positive('ID do pedido invalido'),
+});
+
 // Type exports
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
