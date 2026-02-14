@@ -233,11 +233,11 @@ export const comparePassword = async (
 };
 
 // Middleware para verificar se usuário está verificado
-export const requireVerified = (
+export const requireVerified = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction,
-): void => {
+): Promise<void> => {
   if (!req.user) {
     res.status(401).json({
       success: false,
@@ -246,29 +246,28 @@ export const requireVerified = (
     return;
   }
 
-  // Buscar informações adicionais do usuário
-  prisma.user
-    .findUnique({
+  try {
+    const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: { isVerified: true },
-    })
-    .then((user) => {
-      if (!user || !user.isVerified) {
-        res.status(403).json({
-          success: false,
-          message: "Conta não verificada. Verifique seu e-mail.",
-        });
-        return;
-      }
-      next();
-    })
-    .catch((error) => {
-      console.error("Erro ao verificar status do usuário:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erro interno ao verificar conta",
-      });
     });
+
+    if (!user || !user.isVerified) {
+      res.status(403).json({
+        success: false,
+        message: "Conta não verificada. Verifique seu e-mail.",
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error("Erro ao verificar status do usuário:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro interno ao verificar conta",
+    });
+  }
 };
 
 // Middleware para logar requisições de autenticação
