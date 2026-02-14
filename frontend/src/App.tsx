@@ -26,6 +26,7 @@ import CreateService from "./pages/professional/CreateService";
 import EditService from "./pages/professional/EditService";
 import ProfessionalDashboard from "./pages/professional/Dashboard";
 import ProfessionalServiceOrders from "./pages/professional/ServiceOrders";
+import ProfessionalCRM from "./pages/professional/CRM";
 import ServiceChat from "./pages/services/ServiceChat";
 import ServiceDetails from "./pages/services/ServiceDetails";
 import ServiceSearch from "./pages/services/ServiceSearch";
@@ -92,6 +93,7 @@ const App: React.FC = () => {
               >
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<ProfessionalDashboard />} />
+                <Route path="crm" element={<ProfessionalCRM />} />
                 <Route path="services" element={<ProfessionalServiceOrders />} />
                 <Route path="services/:id" element={<OrderDetails />} />
                 <Route path="services/:id/chat" element={<ServiceChat />} />
