@@ -6,5 +6,6 @@ const router = Router();
 
 router.get("/stats", verifyToken, dashboardController.getDashboardStats);
 router.get("/recent-orders", verifyToken, dashboardController.getRecentOrders);
+router.get("/professional/crm", verifyToken, dashboardController.getProfessionalCrmStats);
 
 export default router;

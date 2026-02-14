@@ -163,3 +163,76 @@ export const getRecentOrders = async (
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
+
+export const getProfessionalCrmStats = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+    if (req.user.role !== "PROFESSIONAL") {
+      res.status(403).json(errorResponse("Only professionals can access CRM stats"));
+      return;
+    }
+
+    const userId = req.user.id;
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const [ordersToday, ordersLast7Days, pendingOrders, monthlyPayments] = await Promise.all([
+      prisma.serviceOrder.count({
+        where: {
+          professionalId: userId,
+          createdAt: { gte: todayStart, lt: todayEnd },
+        },
+      }),
+      prisma.serviceOrder.count({
+        where: {
+          professionalId: userId,
+          createdAt: { gte: sevenDaysAgo },
+        },
+      }),
+      prisma.serviceOrder.count({
+        where: {
+          professionalId: userId,
+          status: { in: ["PENDING", "ACCEPTED"] },
+        },
+      }),
+      prisma.payment.findMany({
+        where: {
+          professionalId: userId,
+          status: "RELEASED",
+          releasedAt: { gte: monthStart, lt: monthEnd },
+        },
+        select: { amount: true },
+      }),
+    ]);
+
+    // Fetch escrow config for fee calculation
+    const escrowConfig = await prisma.escrowConfig.findFirst({ where: { name: "default" } });
+    const feePercentage = escrowConfig?.platformFeePercentage ?? 10;
+    const monthlyRevenue = monthlyPayments.reduce(
+      (sum, p) => sum + p.amount * (1 - feePercentage / 100), 0
+    );
+
+    res.status(200).json(
+      successResponse({
+        ordersToday,
+        ordersLast7Days,
+        pendingOrders,
+        monthlyRevenue,
+        feePercentage,
+      }, "Professional CRM stats retrieved"),
+    );
+  } catch (error) {
+    console.error("Professional CRM stats error:", error);
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
