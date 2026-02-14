@@ -17,15 +17,15 @@ interface ConfirmDialogProps {
 const variantStyles = {
   danger: {
     icon: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
-    button: "bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white",
+    button: "bg-red-600 hover:bg-red-700 focus-visible:ring-red-500 text-white",
   },
   warning: {
     icon: "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
-    button: "bg-amber-600 hover:bg-amber-700 focus:ring-amber-500 text-white",
+    button: "bg-amber-600 hover:bg-amber-700 focus-visible:ring-amber-500 text-white",
   },
   info: {
     icon: "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400",
-    button: "bg-primary-600 hover:bg-primary-700 focus:ring-primary-500 text-white",
+    button: "bg-primary-600 hover:bg-primary-700 focus-visible:ring-primary-500 text-white",
   },
 };
 
