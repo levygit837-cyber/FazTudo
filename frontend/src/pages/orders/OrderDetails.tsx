@@ -12,6 +12,7 @@ import {
   CreditCard,
   CalendarClock,
   AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
@@ -31,6 +32,7 @@ import {
   createPayment,
   releasePayment,
   createReview,
+  createOrder,
   sendMessage,
 } from "../../services/serviceService";
 import { ServiceOrder } from "../../types";
@@ -64,7 +66,9 @@ const OrderDetails: React.FC = () => {
   } | null>(null);
 
   // Review state
-  const [reviewRating, setReviewRating] = useState(5);
+  const [qualityRating, setQualityRating] = useState(5);
+  const [punctualityRating, setPunctualityRating] = useState(5);
+  const [communicationRating, setCommunicationRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
@@ -184,7 +188,8 @@ const OrderDetails: React.FC = () => {
     if (!order) return;
     try {
       setActionLoading(true);
-      await createReview(order.id, { rating: reviewRating, comment: reviewComment || undefined });
+      const rating = Math.round((qualityRating + punctualityRating + communicationRating) / 3 * 10) / 10;
+      await createReview(order.id, { rating, comment: reviewComment || undefined });
       setReviewSubmitted(true);
       await loadOrder();
     } catch (err: any) {
@@ -524,25 +529,68 @@ const OrderDetails: React.FC = () => {
                       ))}
                     </div>
                   )}
+
+                  {/* Re-hire button */}
+                  {isOrderClient && order.serviceListingId && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          setActionLoading(true);
+                          const newOrder = await createOrder({
+                            serviceListingId: order.serviceListingId!,
+                            title: order.title,
+                            description: `Recontratação do serviço "${order.title}"`,
+                          });
+                          navigate(`/client/orders/${newOrder.id}`);
+                        } catch (err: any) {
+                          toast.error("Erro", err?.response?.data?.message || "Erro ao recontratar");
+                        } finally {
+                          setActionLoading(false);
+                        }
+                      }}
+                      disabled={actionLoading}
+                      className="btn btn-primary mt-4"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Recontratar profissional
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Nota
-                    </label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setReviewRating(s)}
-                          className="p-1"
-                        >
-                          <Star className={`w-8 h-8 transition-colors ${s <= reviewRating ? "text-yellow-500 fill-current" : "text-slate-300 dark:text-slate-600 hover:text-yellow-300"}`} />
-                        </button>
-                      ))}
+                <div className="space-y-5">
+                  {/* Criteria ratings */}
+                  {[
+                    { label: "Qualidade do serviço", value: qualityRating, setter: setQualityRating },
+                    { label: "Pontualidade", value: punctualityRating, setter: setPunctualityRating },
+                    { label: "Comunicação", value: communicationRating, setter: setCommunicationRating },
+                  ].map((criteria) => (
+                    <div key={criteria.label}>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                        {criteria.label}
+                      </label>
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => criteria.setter(s)}
+                            className="p-0.5"
+                          >
+                            <Star className={`w-7 h-7 transition-colors ${s <= criteria.value ? "text-yellow-500 fill-current" : "text-slate-300 dark:text-slate-600 hover:text-yellow-300"}`} />
+                          </button>
+                        ))}
+                      </div>
                     </div>
+                  ))}
+
+                  {/* Overall rating display */}
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 text-center">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">Nota geral: </span>
+                    <span className="text-lg font-bold text-primary-600">
+                      {(Math.round((qualityRating + punctualityRating + communicationRating) / 3 * 10) / 10).toFixed(1)}
+                    </span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400"> / 5</span>
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                       Comentario (opcional)
