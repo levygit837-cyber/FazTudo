@@ -198,7 +198,7 @@ const ProfessionalDashboard: React.FC = () => {
       </div>
 
       {/* Ações rápidas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 stagger-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 stagger-grid">
         <Link to="/professional/services" className="card card-hover flex items-center gap-4 p-6">
           <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
             <FileText className="w-6 h-6 text-primary-600" />
@@ -228,17 +228,6 @@ const ProfessionalDashboard: React.FC = () => {
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">Agenda</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Calendario operacional</p>
-          </div>
-          <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
-        </Link>
-
-        <Link to="/professional/financeiro" className="card card-hover flex items-center gap-4 p-6">
-          <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-            <Wallet className="w-6 h-6 text-green-600" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">Financeiro</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Ganhos e saques</p>
           </div>
           <ArrowRight className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
         </Link>
