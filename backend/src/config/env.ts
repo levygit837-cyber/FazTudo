@@ -1,3 +1,25 @@
+import path from 'path';
+import fs from 'fs';
+
+// Load MercadoPago credentials from VARIAVEIS/.env.mp if it exists
+const mpEnvPath = path.resolve(__dirname, '../../../VARIAVEIS/.env.mp');
+if (fs.existsSync(mpEnvPath)) {
+  const mpEnvContent = fs.readFileSync(mpEnvPath, 'utf8');
+  for (const line of mpEnvContent.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx > 0) {
+        const key = trimmed.substring(0, eqIdx).trim();
+        const value = trimmed.substring(eqIdx + 1).trim();
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+  }
+}
+
 import 'dotenv/config';
 import crypto from 'crypto';
 
@@ -26,6 +48,14 @@ export interface EnvConfig {
   DEFAULT_ESCROW_HOLD_DAYS: number;
   ESCROW_AUTO_RELEASE_DAYS: number;
   PLATFORM_FEE_PERCENTAGE: number;
+
+  // MercadoPago
+  MP_ACCESS_TOKEN: string;
+  MP_PUBLIC_KEY: string;
+  MP_CLIENT_ID: string;
+  MP_CLIENT_SECRET: string;
+  MP_WEBHOOK_SECRET: string;
+  MP_SANDBOX: boolean;
 
   // Notifications
   ENABLE_EMAIL_NOTIFICATIONS: boolean;
@@ -102,6 +132,14 @@ function getEnvConfig(): EnvConfig {
     DEFAULT_ESCROW_HOLD_DAYS: parseInt(process.env.DEFAULT_ESCROW_HOLD_DAYS || '7', 10),
     ESCROW_AUTO_RELEASE_DAYS: parseInt(process.env.ESCROW_AUTO_RELEASE_DAYS || '2', 10),
     PLATFORM_FEE_PERCENTAGE: parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '10.0'),
+
+    // MercadoPago
+    MP_ACCESS_TOKEN: process.env.ACESS_TOKEN_MP || process.env.MP_ACCESS_TOKEN || '',
+    MP_PUBLIC_KEY: process.env.PUBLIC_KEY_MP || process.env.MP_PUBLIC_KEY || '',
+    MP_CLIENT_ID: process.env.CLIENT_ID || process.env.MP_CLIENT_ID || '',
+    MP_CLIENT_SECRET: process.env.CLIENT_SECRET || process.env.MP_CLIENT_SECRET || '',
+    MP_WEBHOOK_SECRET: process.env.MP_WEBHOOK_SECRET || '',
+    MP_SANDBOX: process.env.MP_SANDBOX !== 'false',
 
     // Notifications
     ENABLE_EMAIL_NOTIFICATIONS: process.env.ENABLE_EMAIL_NOTIFICATIONS === 'true',
