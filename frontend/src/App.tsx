@@ -28,6 +28,7 @@ import ProfessionalDashboard from "./pages/professional/Dashboard";
 import ProfessionalServiceOrders from "./pages/professional/ServiceOrders";
 import ProfessionalCRM from "./pages/professional/CRM";
 import ProfessionalCalendar from "./pages/professional/Calendar";
+import ProfessionalFinance from "./pages/professional/Finance";
 import ServiceChat from "./pages/services/ServiceChat";
 import ServiceDetails from "./pages/services/ServiceDetails";
 import ServiceSearch from "./pages/services/ServiceSearch";
@@ -96,6 +97,7 @@ const App: React.FC = () => {
                 <Route path="dashboard" element={<ProfessionalDashboard />} />
                 <Route path="crm" element={<ProfessionalCRM />} />
                 <Route path="agenda" element={<ProfessionalCalendar />} />
+                <Route path="financeiro" element={<ProfessionalFinance />} />
                 <Route path="services" element={<ProfessionalServiceOrders />} />
                 <Route path="services/:id" element={<OrderDetails />} />
                 <Route path="services/:id/chat" element={<ServiceChat />} />

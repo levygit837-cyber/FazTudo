@@ -29,3 +29,29 @@ export const requestWithdrawal = async (
   >("/wallet/withdraw", data);
   return extractData(response);
 };
+
+export interface ReleaseForecastItem {
+  grossAmount: number;
+  netAmount: number;
+  platformFee: number;
+  releaseDate: string;
+  serviceOrderId: number;
+}
+
+export interface ProfessionalFinancialOverview {
+  balance: number;
+  totalEarned: number;
+  totalWithdrawn: number;
+  totalFees: number;
+  pendingInEscrow: number;
+  feePercentage: number;
+  releaseForecast: ReleaseForecastItem[];
+  recentTransactions: Transaction[];
+}
+
+export const getProfessionalFinancialOverview = async (): Promise<ProfessionalFinancialOverview> => {
+  const response = await api.get<ApiResponse<ProfessionalFinancialOverview>>(
+    "/wallet/professional/overview"
+  );
+  return extractData(response);
+};
