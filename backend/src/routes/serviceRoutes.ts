@@ -126,6 +126,32 @@ router.post(
 );
 
 // ============================================
+// SCHEDULE ROUTES
+// ============================================
+
+// Get professional schedule
+router.get("/professionals/:id/schedule", serviceController.getProfessionalSchedule);
+
+// Update professional schedule
+router.put(
+  "/professionals/schedule",
+  verifyToken,
+  requireRole("PROFESSIONAL"),
+  requireVerified,
+  serviceController.updateProfessionalSchedule,
+);
+
+// Get available slots for a date
+router.get("/professionals/:id/available-slots", serviceController.getAvailableSlots);
+
+// Reschedule an order
+router.post(
+  "/orders/:id/reschedule",
+  verifyToken,
+  serviceController.rescheduleOrder,
+);
+
+// ============================================
 // PROPOSAL ROUTES
 // ============================================
 
