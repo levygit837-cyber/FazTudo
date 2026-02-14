@@ -57,9 +57,6 @@ const TransactionList: React.FC<TransactionListProps> = ({
       ? [{ id: "WITHDRAWAL", label: "Saques" }]
       : []),
     { id: "REFUND", label: "Reembolsos" },
-    ...(isProfessional
-      ? [{ id: "FEE", label: "Taxas" }]
-      : []),
     { id: "DEPOSIT", label: "Depositos" },
   ];
 

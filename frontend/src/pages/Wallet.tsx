@@ -6,7 +6,6 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Receipt,
-  Percent,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { StatsCard } from "../components/dashboard/StatsCard";
@@ -128,63 +127,55 @@ const Wallet: React.FC = () => {
           ))}
         </div>
       ) : summary ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-grid">
-          {isProfessional ? (
-            <>
-              <StatsCard
-                title="Ganhos Totais"
-                value={formatCurrency(summary.totalEarned || 0)}
-                icon={<DollarSign className="w-6 h-6" />}
-                color="green"
-              />
-              <StatsCard
-                title="Pendente em Escrow"
-                value={formatCurrency(summary.pendingInEscrow)}
-                icon={<Clock className="w-6 h-6" />}
-                color="yellow"
-              />
-              <StatsCard
-                title="Ja Sacado"
-                value={formatCurrency(summary.totalWithdrawn || 0)}
-                icon={<ArrowUpCircle className="w-6 h-6" />}
-                color="blue"
-              />
-              <StatsCard
-                title="Taxas"
-                value={formatCurrency(summary.totalFees || 0)}
-                icon={<Percent className="w-6 h-6" />}
-                color="red"
-              />
-            </>
-          ) : (
-            <>
-              <StatsCard
-                title="Total Gasto"
-                value={formatCurrency(summary.totalSpent || 0)}
-                icon={<Receipt className="w-6 h-6" />}
-                color="blue"
-              />
-              <StatsCard
-                title="Em Escrow"
-                value={formatCurrency(summary.pendingInEscrow)}
-                icon={<Clock className="w-6 h-6" />}
-                color="yellow"
-              />
-              <StatsCard
-                title="Reembolsos"
-                value={formatCurrency(summary.totalRefunded || 0)}
-                icon={<ArrowDownCircle className="w-6 h-6" />}
-                color="green"
-              />
-              <StatsCard
-                title="Saldo Atual"
-                value={formatCurrency(summary.balance)}
-                icon={<WalletIcon className="w-6 h-6" />}
-                color="primary"
-              />
-            </>
-          )}
-        </div>
+        isProfessional ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-grid">
+            <StatsCard
+              title="Ganhos Totais"
+              value={formatCurrency(summary.totalEarned || 0)}
+              icon={<DollarSign className="w-6 h-6" />}
+              color="green"
+            />
+            <StatsCard
+              title="Pendente em Escrow"
+              value={formatCurrency(summary.pendingInEscrow)}
+              icon={<Clock className="w-6 h-6" />}
+              color="yellow"
+            />
+            <StatsCard
+              title="Ja Sacado"
+              value={formatCurrency(summary.totalWithdrawn || 0)}
+              icon={<ArrowUpCircle className="w-6 h-6" />}
+              color="blue"
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-grid">
+            <StatsCard
+              title="Total Gasto"
+              value={formatCurrency(summary.totalSpent || 0)}
+              icon={<Receipt className="w-6 h-6" />}
+              color="blue"
+            />
+            <StatsCard
+              title="Em Escrow"
+              value={formatCurrency(summary.pendingInEscrow)}
+              icon={<Clock className="w-6 h-6" />}
+              color="yellow"
+            />
+            <StatsCard
+              title="Reembolsos"
+              value={formatCurrency(summary.totalRefunded || 0)}
+              icon={<ArrowDownCircle className="w-6 h-6" />}
+              color="green"
+            />
+            <StatsCard
+              title="Saldo Atual"
+              value={formatCurrency(summary.balance)}
+              icon={<WalletIcon className="w-6 h-6" />}
+              color="primary"
+            />
+          </div>
+        )
       ) : null}
 
       {/* Transactions */}
