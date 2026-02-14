@@ -306,6 +306,17 @@ const Layout: React.FC = () => {
                 </Link>
               )}
 
+              {/* CTA: Pedir Servico (clients only) */}
+              {isAuthenticated && isClient && (
+                <Link
+                  to="/client/orders/new"
+                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all no-underline"
+                >
+                  <FileText size={16} />
+                  Pedir Serviço
+                </Link>
+              )}
+
               {/* User menu or auth buttons */}
               {isAuthenticated ? (
                 <div className="relative" ref={userMenuRef}>

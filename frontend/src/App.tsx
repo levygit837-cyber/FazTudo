@@ -20,6 +20,7 @@ import Settings from "./pages/Settings";
 import VerifyAccount from "./pages/VerifyAccount";
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientServiceOrders from "./pages/client/ServiceOrders";
+import NewOrder from "./pages/client/NewOrder";
 import OrderDetails from "./pages/orders/OrderDetails";
 import CreateService from "./pages/professional/CreateService";
 import EditService from "./pages/professional/EditService";
@@ -75,6 +76,7 @@ const App: React.FC = () => {
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<ClientDashboard />} />
                 <Route path="orders" element={<ClientServiceOrders />} />
+                <Route path="orders/new" element={<NewOrder />} />
                 <Route path="orders/:id" element={<OrderDetails />} />
                 <Route path="orders/:id/chat" element={<ServiceChat />} />
                 <Route path="messages" element={<Navigate to="../orders" replace />} />

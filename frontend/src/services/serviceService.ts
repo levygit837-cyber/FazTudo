@@ -376,6 +376,43 @@ export const getOrderMessages = async (
   return normalizePage<Message>(extractData(response));
 };
 
+// ==================== SERVIÇOS - BRIEFS ====================
+
+/**
+ * Obtém template de brief para uma categoria
+ */
+export const getBriefTemplate = async (categorySlug: string): Promise<any> => {
+  const response = await api.get<ApiResponse<any>>(
+    `/services/briefs/templates/${categorySlug}`,
+  );
+  return extractData(response);
+};
+
+/**
+ * Cria pedido com brief inteligente
+ */
+export const createOrderWithBrief = async (data: {
+  title: string;
+  description?: string;
+  categoryId?: number;
+  urgencyLevel?: string;
+  priceRangeMin?: number;
+  priceRangeMax?: number;
+  briefData?: Record<string, any>;
+  mediaUrls?: string[];
+  notes?: string;
+  addressId?: number;
+  addressNotes?: string;
+  scheduledDate?: string;
+  serviceListingId?: number;
+}): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    "/services/orders/with-brief",
+    data,
+  );
+  return extractData(response);
+};
+
 export default {
   // Listings
   listServices,
@@ -401,4 +438,7 @@ export default {
   // Messages
   sendMessage,
   getOrderMessages,
+  // Briefs
+  getBriefTemplate,
+  createOrderWithBrief,
 };
