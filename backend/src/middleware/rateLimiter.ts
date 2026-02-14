@@ -49,3 +49,19 @@ export const sensitiveLimiter = rateLimit({
     statusCode: 429,
   },
 });
+
+/**
+ * Very strict limiter for financial operations (withdraw, payment release).
+ * 3 requests per 15 minutes per IP.
+ */
+export const financialLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Muitas operacoes financeiras. Tente novamente em 15 minutos.',
+    statusCode: 429,
+  },
+});

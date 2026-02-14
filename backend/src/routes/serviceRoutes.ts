@@ -7,6 +7,7 @@ import {
   requireVerified,
   authLogger,
 } from "../middleware/auth";
+import { financialLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
@@ -110,6 +111,7 @@ router.post(
   verifyToken,
   requireRole("CLIENT"),
   requireVerified,
+  financialLimiter,
   serviceController.createPayment,
 );
 
@@ -117,6 +119,7 @@ router.post(
 router.post(
   "/orders/:orderId/payments/release",
   verifyToken,
+  financialLimiter,
   serviceController.releasePayment,
 );
 

@@ -32,7 +32,7 @@ router.post("/verify-email", sensitiveLimiter, authController.verifyEmail);
 // Rotas protegidas (requerem autenticacao + validacao)
 router.get("/profile", verifyToken, authController.getProfile);
 router.put("/profile", verifyToken, validateBody(updateProfileSchema), authController.updateProfile);
-router.post("/change-password", verifyToken, validateBody(changePasswordSchema), authController.changePassword);
+router.post("/change-password", verifyToken, sensitiveLimiter, validateBody(changePasswordSchema), authController.changePassword);
 router.post(
   "/verification/document",
   verifyToken,
