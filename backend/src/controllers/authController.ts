@@ -203,6 +203,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (!user) {
+      // Timing-safe: still hash compare to prevent timing attacks
+      // that could reveal whether an email exists in the system
+      await comparePassword(password, "$2b$12$KIXTlzGhEO6tpMkLFdsrCuSaKDF.ISsnGrmFEvG5TuAyangKGr3PK");
       res.status(401).json(errorResponse("Invalid credentials"));
       return;
     }
