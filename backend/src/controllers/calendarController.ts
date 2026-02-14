@@ -30,9 +30,9 @@ export const getCalendarOverview = async (
 
     const userId = req.user.id;
     const monthStr = (req.query.month as string) || new Date().toISOString().slice(0, 7);
-    const [yearStr, monStr] = monthStr.split("-");
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monStr, 10) - 1; // JS months are 0-indexed
+    const parts = monthStr.split("-");
+    const year = parseInt(parts[0] || "2026", 10);
+    const month = parseInt(parts[1] || "1", 10) - 1; // JS months are 0-indexed
 
     const monthStart = new Date(year, month, 1);
     const monthEnd = new Date(year, month + 1, 1);
@@ -142,7 +142,7 @@ export const getCalendarDayDetail = async (
     }
 
     const userId = req.user.id;
-    const dateStr = req.params.date; // YYYY-MM-DD
+    const dateStr = req.params.date as string; // YYYY-MM-DD
 
     if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       res.status(400).json(errorResponse("Invalid date format. Use YYYY-MM-DD"));
@@ -194,8 +194,8 @@ export const getCalendarDayDetail = async (
     }> = [];
 
     if (isAvailable && startTime && endTime) {
-      const startH = parseInt(startTime.split(":")[0], 10);
-      const endH = parseInt(endTime.split(":")[0], 10);
+      const startH = parseInt(startTime.split(":")[0] || "8", 10);
+      const endH = parseInt(endTime.split(":")[0] || "18", 10);
 
       for (let h = startH; h < endH; h++) {
         const timeStr = `${String(h).padStart(2, "0")}:00`;
