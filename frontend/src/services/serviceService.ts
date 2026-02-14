@@ -413,6 +413,33 @@ export const rescheduleOrder = async (orderId: number, data: {
   return extractData(response);
 };
 
+// ==================== SERVIÇOS - DISPUTES ====================
+
+/**
+ * Abre uma disputa para um pedido
+ */
+export const createDispute = async (orderId: number, data: {
+  reason: string;
+  description: string;
+  attachments?: string[];
+}): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/disputes`,
+    data,
+  );
+  return extractData(response);
+};
+
+/**
+ * Obtém disputas de um pedido
+ */
+export const getOrderDisputes = async (orderId: number): Promise<any> => {
+  const response = await api.get<ApiResponse<any>>(
+    `/services/orders/${orderId}/disputes`,
+  );
+  return extractData(response);
+};
+
 // ==================== SERVIÇOS - PROPOSALS ====================
 
 /**

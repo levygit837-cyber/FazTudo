@@ -11,12 +11,15 @@ import {
   Send,
   CreditCard,
   CalendarClock,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import ProposalComparator from "../../components/orders/ProposalComparator";
 import RescheduleModal from "../../components/orders/RescheduleModal";
+import OrderTimeline from "../../components/orders/OrderTimeline";
+import DisputeModal from "../../components/orders/DisputeModal";
 import { SkeletonOrderCard, Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import {
   getOrderById,
@@ -73,6 +76,9 @@ const OrderDetails: React.FC = () => {
 
   // Reschedule state
   const [showReschedule, setShowReschedule] = useState(false);
+
+  // Dispute state
+  const [showDispute, setShowDispute] = useState(false);
 
   const isOrderClient = order?.clientId === user?.id;
   const isOrderProfessional = order?.professionalId === user?.id;
@@ -204,13 +210,13 @@ const OrderDetails: React.FC = () => {
 
   // Timeline steps
   const timelineSteps = [
-    { label: "Pedido Criado", date: order.createdAt, done: true, icon: <Clock className="w-4 h-4" /> },
-    { label: "Aceito", date: order.status !== "PENDING" && order.status !== "CANCELLED" ? order.startedAt || order.createdAt : null, done: ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION", "COMPLETED"].includes(order.status), icon: <CheckCircle className="w-4 h-4" /> },
-    { label: "Pagamento", date: activePayment?.paidAt, done: !!activePayment, icon: <DollarSign className="w-4 h-4" /> },
-    { label: "Em Andamento", date: order.startedAt, done: ["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION", "COMPLETED"].includes(order.status), icon: <Clock className="w-4 h-4" /> },
-    { label: "Aguardando confirmacao", date: order.status === "AWAITING_CLIENT_CONFIRMATION" ? order.updatedAt : null, done: ["AWAITING_CLIENT_CONFIRMATION", "COMPLETED"].includes(order.status), icon: <Clock className="w-4 h-4" /> },
-    { label: "Concluido", date: order.completedAt, done: order.status === "COMPLETED", icon: <CheckCircle className="w-4 h-4" /> },
-    { label: "Pagamento Liberado", date: hasReleasedPayment ? activePayment?.releasedAt : null, done: !!hasReleasedPayment, icon: <DollarSign className="w-4 h-4" /> },
+    { label: "Pedido Criado", date: order.createdAt, done: true },
+    { label: "Aceito", date: order.status !== "PENDING" && order.status !== "CANCELLED" ? order.startedAt || order.createdAt : null, done: ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION", "COMPLETED"].includes(order.status) },
+    { label: "Pagamento", date: activePayment?.paidAt, done: !!activePayment },
+    { label: "Em Andamento", date: order.startedAt, done: ["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION", "COMPLETED"].includes(order.status) },
+    { label: "Aguardando confirmacao", date: order.status === "AWAITING_CLIENT_CONFIRMATION" ? order.updatedAt : null, done: ["AWAITING_CLIENT_CONFIRMATION", "COMPLETED"].includes(order.status) },
+    { label: "Concluido", date: order.completedAt, done: order.status === "COMPLETED" },
+    { label: "Pagamento Liberado", date: hasReleasedPayment ? activePayment?.releasedAt : null, done: !!hasReleasedPayment },
   ];
 
   return (
@@ -279,36 +285,7 @@ const OrderDetails: React.FC = () => {
           {/* Timeline */}
           <div className="card">
             <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Progresso</h2>
-            <div className="relative">
-              {timelineSteps.map((step, index) => (
-                <div key={index} className="relative flex items-start gap-3 pb-6 last:pb-0">
-                  {/* Vertical connector line */}
-                  {index < timelineSteps.length - 1 && (
-                    <div className={`absolute left-4 top-8 w-0.5 h-[calc(100%-8px)] ${
-                      step.done ? "bg-green-300 dark:bg-green-700" : "bg-slate-200 dark:bg-slate-700"
-                    }`} />
-                  )}
-                  {/* Step circle */}
-                  <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                    step.done ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
-                  }`}>
-                    {step.icon}
-                  </div>
-                  {/* Step content */}
-                  <div className="flex-1 min-w-0 pt-1">
-                    <p className={`text-sm font-medium ${step.done ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}`}>
-                      {step.label}
-                    </p>
-                    {step.date && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{formatDateTime(step.date)}</p>
-                    )}
-                    {!step.done && !step.date && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500">Aguardando</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <OrderTimeline steps={timelineSteps} deadlineDate={order.deadlineDate} />
           </div>
 
           {/* Proposals (visible for PENDING orders) */}
@@ -490,6 +467,19 @@ const OrderDetails: React.FC = () => {
                 >
                   <CalendarClock className="w-4 h-4 mr-2" />
                   Reagendar
+                </button>
+              )}
+
+              {/* Abrir Disputa (ambos, em andamento ou aguardando confirmação) */}
+              {(isOrderClient || isOrderProfessional) &&
+                ["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION"].includes(order.status) && (
+                <button
+                  onClick={() => setShowDispute(true)}
+                  disabled={actionLoading}
+                  className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Abrir Disputa
                 </button>
               )}
 
@@ -737,6 +727,13 @@ const OrderDetails: React.FC = () => {
           onRescheduled={loadOrder}
         />
       )}
+
+      <DisputeModal
+        isOpen={showDispute}
+        onClose={() => setShowDispute(false)}
+        orderId={order.id}
+        onDisputeCreated={loadOrder}
+      />
 
       <ConfirmDialog
         isOpen={confirmAction !== null}
