@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as dashboardController from "../controllers/dashboardController";
 import * as calendarController from "../controllers/calendarController";
+import * as reputationController from "../controllers/reputationController";
 import { verifyToken } from "../middleware/auth";
 
 const router = Router();
@@ -10,5 +11,6 @@ router.get("/recent-orders", verifyToken, dashboardController.getRecentOrders);
 router.get("/professional/crm", verifyToken, dashboardController.getProfessionalCrmStats);
 router.get("/professional/calendar", verifyToken, calendarController.getCalendarOverview);
 router.get("/professional/calendar/:date", verifyToken, calendarController.getCalendarDayDetail);
+router.get("/professional/reputation", verifyToken, reputationController.getReputationAnalytics);
 
 export default router;
