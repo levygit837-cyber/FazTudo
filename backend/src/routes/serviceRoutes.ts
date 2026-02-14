@@ -126,6 +126,50 @@ router.post(
 );
 
 // ============================================
+// PROPOSAL ROUTES
+// ============================================
+
+// Professional submits proposal for an order
+router.post(
+  "/orders/:orderId/proposals",
+  verifyToken,
+  requireRole("PROFESSIONAL"),
+  requireVerified,
+  serviceController.createProposal,
+);
+
+// Get proposals for an order
+router.get(
+  "/orders/:orderId/proposals",
+  verifyToken,
+  serviceController.getOrderProposals,
+);
+
+// Client accepts a proposal
+router.post(
+  "/orders/:orderId/proposals/:proposalId/accept",
+  verifyToken,
+  requireRole("CLIENT"),
+  serviceController.acceptProposal,
+);
+
+// Client rejects a proposal
+router.post(
+  "/orders/:orderId/proposals/:proposalId/reject",
+  verifyToken,
+  requireRole("CLIENT"),
+  serviceController.rejectProposal,
+);
+
+// Professional withdraws their proposal
+router.post(
+  "/orders/:orderId/proposals/:proposalId/withdraw",
+  verifyToken,
+  requireRole("PROFESSIONAL"),
+  serviceController.withdrawProposal,
+);
+
+// ============================================
 // MERCADOPAGO WEBHOOK (público — validado por assinatura)
 // ============================================
 
