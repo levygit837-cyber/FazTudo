@@ -93,6 +93,7 @@ model User {
   ratingAverage Float      @default(0.0)
   totalReviews  Int        @default(0)
   balance       Float      @default(0.0)
+  tokenVersion  Int        @default(0)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 

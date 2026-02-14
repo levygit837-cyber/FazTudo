@@ -22,6 +22,7 @@ export interface JwtPayload {
   name: string;
   role: string;
   status: string;
+  tokenVersion: number;
 }
 
 // Middleware de verificação de token
@@ -66,6 +67,7 @@ export const verifyToken = async (
         role: true,
         status: true,
         isVerified: true,
+        tokenVersion: true,
       },
     });
 
@@ -81,6 +83,15 @@ export const verifyToken = async (
       res.status(403).json({
         success: false,
         message: "Conta não está ativa",
+      });
+      return;
+    }
+
+    // Verify token version matches (invalidated on password change)
+    if (user.tokenVersion !== decoded.tokenVersion) {
+      res.status(401).json({
+        success: false,
+        message: "Token invalidado. Faça login novamente.",
       });
       return;
     }
@@ -204,6 +215,7 @@ export const generateToken = (user: {
   name: string;
   role: string;
   status: string;
+  tokenVersion: number;
 }): string => {
   const payload: JwtPayload = {
     id: user.id,
@@ -211,6 +223,7 @@ export const generateToken = (user: {
     name: user.name,
     role: user.role,
     status: user.status,
+    tokenVersion: user.tokenVersion,
   };
 
   return jwt.sign(payload, env.JWT_SECRET, {

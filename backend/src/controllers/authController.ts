@@ -138,6 +138,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         bio: true,
         ratingAverage: true,
         totalReviews: true,
+        tokenVersion: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -150,6 +151,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       name: user.name,
       role: user.role,
       status: user.status,
+      tokenVersion: user.tokenVersion,
     });
 
     res.status(201).json(
@@ -194,6 +196,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         bio: true,
         ratingAverage: true,
         totalReviews: true,
+        tokenVersion: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -227,6 +230,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       name: user.name,
       role: user.role,
       status: user.status,
+      tokenVersion: user.tokenVersion,
     });
 
     res.status(200).json(
@@ -402,9 +406,13 @@ export const changePassword = async (
     const hashedPassword = await hashPassword(newPassword);
 
     // Update password
+    // Update password and increment tokenVersion to invalidate existing tokens
     await prisma.user.update({
       where: { id: req.user.id },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        tokenVersion: { increment: 1 },
+      },
     });
 
     res
