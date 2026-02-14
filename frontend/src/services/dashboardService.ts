@@ -39,3 +39,18 @@ export const getRecentOrders = async (limit: number = 5): Promise<ServiceOrder[]
   );
   return extractData(response).orders;
 };
+
+export interface ProfessionalCrmStats {
+  ordersToday: number;
+  ordersLast7Days: number;
+  pendingOrders: number;
+  monthlyRevenue: number;
+  feePercentage: number;
+}
+
+export const getProfessionalCrmStats = async (): Promise<ProfessionalCrmStats> => {
+  const response = await api.get<ApiResponse<ProfessionalCrmStats>>(
+    "/dashboard/professional/crm"
+  );
+  return extractData(response);
+};
