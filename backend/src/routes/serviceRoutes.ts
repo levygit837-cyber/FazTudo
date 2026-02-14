@@ -152,6 +152,25 @@ router.post(
 );
 
 // ============================================
+// DISPUTE ROUTES
+// ============================================
+
+// Open a dispute for an order
+router.post(
+  "/orders/:orderId/disputes",
+  verifyToken,
+  requireVerified,
+  serviceController.createDispute,
+);
+
+// Get disputes for an order
+router.get(
+  "/orders/:orderId/disputes",
+  verifyToken,
+  serviceController.getOrderDisputes,
+);
+
+// ============================================
 // PROPOSAL ROUTES
 // ============================================
 
