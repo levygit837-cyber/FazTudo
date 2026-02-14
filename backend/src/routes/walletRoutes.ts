@@ -4,6 +4,7 @@ import { verifyToken, requireRole, requireVerified } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { withdrawalSchema } from "../middleware/validation";
 import { financialLimiter } from "../middleware/rateLimiter";
+import { auditLog } from "../middleware/auditLog";
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.post(
   requireRole("PROFESSIONAL"),
   requireVerified,
   financialLimiter,
+  auditLog("WITHDRAWAL_REQUEST"),
   validateBody(withdrawalSchema),
   walletController.requestWithdrawal,
 );
