@@ -14,6 +14,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
+import ProposalComparator from "../../components/orders/ProposalComparator";
 import { SkeletonOrderCard, Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import {
   getOrderById,
@@ -304,6 +305,15 @@ const OrderDetails: React.FC = () => {
               ))}
             </div>
           </div>
+
+          {/* Proposals (visible for PENDING orders) */}
+          {order.status === "PENDING" && (
+            <ProposalComparator
+              orderId={order.id}
+              isClient={isOrderClient}
+              onProposalAccepted={loadOrder}
+            />
+          )}
 
           {/* Ações */}
           <div className="card">

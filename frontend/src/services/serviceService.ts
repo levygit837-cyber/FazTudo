@@ -376,6 +376,56 @@ export const getOrderMessages = async (
   return normalizePage<Message>(extractData(response));
 };
 
+// ==================== SERVIÇOS - PROPOSALS ====================
+
+/**
+ * Obtém propostas para um pedido
+ */
+export const getProposals = async (orderId: number): Promise<any[]> => {
+  const response = await api.get<ApiResponse<any>>(
+    `/services/orders/${orderId}/proposals`,
+  );
+  const data = extractData(response);
+  return data.proposals || [];
+};
+
+/**
+ * Profissional cria proposta para um pedido
+ */
+export const createProposal = async (orderId: number, data: {
+  price: number;
+  estimatedDays?: number;
+  estimatedHours?: number;
+  description: string;
+  guaranteeDays?: number;
+}): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/proposals`,
+    data,
+  );
+  return extractData(response);
+};
+
+/**
+ * Cliente aceita uma proposta
+ */
+export const acceptProposal = async (orderId: number, proposalId: number): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/proposals/${proposalId}/accept`,
+  );
+  return extractData(response);
+};
+
+/**
+ * Cliente rejeita uma proposta
+ */
+export const rejectProposal = async (orderId: number, proposalId: number): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/proposals/${proposalId}/reject`,
+  );
+  return extractData(response);
+};
+
 // ==================== SERVIÇOS - BRIEFS ====================
 
 /**
@@ -441,4 +491,9 @@ export default {
   // Briefs
   getBriefTemplate,
   createOrderWithBrief,
+  // Proposals
+  getProposals,
+  createProposal,
+  acceptProposal,
+  rejectProposal,
 };
