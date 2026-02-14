@@ -22,6 +22,7 @@ import {
   getServiceById,
   ServiceListingWithProfessional,
 } from "../../services/serviceService";
+import AvailabilityCalendar from "../../components/orders/AvailabilityCalendar";
 import { formatCurrency, formatRating, formatReviewCount } from "../../utils/formatters";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
@@ -433,6 +434,12 @@ const ServiceDetails: React.FC = () => {
                 <MessageCircle className="w-4 h-4" />
                 Enviar mensagem
               </button>
+            </div>
+
+            {/* Disponibilidade do profissional */}
+            <div className="card">
+              <h3 className="text-lg font-semibold mb-4">Disponibilidade</h3>
+              <AvailabilityCalendar professionalId={service.professional.id} />
             </div>
           </div>
 

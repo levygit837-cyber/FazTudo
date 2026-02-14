@@ -10,11 +10,13 @@ import {
   ArrowLeft,
   Send,
   CreditCard,
+  CalendarClock,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import ProposalComparator from "../../components/orders/ProposalComparator";
+import RescheduleModal from "../../components/orders/RescheduleModal";
 import { SkeletonOrderCard, Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import {
   getOrderById,
@@ -68,6 +70,9 @@ const OrderDetails: React.FC = () => {
 
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState("pix");
+
+  // Reschedule state
+  const [showReschedule, setShowReschedule] = useState(false);
 
   const isOrderClient = order?.clientId === user?.id;
   const isOrderProfessional = order?.professionalId === user?.id;
@@ -475,6 +480,19 @@ const OrderDetails: React.FC = () => {
                 </button>
               )}
 
+              {/* Reagendar (ambos, aceito ou em andamento) */}
+              {(isOrderClient || isOrderProfessional) &&
+                ["ACCEPTED", "IN_PROGRESS"].includes(order.status) && order.professionalId && (
+                <button
+                  onClick={() => setShowReschedule(true)}
+                  disabled={actionLoading}
+                  className="btn btn-outline"
+                >
+                  <CalendarClock className="w-4 h-4 mr-2" />
+                  Reagendar
+                </button>
+              )}
+
               {/* Status finais */}
               {order.status === "CANCELLED" && (
                 <p className="text-sm text-slate-500 dark:text-slate-400">Este pedido foi cancelado.</p>
@@ -709,6 +727,16 @@ const OrderDetails: React.FC = () => {
           )}
         </div>
       </div>
+
+      {order.professionalId && (
+        <RescheduleModal
+          isOpen={showReschedule}
+          onClose={() => setShowReschedule(false)}
+          orderId={order.id}
+          professionalId={order.professionalId}
+          onRescheduled={loadOrder}
+        />
+      )}
 
       <ConfirmDialog
         isOpen={confirmAction !== null}

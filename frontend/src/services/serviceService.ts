@@ -376,6 +376,43 @@ export const getOrderMessages = async (
   return normalizePage<Message>(extractData(response));
 };
 
+// ==================== SERVIÇOS - SCHEDULE ====================
+
+/**
+ * Obtém agenda semanal de um profissional
+ */
+export const getProfessionalSchedule = async (professionalId: number): Promise<any> => {
+  const response = await api.get<ApiResponse<any>>(
+    `/services/professionals/${professionalId}/schedule`,
+  );
+  return extractData(response);
+};
+
+/**
+ * Obtém slots disponíveis para uma data
+ */
+export const getAvailableSlots = async (professionalId: number, date: string): Promise<any> => {
+  const response = await api.get<ApiResponse<any>>(
+    `/services/professionals/${professionalId}/available-slots`,
+    { params: { date } },
+  );
+  return extractData(response);
+};
+
+/**
+ * Reagenda um pedido
+ */
+export const rescheduleOrder = async (orderId: number, data: {
+  newDate: string;
+  reason?: string;
+}): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/reschedule`,
+    data,
+  );
+  return extractData(response);
+};
+
 // ==================== SERVIÇOS - PROPOSALS ====================
 
 /**
