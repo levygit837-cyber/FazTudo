@@ -1,0 +1,77 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+
+# Database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Secrets / credentials
+*.pem
+*.key
+credentials.json
+service-account.json
+
+# Agent files
+AGENTS.md
+CLAUDE.md
+.co/
+.claude/
+.claude-flow/
+.coa/
+.opencode/
+.swarm/
+arms_cache/
+1mcpserver/
+agentql-mcp/
+agentrpc/
+coa-codesearch-mcp/
+FazTudoMelhorias/
+LOGO/
+.mcp.json
+Documentacao.MD
+GUIA-FRONTEND.md
+.codesearchignore

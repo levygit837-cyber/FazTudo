@@ -1,0 +1,403 @@
+import api, { ApiResponse, extractData } from "./api";
+import { Message, ServiceListing, ServiceOrder, ServiceOrderStatus } from "../types";
+
+// ==================== TIPOS ====================
+
+export interface ServiceListParams {
+  categoryId?: number;
+  search?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  available?: boolean;
+  availableOnly?: "true" | "false" | "all";
+  professionalId?: number;
+  page?: number;
+  limit?: number;
+  sortBy?: "price" | "rating" | "recent";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface ServiceListingWithProfessional extends Omit<
+  ServiceListing,
+  "professional" | "category"
+> {
+  professional: {
+    id: number;
+    name: string;
+    profileImage?: string;
+    ratingAverage: number;
+    totalReviews: number;
+  };
+  category: {
+    id: number;
+    name: string;
+    icon?: string;
+  };
+  completedOrders?: number;
+  completedOrdersCount?: number;
+}
+
+export interface NormalizedPage<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface CreateServiceListingData {
+  title: string;
+  description: string;
+  price: number;
+  estimatedHours?: number;
+  categoryId: number;
+  images?: string[];
+  tags?: string[];
+}
+
+export interface UpdateServiceListingData
+  extends Partial<CreateServiceListingData> {
+  isAvailable?: boolean;
+}
+
+export interface CreateOrderData {
+  serviceListingId: number;
+  title: string;
+  scheduledDate?: string;
+  addressId?: number;
+  addressNotes?: string;
+  description?: string;
+}
+
+interface BackendPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+interface BackendServiceListData {
+  services: ServiceListingWithProfessional[];
+  pagination: BackendPagination;
+}
+
+interface BackendOrderListData {
+  serviceOrders: ServiceOrder[];
+  pagination: BackendPagination;
+}
+
+interface BackendMessagesData {
+  messages: Message[];
+  pagination: BackendPagination;
+}
+
+type RawPagePayload<T> = {
+  data?: T[];
+  items?: T[];
+  services?: T[];
+  serviceOrders?: T[];
+  messages?: T[];
+  pagination?: BackendPagination;
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+};
+
+const normalizePage = <T>(raw: RawPagePayload<T>): NormalizedPage<T> => {
+  const items =
+    raw.items ||
+    raw.data ||
+    raw.services ||
+    raw.serviceOrders ||
+    raw.messages ||
+    [];
+
+  if (raw.pagination) {
+    return {
+      items,
+      total: raw.pagination.total,
+      page: raw.pagination.page,
+      limit: raw.pagination.limit,
+      totalPages: raw.pagination.totalPages,
+    };
+  }
+
+  return {
+    items,
+    total: raw.total || items.length,
+    page: raw.page || 1,
+    limit: raw.limit || items.length || 1,
+    totalPages: raw.totalPages || 1,
+  };
+};
+
+// ==================== SERVIÇOS - LISTINGS ====================
+
+/**
+ * Lista serviços disponíveis
+ */
+export const listServices = async (
+  params?: ServiceListParams,
+): Promise<NormalizedPage<ServiceListingWithProfessional>> => {
+  const normalizedParams: Record<string, unknown> = { ...(params || {}) };
+
+  if (params?.availableOnly) {
+    normalizedParams.availableOnly = params.availableOnly;
+  } else if (typeof params?.available === "boolean") {
+    normalizedParams.availableOnly = params.available ? "true" : "false";
+  }
+
+  delete normalizedParams.available;
+
+  const response = await api.get<ApiResponse<BackendServiceListData | any>>(
+    "/services",
+    { params: normalizedParams },
+  );
+  return normalizePage<ServiceListingWithProfessional>(extractData(response));
+};
+
+/**
+ * Obtém detalhes de um serviço
+ */
+export const getServiceById = async (
+  id: number,
+): Promise<ServiceListingWithProfessional> => {
+  const response = await api.get<ApiResponse<any>>(`/services/${id}`);
+  const data = extractData(response);
+  return data.service || data;
+};
+
+/**
+ * Cria um novo serviço (profissional)
+ */
+export const createService = async (
+  data: CreateServiceListingData,
+): Promise<ServiceListing> => {
+  const response = await api.post<ApiResponse<any>>("/services", data);
+  const payload = extractData(response);
+  return payload.service || payload;
+};
+
+/**
+ * Atualiza um serviço (profissional)
+ */
+export const updateService = async (
+  id: number,
+  data: UpdateServiceListingData,
+): Promise<ServiceListing> => {
+  const response = await api.put<ApiResponse<any>>(`/services/${id}`, data);
+  const payload = extractData(response);
+  return payload.service || payload;
+};
+
+/**
+ * Remove um serviço (profissional)
+ */
+export const deleteService = async (id: number): Promise<void> => {
+  await api.delete(`/services/${id}`);
+};
+
+// ==================== SERVIÇOS - ORDERS ====================
+
+/**
+ * Cria um novo pedido (cliente)
+ */
+export const createOrder = async (data: CreateOrderData): Promise<ServiceOrder> => {
+  const response = await api.post<ApiResponse<any>>("/services/orders", data);
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
+};
+
+/**
+ * Lista pedidos do usuário
+ */
+export const listOrders = async (params?: {
+  status?: ServiceOrderStatus | "all";
+  role?: "client" | "professional";
+  page?: number;
+  limit?: number;
+}): Promise<NormalizedPage<ServiceOrder>> => {
+  const response = await api.get<ApiResponse<BackendOrderListData | any>>(
+    "/services/orders",
+    { params },
+  );
+  return normalizePage<ServiceOrder>(extractData(response));
+};
+
+/**
+ * Obtém detalhes de um pedido
+ */
+export const getOrderById = async (id: number): Promise<ServiceOrder> => {
+  const response = await api.get<ApiResponse<any>>(`/services/orders/${id}`);
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
+};
+
+/**
+ * Aceita um pedido (profissional)
+ */
+export const acceptOrder = async (id: number): Promise<ServiceOrder> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${id}/accept`,
+  );
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
+};
+
+/**
+ * Inicia um serviço (profissional)
+ */
+export const startOrder = async (id: number): Promise<ServiceOrder> => {
+  const response = await api.post<ApiResponse<any>>(`/services/orders/${id}/start`);
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
+};
+
+/**
+ * Profissional marca serviço como entregue
+ */
+export const submitOrderCompletion = async (id: number): Promise<ServiceOrder> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${id}/submit-completion`,
+  );
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
+};
+
+/**
+ * Compatibilidade: endpoint antigo /complete
+ */
+export const completeOrder = async (id: number): Promise<ServiceOrder> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${id}/complete`,
+  );
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
+};
+
+/**
+ * Cliente confirma conclusão
+ */
+export const confirmOrderCompletion = async (id: number): Promise<ServiceOrder> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${id}/confirm-completion`,
+  );
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
+};
+
+/**
+ * Cancela um pedido
+ */
+export const cancelOrder = async (
+  id: number,
+  reason?: string,
+): Promise<ServiceOrder> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${id}/cancel`,
+    { reason },
+  );
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
+};
+
+// ==================== SERVIÇOS - PAYMENTS ====================
+
+/**
+ * Cria pagamento para um pedido (cliente)
+ */
+export const createPayment = async (
+  orderId: number,
+  paymentMethod: string,
+): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/payments`,
+    { paymentMethod },
+  );
+  return extractData(response);
+};
+
+/**
+ * Libera pagamento do escrow
+ */
+export const releasePayment = async (orderId: number): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/payments/release`,
+  );
+  return extractData(response);
+};
+
+// ==================== SERVIÇOS - REVIEWS ====================
+
+/**
+ * Cria avaliação para um pedido
+ */
+export const createReview = async (
+  orderId: number,
+  data: { rating: number; comment?: string; isProfessional?: boolean },
+): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/reviews`,
+    data,
+  );
+  return extractData(response);
+};
+
+// ==================== SERVIÇOS - MESSAGES ====================
+
+/**
+ * Envia mensagem em um pedido
+ */
+export const sendMessage = async (
+  orderId: number,
+  content: string,
+): Promise<Message> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/messages`,
+    { content },
+  );
+  const payload = extractData(response);
+  return payload.message || payload;
+};
+
+/**
+ * Lista mensagens de um pedido
+ */
+export const getOrderMessages = async (
+  orderId: number,
+  params?: { page?: number; limit?: number },
+): Promise<NormalizedPage<Message>> => {
+  const response = await api.get<ApiResponse<BackendMessagesData | any>>(
+    `/services/orders/${orderId}/messages`,
+    { params },
+  );
+  return normalizePage<Message>(extractData(response));
+};
+
+export default {
+  // Listings
+  listServices,
+  getServiceById,
+  createService,
+  updateService,
+  deleteService,
+  // Orders
+  createOrder,
+  listOrders,
+  getOrderById,
+  acceptOrder,
+  startOrder,
+  submitOrderCompletion,
+  completeOrder,
+  confirmOrderCompletion,
+  cancelOrder,
+  // Payments
+  createPayment,
+  releasePayment,
+  // Reviews
+  createReview,
+  // Messages
+  sendMessage,
+  getOrderMessages,
+};
