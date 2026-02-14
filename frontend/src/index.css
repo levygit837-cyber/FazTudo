@@ -247,7 +247,7 @@
 
   /* Cards */
   .card {
-    @apply bg-white rounded-xl shadow-md overflow-hidden border border-slate-200;
+    @apply bg-white rounded-xl shadow-md overflow-hidden border border-slate-200 p-5;
   }
 
   html.dark .card {

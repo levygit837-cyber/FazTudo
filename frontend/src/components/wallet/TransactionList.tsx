@@ -74,7 +74,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
 
   if (loading) {
     return (
-      <div className="card">
+      <div className="card !p-0">
         <div className="p-4 border-b border-slate-200 dark:border-slate-700">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             Historico de Transacoes
@@ -86,7 +86,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
   }
 
   return (
-    <div className="card">
+    <div className="card !p-0">
       <div className="p-4 border-b border-slate-200 dark:border-slate-700">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3">
           Historico de Transacoes
