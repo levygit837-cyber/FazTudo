@@ -352,6 +352,20 @@ export interface Certification {
 // API REQUEST/RESPONSE TYPES
 // ============================================
 
+export interface CheckoutResponse {
+  payment: Payment;
+  checkout: {
+    preferenceId: string;
+    checkoutUrl: string;
+  } | null;
+  feeBreakdown: {
+    totalAmount: number;
+    platformFeePercentage: number;
+    platformFee: number;
+    professionalAmount: number;
+  };
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;

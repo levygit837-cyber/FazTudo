@@ -1,5 +1,5 @@
 import api, { ApiResponse, extractData } from "./api";
-import { Message, ServiceListing, ServiceOrder, ServiceOrderStatus } from "../types";
+import { CheckoutResponse, Message, ServiceListing, ServiceOrder, ServiceOrderStatus } from "../types";
 
 // ==================== TIPOS ====================
 
@@ -306,12 +306,13 @@ export const cancelOrder = async (
 
 /**
  * Cria pagamento para um pedido (cliente)
+ * Retorna checkout URL do MercadoPago ou fallback local
  */
 export const createPayment = async (
   orderId: number,
   paymentMethod: string,
-): Promise<any> => {
-  const response = await api.post<ApiResponse<any>>(
+): Promise<CheckoutResponse> => {
+  const response = await api.post<ApiResponse<CheckoutResponse>>(
     `/services/orders/${orderId}/payments`,
     { paymentMethod },
   );

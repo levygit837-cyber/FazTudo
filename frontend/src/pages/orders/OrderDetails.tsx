@@ -95,6 +95,23 @@ const OrderDetails: React.FC = () => {
     loadOrder();
   }, [id]);
 
+  // Handle payment return from MercadoPago
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    if (paymentStatus === "success") {
+      toast.success("Pagamento aprovado! Aguardando confirmação.");
+    } else if (paymentStatus === "failure") {
+      toast.error("Pagamento", "Pagamento não foi aprovado. Tente novamente.");
+    } else if (paymentStatus === "pending") {
+      toast.info("Pagamento pendente. Você será notificado quando for confirmado.");
+    }
+    // Clean URL params
+    if (paymentStatus) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const handleAction = async (action: () => Promise<any>) => {
     try {
       setActionLoading(true);
@@ -128,6 +145,29 @@ const OrderDetails: React.FC = () => {
     }
   };
 
+  const handlePayment = async () => {
+    if (!order) return;
+    try {
+      setActionLoading(true);
+      setError(null);
+      const result = await createPayment(order.id, paymentMethod);
+      if (result.checkout?.checkoutUrl) {
+        // Redirect to MercadoPago checkout
+        window.location.href = result.checkout.checkoutUrl;
+      } else {
+        // Fallback: payment processed locally
+        await loadOrder();
+        toast.success("Pagamento realizado com sucesso!");
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Erro ao processar pagamento";
+      setError(msg);
+      toast.error("Erro", msg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleSubmitReview = async () => {
     if (!order) return;
     try {
@@ -151,7 +191,7 @@ const OrderDetails: React.FC = () => {
   );
   if (!order) return <div className="text-center py-12 text-slate-600 dark:text-slate-400">Pedido nao encontrado</div>;
 
-  const activePayment = order.payments?.find((p) => p.status === "HELD" || p.status === "RELEASED");
+  const activePayment = order.payments?.find((p) => p.status === "HELD" || p.status === "RELEASED" || p.status === "PENDING");
   const hasPendingPayment = order.payments?.some((p) => p.status === "HELD");
   const hasReleasedPayment = order.payments?.some((p) => p.status === "RELEASED");
   const needsPayment = !order.payments?.length || order.payments.every((p) => p.status === "FAILED" || p.status === "REFUNDED");
@@ -328,9 +368,7 @@ const OrderDetails: React.FC = () => {
                     ))}
                   </div>
                   <button
-                    onClick={() =>
-                      handleAction(() => createPayment(order.id, paymentMethod))
-                    }
+                    onClick={handlePayment}
                     disabled={actionLoading}
                     className="btn btn-primary"
                   >
