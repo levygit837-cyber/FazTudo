@@ -378,19 +378,8 @@ export const changePassword = async (
 
     const { currentPassword, newPassword }: ChangePasswordBody = req.body;
 
-    if (!currentPassword || !newPassword) {
-      res
-        .status(400)
-        .json(errorResponse("Current password and new password are required"));
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      res
-        .status(400)
-        .json(errorResponse("New password must be at least 6 characters long"));
-      return;
-    }
+    // Validation is handled by validateBody(changePasswordSchema) middleware
+    // which enforces 8+ chars with uppercase, lowercase, and number
 
     // Get user with password
     const user = await prisma.user.findUnique({
