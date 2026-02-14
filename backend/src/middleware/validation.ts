@@ -112,7 +112,10 @@ export const updateServiceSchema = createServiceSchema.partial().refine(
 
 export const withdrawalSchema = z.object({
   amount: positiveAmountSchema
-    .pipe(z.number().min(10, 'Valor minimo para saque e R$ 10,00')),
+    .pipe(z.number()
+      .min(10, 'Valor minimo para saque e R$ 10,00')
+      .max(50000, 'Valor maximo por saque e R$ 50.000,00')
+    ),
 });
 
 // ============================================
