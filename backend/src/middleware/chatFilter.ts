@@ -25,7 +25,14 @@ const SOCIAL_PATTERNS = [
   /(?:linkedin)\.com\/in\/[a-zA-Z0-9_.]+/gi,
   /(?:wa\.me|api\.whatsapp\.com)\/\d+/gi,
   /(?:t\.me)\/[a-zA-Z0-9_.]+/gi,
+  /(?:tiktok\.com\/@?)[a-zA-Z0-9_.]+/gi,
+  /(?:youtube\.com\/(?:@|channel\/|c\/)?)[a-zA-Z0-9_.]+/gi,
   /@[a-zA-Z0-9_.]{3,30}(?=\s|$|[.,!?])/g, // @username patterns
+];
+
+// Social media keywords with identifiers (e.g., "insta: meu_perfil")
+const SOCIAL_KEYWORD_PATTERNS = [
+  /(?:insta|instagram|face|facebook|twitter|tiktok|telegram|linkedin)[\s:]+[a-zA-Z0-9_.@/]+/gi,
 ];
 
 // CPF: XXX.XXX.XXX-XX
@@ -37,7 +44,42 @@ const CNPJ_REGEX = /\d{2}\.?\d{3}\.?\d{3}\/?\d{4}[-.]?\d{2}/g;
 // WhatsApp mentions
 const WHATSAPP_REGEX = /(?:whats?\s*app|wpp|zap|zapzap)[\s:]*\d*/gi;
 
+// PIX key mentions
+const PIX_REGEX = /(?:chave\s*)?pix[\s:]+\S+/gi;
+
+// Phone numbers written in words (Portuguese)
+const PHONE_WORDS_REGEX = /(?:(?:meu\s+)?(?:n[uú]mero|tel(?:efone)?|celular|contato)\s+[eé:]\s*).{5,50}/gi;
+
+// Numbers written as words (attempts to bypass)
+const NUMBER_WORDS = /(?:zero|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|meia|sete|oito|nove)(?:\s+(?:zero|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|meia|sete|oito|nove)){6,}/gi;
+
+// URL patterns (generic)
+const URL_REGEX = /https?:\/\/[^\s]+/gi;
+
+// "Me liga", "me chama", "me adiciona" + variations
+const CONTACT_REQUEST_REGEX = /(?:me\s+(?:liga|chama|adiciona|manda|envia)\s*(?:no|na|em|pelo)?)\s*(?:whatsapp|wpp|zap|telegram|insta|instagram|face|facebook|email)/gi;
+
 const PLACEHOLDER = "***";
+
+/**
+ * Helper to test and replace with a regex, resetting lastIndex for global regexes.
+ */
+function testAndReplace(
+  text: string,
+  regex: RegExp,
+  blockedTypes: string[],
+  typeName: string,
+): string {
+  regex.lastIndex = 0;
+  if (regex.test(text)) {
+    if (!blockedTypes.includes(typeName)) {
+      blockedTypes.push(typeName);
+    }
+    regex.lastIndex = 0;
+    text = text.replace(regex, PLACEHOLDER);
+  }
+  return text;
+}
 
 /**
  * Filters personal contact information from chat messages.
@@ -48,46 +90,58 @@ export function filterChatContent(content: string): FilterResult {
   const blockedTypes: string[] = [];
 
   // Check phone numbers
-  if (PHONE_REGEX.test(sanitized)) {
-    blockedTypes.push("telefone");
-    sanitized = sanitized.replace(PHONE_REGEX, PLACEHOLDER);
-  }
+  sanitized = testAndReplace(sanitized, PHONE_REGEX, blockedTypes, "telefone");
 
   // Check emails
-  if (EMAIL_REGEX.test(sanitized)) {
-    blockedTypes.push("email");
-    sanitized = sanitized.replace(EMAIL_REGEX, PLACEHOLDER);
+  sanitized = testAndReplace(sanitized, EMAIL_REGEX, blockedTypes, "email");
+
+  // Check social media URLs
+  for (const pattern of SOCIAL_PATTERNS) {
+    sanitized = testAndReplace(sanitized, pattern, blockedTypes, "rede social");
   }
 
-  // Check social media
-  for (const pattern of SOCIAL_PATTERNS) {
-    if (pattern.test(sanitized)) {
-      if (!blockedTypes.includes("rede social")) {
-        blockedTypes.push("rede social");
-      }
-      sanitized = sanitized.replace(pattern, PLACEHOLDER);
-    }
+  // Check social media keywords
+  for (const pattern of SOCIAL_KEYWORD_PATTERNS) {
+    sanitized = testAndReplace(sanitized, pattern, blockedTypes, "rede social");
   }
 
   // Check CPF
-  if (CPF_REGEX.test(sanitized)) {
-    blockedTypes.push("CPF");
-    sanitized = sanitized.replace(CPF_REGEX, PLACEHOLDER);
-  }
+  sanitized = testAndReplace(sanitized, CPF_REGEX, blockedTypes, "CPF");
 
   // Check CNPJ
-  if (CNPJ_REGEX.test(sanitized)) {
-    blockedTypes.push("CNPJ");
-    sanitized = sanitized.replace(CNPJ_REGEX, PLACEHOLDER);
-  }
+  sanitized = testAndReplace(sanitized, CNPJ_REGEX, blockedTypes, "CNPJ");
 
   // Check WhatsApp mentions
-  if (WHATSAPP_REGEX.test(sanitized)) {
-    if (!blockedTypes.includes("telefone")) {
-      blockedTypes.push("telefone");
+  sanitized = testAndReplace(sanitized, WHATSAPP_REGEX, blockedTypes, "telefone");
+
+  // Check PIX keys
+  sanitized = testAndReplace(sanitized, PIX_REGEX, blockedTypes, "chave PIX");
+
+  // Check phone numbers as words
+  sanitized = testAndReplace(sanitized, NUMBER_WORDS, blockedTypes, "telefone");
+
+  // Check contact request patterns
+  sanitized = testAndReplace(sanitized, CONTACT_REQUEST_REGEX, blockedTypes, "solicitação de contato");
+
+  // Check generic URLs (except platform URLs)
+  URL_REGEX.lastIndex = 0;
+  const urlMatches = sanitized.match(URL_REGEX);
+  if (urlMatches) {
+    const externalUrls = urlMatches.filter(
+      (url) => !url.includes("faztudo") && !url.includes("localhost"),
+    );
+    if (externalUrls.length > 0) {
+      if (!blockedTypes.includes("link externo")) {
+        blockedTypes.push("link externo");
+      }
+      for (const url of externalUrls) {
+        sanitized = sanitized.replace(url, PLACEHOLDER);
+      }
     }
-    sanitized = sanitized.replace(WHATSAPP_REGEX, PLACEHOLDER);
   }
+
+  // Check "phone number is" pattern
+  sanitized = testAndReplace(sanitized, PHONE_WORDS_REGEX, blockedTypes, "telefone");
 
   return {
     clean: blockedTypes.length === 0,
