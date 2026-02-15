@@ -29,6 +29,7 @@ import ProfessionalServiceOrders from "./pages/professional/ServiceOrders";
 import ProfessionalCRM from "./pages/professional/CRM";
 import ProfessionalCalendar from "./pages/professional/Calendar";
 import ProfessionalReputation from "./pages/professional/Reputation";
+import Checkout from "./pages/checkout/Checkout";
 import ServiceChat from "./pages/services/ServiceChat";
 import ServiceDetails from "./pages/services/ServiceDetails";
 import ServiceSearch from "./pages/services/ServiceSearch";
@@ -82,6 +83,7 @@ const App: React.FC = () => {
                 <Route path="orders" element={<ClientServiceOrders />} />
                 <Route path="orders/new" element={<NewOrder />} />
                 <Route path="orders/:id" element={<OrderDetails />} />
+                <Route path="orders/:id/checkout" element={<Checkout />} />
                 <Route path="orders/:id/chat" element={<ServiceChat />} />
                 <Route path="messages" element={<Messages />} />
                 <Route path="notifications" element={<Notifications />} />

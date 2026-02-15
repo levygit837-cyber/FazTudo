@@ -21,6 +21,10 @@ import ProposalComparator from "../../components/orders/ProposalComparator";
 import RescheduleModal from "../../components/orders/RescheduleModal";
 import OrderTimeline from "../../components/orders/OrderTimeline";
 import DisputeModal from "../../components/orders/DisputeModal";
+import ServiceFlowStepper from "../../components/orders/ServiceFlowStepper";
+import FlowStatusBanner from "../../components/orders/FlowStatusBanner";
+import DualConfirmation from "../../components/orders/DualConfirmation";
+import ReviewCTA from "../../components/orders/ReviewCTA";
 import { SkeletonOrderCard, Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import {
   getOrderById,
@@ -29,7 +33,6 @@ import {
   submitOrderCompletion,
   confirmOrderCompletion,
   cancelOrder,
-  createPayment,
   releasePayment,
   createReview,
   createOrder,
@@ -67,17 +70,10 @@ const OrderDetails: React.FC = () => {
   } | null>(null);
 
   // Review state
-  const [qualityRating, setQualityRating] = useState(5);
-  const [punctualityRating, setPunctualityRating] = useState(5);
-  const [communicationRating, setCommunicationRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   // Message state
   const [newMessage, setNewMessage] = useState("");
-
-  // Payment state
-  const [paymentMethod, setPaymentMethod] = useState("pix");
 
   // Reschedule state
   const [showReschedule, setShowReschedule] = useState(false);
@@ -162,49 +158,6 @@ const OrderDetails: React.FC = () => {
     }
   };
 
-  const handlePayment = async () => {
-    if (!order) return;
-    try {
-      setActionLoading(true);
-      setError(null);
-      // TODO: Will be replaced by navigation to /client/orders/{id}/checkout in Task 13
-      const result = await createPayment(order.id, {
-        paymentMethod: paymentMethod as "credit_card" | "pix" | "boleto",
-        payerEmail: "",
-        payerName: "",
-        payerCPF: "",
-      });
-      if (result.paymentData?.status === "approved") {
-        await loadOrder();
-        toast.success("Pagamento realizado com sucesso!");
-      } else {
-        await loadOrder();
-        toast.info("Pagamento em processamento...");
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao processar pagamento";
-      setError(msg);
-      toast.error("Erro", msg);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleSubmitReview = async () => {
-    if (!order) return;
-    try {
-      setActionLoading(true);
-      const rating = Math.round((qualityRating + punctualityRating + communicationRating) / 3 * 10) / 10;
-      await createReview(order.id, { rating, comment: reviewComment || undefined });
-      setReviewSubmitted(true);
-      await loadOrder();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Erro ao enviar avaliacao");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   if (loading) return (
     <div className="container mx-auto px-4 py-8 max-w-4xl animate-pulse space-y-6">
       <Skeleton className="h-6 w-40 rounded" />
@@ -260,6 +213,40 @@ const OrderDetails: React.FC = () => {
         </div>
       )}
 
+      {/* Service Flow Stepper */}
+      <ServiceFlowStepper
+        status={order.status}
+        hasPayment={!!activePayment}
+        hasReview={reviewSubmitted || (order.reviews && order.reviews.length > 0)}
+      />
+
+      {/* Flow Status Banner */}
+      <FlowStatusBanner
+        status={order.status}
+        isClient={isOrderClient}
+        isProfessional={isOrderProfessional}
+        hasPayment={!!activePayment}
+        orderId={order.id}
+        onAction={
+          order.status === "ACCEPTED" && isOrderClient && needsPayment
+            ? () => navigate(`/client/orders/${order.id}/checkout`)
+            : order.status === "PENDING" && isOrderProfessional
+              ? () => handleAction(() => acceptOrder(order.id), "✅ Pedido aceito! O cliente será notificado.")
+              : order.status === "IN_PROGRESS" && isOrderProfessional
+                ? () => handleAction(() => submitOrderCompletion(order.id), "🔔 Serviço marcado como concluído! Aguardando confirmação do cliente.")
+                : order.status === "AWAITING_CLIENT_CONFIRMATION" && isOrderClient
+                  ? () => setConfirmAction({
+                      title: "Confirmar conclusao",
+                      message: "Ao confirmar, voce atesta que o servico foi entregue conforme combinado.",
+                      variant: "warning",
+                      confirmLabel: "Confirmar",
+                      action: () => confirmOrderCompletion(order.id),
+                      successMessage: "✅ Serviço confirmado! O pagamento será liberado ao profissional.",
+                    })
+                  : undefined
+        }
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
@@ -305,6 +292,23 @@ const OrderDetails: React.FC = () => {
               orderId={order.id}
               isClient={isOrderClient}
               onProposalAccepted={loadOrder}
+            />
+          )}
+
+          {/* Dual Confirmation (visible for AWAITING_CLIENT_CONFIRMATION and COMPLETED) */}
+          {(order.status === "AWAITING_CLIENT_CONFIRMATION" || order.status === "COMPLETED") && (
+            <DualConfirmation
+              professionalConfirmedAt={order.professionalConfirmedAt}
+              clientConfirmedAt={order.clientConfirmedAt}
+              professionalName={order.professional?.name}
+              clientName={order.client?.name}
+              isClient={isOrderClient}
+              onConfirm={
+                isOrderClient && order.status === "AWAITING_CLIENT_CONFIRMATION"
+                  ? () => handleAction(() => confirmOrderCompletion(order.id), "✅ Serviço confirmado! O pagamento será liberado ao profissional.")
+                  : undefined
+              }
+              loading={actionLoading}
             />
           )}
 
@@ -354,32 +358,13 @@ const OrderDetails: React.FC = () => {
 
               {/* Cliente: pagar pedido aceito */}
               {isOrderClient && (order.status === "PENDING" || order.status === "ACCEPTED") && needsPayment && (
-                <div className="w-full space-y-3">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Selecione o metodo de pagamento:</p>
-                  <div className="flex gap-3">
-                    {["pix", "cartao", "boleto"].map((method) => (
-                      <button
-                        key={method}
-                        onClick={() => setPaymentMethod(method)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                          paymentMethod === method
-                            ? "border-primary-500 bg-primary-50 text-primary-700"
-                            : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                        }`}
-                      >
-                        {method === "pix" ? "PIX" : method === "cartao" ? "Cartao" : "Boleto"}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={handlePayment}
-                    disabled={actionLoading}
-                    className="btn btn-primary"
-                  >
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Pagar {formatCurrency(order.price)}
-                  </button>
-                </div>
+                <button
+                  onClick={() => navigate(`/client/orders/${order.id}/checkout`)}
+                  className="btn btn-primary"
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Pagar {formatCurrency(order.price)}
+                </button>
               )}
 
               {/* Profissional: iniciar serviço */}
@@ -514,113 +499,64 @@ const OrderDetails: React.FC = () => {
             </div>
           </div>
 
-          {/* Avaliação */}
-          {order.status === "COMPLETED" && (
-            <div className="card">
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Avaliacao</h2>
-              {reviewSubmitted ? (
-                <div className="text-center py-4">
-                  <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                  <p className="text-slate-600 dark:text-slate-400">Avaliacao enviada com sucesso!</p>
-                  {order.reviews && order.reviews.length > 0 && (
-                    <div className="mt-4 space-y-3">
-                      {order.reviews.map((review) => (
-                        <div key={review.id} className="text-left bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="flex">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star key={s} className={`w-4 h-4 ${s <= review.rating ? "text-yellow-500 fill-current" : "text-slate-300 dark:text-slate-600"}`} />
-                              ))}
-                            </div>
-                            <span className="text-sm text-slate-500 dark:text-slate-400">por {review.author?.name}</span>
-                          </div>
-                          {review.comment && <p className="text-sm text-slate-600 dark:text-slate-400">{review.comment}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+          {/* Avaliação - ReviewCTA */}
+          {order.status === "COMPLETED" && isOrderClient && (
+            <ReviewCTA
+              onSubmit={async (data) => {
+                await createReview(order.id, data);
+                setReviewSubmitted(true);
+                await loadOrder();
+              }}
+              professionalName={order.professional?.name}
+              alreadyReviewed={reviewSubmitted || (order.reviews?.some((r: any) => r.authorId === user?.id) ?? false)}
+              loading={actionLoading}
+            />
+          )}
 
-                  {/* Re-hire button */}
-                  {isOrderClient && order.serviceListingId && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          setActionLoading(true);
-                          const newOrder = await createOrder({
-                            serviceListingId: order.serviceListingId!,
-                            title: order.title,
-                            description: `Recontratação do serviço "${order.title}"`,
-                          });
-                          navigate(`/client/orders/${newOrder.id}`);
-                        } catch (err: any) {
-                          toast.error("Erro", err?.response?.data?.message || "Erro ao recontratar");
-                        } finally {
-                          setActionLoading(false);
-                        }
-                      }}
-                      disabled={actionLoading}
-                      className="btn btn-primary mt-4"
-                    >
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Recontratar profissional
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  {/* Criteria ratings */}
-                  {[
-                    { label: "Qualidade do serviço", value: qualityRating, setter: setQualityRating },
-                    { label: "Pontualidade", value: punctualityRating, setter: setPunctualityRating },
-                    { label: "Comunicação", value: communicationRating, setter: setCommunicationRating },
-                  ].map((criteria) => (
-                    <div key={criteria.label}>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                        {criteria.label}
-                      </label>
-                      <div className="flex gap-1.5">
+          {/* Existing reviews display */}
+          {order.status === "COMPLETED" && order.reviews && order.reviews.length > 0 && (
+            <div className="card">
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Avaliações</h2>
+              <div className="space-y-3">
+                {order.reviews.map((review) => (
+                  <div key={review.id} className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex">
                         {[1, 2, 3, 4, 5].map((s) => (
-                          <button
-                            key={s}
-                            onClick={() => criteria.setter(s)}
-                            className="p-0.5"
-                          >
-                            <Star className={`w-7 h-7 transition-colors ${s <= criteria.value ? "text-yellow-500 fill-current" : "text-slate-300 dark:text-slate-600 hover:text-yellow-300"}`} />
-                          </button>
+                          <Star key={s} className={`w-4 h-4 ${s <= review.rating ? "text-yellow-500 fill-current" : "text-slate-300 dark:text-slate-600"}`} />
                         ))}
                       </div>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">por {review.author?.name}</span>
                     </div>
-                  ))}
-
-                  {/* Overall rating display */}
-                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 text-center">
-                    <span className="text-sm text-slate-500 dark:text-slate-400">Nota geral: </span>
-                    <span className="text-lg font-bold text-primary-600">
-                      {(Math.round((qualityRating + punctualityRating + communicationRating) / 3 * 10) / 10).toFixed(1)}
-                    </span>
-                    <span className="text-sm text-slate-500 dark:text-slate-400"> / 5</span>
+                    {review.comment && <p className="text-sm text-slate-600 dark:text-slate-400">{review.comment}</p>}
                   </div>
+                ))}
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Comentario (opcional)
-                    </label>
-                    <textarea
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
-                      placeholder="Como foi sua experiencia?"
-                      rows={3}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <button
-                    onClick={handleSubmitReview}
-                    disabled={actionLoading}
-                    className="btn btn-primary"
-                  >
-                    Enviar Avaliacao
-                  </button>
-                </div>
+              {/* Re-hire button */}
+              {isOrderClient && order.serviceListingId && (
+                <button
+                  onClick={async () => {
+                    try {
+                      setActionLoading(true);
+                      const newOrder = await createOrder({
+                        serviceListingId: order.serviceListingId!,
+                        title: order.title,
+                        description: `Recontratação do serviço "${order.title}"`,
+                      });
+                      navigate(`/client/orders/${newOrder.id}`);
+                    } catch (err: any) {
+                      toast.error("Erro", err?.response?.data?.message || "Erro ao recontratar");
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  disabled={actionLoading}
+                  className="btn btn-primary mt-4 w-full"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Recontratar profissional
+                </button>
               )}
             </div>
           )}
