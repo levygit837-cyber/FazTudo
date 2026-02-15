@@ -157,6 +157,9 @@ export const searchQuerySchema = paginationSchema.extend({
 
 export const createOrderSchema = z.object({
   serviceListingId: z.number().int().positive('Servico invalido'),
+  title: sanitizedString
+    .pipe(z.string().min(3, 'Titulo muito curto').max(200, 'Titulo muito longo'))
+    .optional(),
   description: sanitizedString
     .pipe(z.string().min(10, 'Descricao muito curta').max(2000, 'Descricao muito longa')),
   address: z.string().max(500).optional(),
@@ -205,7 +208,7 @@ export const sendMessageSchema = z.object({
 // ============================================
 
 export const createReviewSchema = z.object({
-  rating: z.number().int().min(1, 'Nota minima e 1').max(5, 'Nota maxima e 5'),
+  rating: z.number().min(1, 'Nota minima e 1').max(5, 'Nota maxima e 5'),
   comment: sanitizedString
     .pipe(z.string().max(1000, 'Comentario muito longo'))
     .optional(),
