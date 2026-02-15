@@ -279,6 +279,15 @@ router.post(
   serviceController.sendMessage,
 );
 
+// Upload de arquivo para chat
+router.post(
+  "/orders/:orderId/messages/upload",
+  verifyToken,
+  requireVerified,
+  serviceController.chatUpload.single("file"),
+  serviceController.uploadChatFile,
+);
+
 // Listar mensagens de um pedido (envolvidos no pedido)
 router.get(
   "/orders/:orderId/messages",

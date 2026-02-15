@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import path from "path";
 import { env } from "./config/env";
 import prisma from "./lib/prisma";
 import { errorHandler, notFoundHandler } from "./middleware/error";
@@ -70,6 +71,9 @@ app.use(express.urlencoded({ extended: true, limit: env.BODY_SIZE_LIMIT }));
 
 // XSS sanitization for all incoming data
 app.use(xssSanitizer);
+
+// Serve uploaded files (chat attachments, etc.)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // ============================================
 // HEALTH CHECKS

@@ -9,3 +9,4 @@ export * from './proposalController';
 export * from './scheduleController';
 export * from './disputeController';
 export * from './chatController';
+export { uploadChatFile, chatUpload } from './fileUploadController';
