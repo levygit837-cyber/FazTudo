@@ -123,6 +123,13 @@ export const sendMessage = async (
         clientId: true,
         professionalId: true,
         status: true,
+        payments: {
+          where: {
+            status: { in: ["HELD", "RELEASED"] },
+          },
+          select: { id: true },
+          take: 1,
+        },
       },
     });
 
@@ -140,6 +147,14 @@ export const sendMessage = async (
       res
         .status(403)
         .json(errorResponse("You are not part of this service order"));
+      return;
+    }
+
+    // Payment gate: chat is only available after payment is approved
+    if (!isAdmin && serviceOrder.payments.length === 0) {
+      res
+        .status(403)
+        .json(errorResponse("Chat is only available after payment is approved"));
       return;
     }
 
