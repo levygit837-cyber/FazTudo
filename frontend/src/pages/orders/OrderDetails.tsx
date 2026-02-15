@@ -8,8 +8,11 @@ import {
   MessageSquare,
   Star,
   ArrowLeft,
-  Send,
   CreditCard,
+  Calendar,
+  AlertCircle,
+  Loader2,
+  User,
   CalendarClock,
   AlertTriangle,
   RotateCcw,
@@ -17,13 +20,9 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
-import ProposalComparator from "../../components/orders/ProposalComparator";
 import RescheduleModal from "../../components/orders/RescheduleModal";
-import OrderTimeline from "../../components/orders/OrderTimeline";
 import DisputeModal from "../../components/orders/DisputeModal";
-import ServiceFlowStepper from "../../components/orders/ServiceFlowStepper";
-import FlowStatusBanner from "../../components/orders/FlowStatusBanner";
-import DualConfirmation from "../../components/orders/DualConfirmation";
+import ProposalComparator from "../../components/orders/ProposalComparator";
 import ReviewCTA from "../../components/orders/ReviewCTA";
 import { SkeletonOrderCard, Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import {
@@ -32,13 +31,13 @@ import {
   startOrder,
   submitOrderCompletion,
   confirmOrderCompletion,
+  confirmProfessionalCompletion,
   cancelOrder,
   releasePayment,
   createReview,
   createOrder,
-  sendMessage,
 } from "../../services/serviceService";
-import { ServiceOrder } from "../../types";
+import { ServiceOrder, ServiceOrderStatus } from "../../types";
 import {
   formatCurrency,
   formatDate,
@@ -48,16 +47,180 @@ import {
   formatPaymentStatus,
 } from "../../utils/formatters";
 
+// =====================================
+// CHECKOUT STEPPER (pedidos sem pagamento)
+// =====================================
+interface CheckoutStepperProps {
+  currentStep: number; // 0=criado, 1=horario, 2=pagamento
+}
+
+const CHECKOUT_STEPS = [
+  { label: "Pedido Criado", icon: <CheckCircle className="w-4 h-4" /> },
+  { label: "Horario", icon: <Calendar className="w-4 h-4" /> },
+  { label: "Pagamento", icon: <CreditCard className="w-4 h-4" /> },
+];
+
+const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ currentStep }) => {
+  return (
+    <div className="flex items-center justify-between mb-6">
+      {CHECKOUT_STEPS.map((step, index) => {
+        const isCompleted = index < currentStep;
+        const isCurrent = index === currentStep;
+        return (
+          <React.Fragment key={step.label}>
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                  isCompleted
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-600"
+                    : isCurrent
+                    ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                }`}
+              >
+                {isCompleted ? <CheckCircle className="w-5 h-5" /> : step.icon}
+              </div>
+              <span
+                className={`text-xs font-medium ${
+                  isCompleted || isCurrent
+                    ? "text-slate-900 dark:text-slate-100"
+                    : "text-slate-400 dark:text-slate-500"
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+            {index < CHECKOUT_STEPS.length - 1 && (
+              <div
+                className={`flex-1 h-0.5 mx-2 ${
+                  isCompleted
+                    ? "bg-green-300 dark:bg-green-700"
+                    : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+};
+
+// =====================================
+// ORDER PROGRESS STEPPER (pedidos pagos - acompanhamento)
+// =====================================
+interface OrderProgressStepperProps {
+  order: ServiceOrder;
+}
+
+const OrderProgressStepper: React.FC<OrderProgressStepperProps> = ({ order }) => {
+  const getSteps = () => {
+    const steps = [
+      {
+        label: "Servico Iniciado",
+        description: "Pagamento aprovado",
+        done: true, // Sempre verde pois pagamento ja foi aprovado
+        icon: <CheckCircle className="w-4 h-4" />,
+      },
+      {
+        label: "Aguardando Profissional",
+        description: "Profissional precisa confirmar o servico",
+        done: [
+          "ACCEPTED", "IN_PROGRESS",
+          "AWAITING_CLIENT_CONFIRMATION",
+          "AWAITING_PROFESSIONAL_CONFIRMATION",
+          "COMPLETED",
+        ].includes(order.status),
+        icon: <User className="w-4 h-4" />,
+      },
+      {
+        label: "Servico em Andamento",
+        description: "Profissional esta realizando o servico",
+        done: [
+          "IN_PROGRESS",
+          "AWAITING_CLIENT_CONFIRMATION",
+          "AWAITING_PROFESSIONAL_CONFIRMATION",
+          "COMPLETED",
+        ].includes(order.status),
+        icon: <Clock className="w-4 h-4" />,
+      },
+      {
+        label: "Aguardando Confirmacao",
+        description: order.status === "AWAITING_CLIENT_CONFIRMATION"
+          ? "Confirme que o servico foi concluido"
+          : order.status === "AWAITING_PROFESSIONAL_CONFIRMATION"
+          ? "Aguardando profissional confirmar"
+          : "Cliente e profissional confirmam conclusao",
+        done: ["AWAITING_PROFESSIONAL_CONFIRMATION", "COMPLETED"].includes(order.status),
+        icon: <CheckCircle className="w-4 h-4" />,
+      },
+      {
+        label: "Concluido",
+        description: "Servico finalizado com sucesso",
+        done: order.status === "COMPLETED",
+        icon: <Star className="w-4 h-4" />,
+      },
+    ];
+    return steps;
+  };
+
+  const steps = getSteps();
+
+  return (
+    <div className="relative">
+      {steps.map((step, index) => (
+        <div key={index} className="relative flex items-start gap-3 pb-6 last:pb-0">
+          {index < steps.length - 1 && (
+            <div
+              className={`absolute left-4 top-8 w-0.5 h-[calc(100%-8px)] ${
+                step.done
+                  ? "bg-green-300 dark:bg-green-700"
+                  : "bg-slate-200 dark:bg-slate-700"
+              }`}
+            />
+          )}
+          <div
+            className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+              step.done
+                ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
+            }`}
+          >
+            {step.icon}
+          </div>
+          <div className="flex-1 min-w-0 pt-1">
+            <p
+              className={`text-sm font-medium ${
+                step.done
+                  ? "text-slate-900 dark:text-slate-100"
+                  : "text-slate-400 dark:text-slate-500"
+              }`}
+            >
+              {step.label}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {step.description}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// =====================================
+// MAIN ORDER DETAILS COMPONENT
+// =====================================
 const OrderDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<ServiceOrder | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const toast = useToast();
 
   // Confirmation dialog state
   const [confirmAction, setConfirmAction] = useState<{
@@ -66,20 +229,19 @@ const OrderDetails: React.FC = () => {
     variant: "danger" | "warning" | "info";
     confirmLabel: string;
     action: () => Promise<any>;
-    successMessage?: string;
   } | null>(null);
 
   // Review state
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
-
-  // Message state
-  const [newMessage, setNewMessage] = useState("");
 
   // Reschedule state
   const [showReschedule, setShowReschedule] = useState(false);
 
   // Dispute state
   const [showDispute, setShowDispute] = useState(false);
+
+  // Payment method state (for checkout)
+  const [paymentMethod, setPaymentMethod] = useState("pix");
 
   const isOrderClient = order?.clientId === user?.id;
   const isOrderProfessional = order?.professionalId === user?.id;
@@ -113,27 +275,26 @@ const OrderDetails: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get("payment");
     if (paymentStatus === "success") {
-      toast.success("Pagamento aprovado! Aguardando confirmação.");
+      toast.success("Pagamento aprovado! Aguardando confirmacao.");
     } else if (paymentStatus === "failure") {
-      toast.error("Pagamento", "Pagamento não foi aprovado. Tente novamente.");
+      toast.error("Pagamento", "Pagamento nao foi aprovado. Tente novamente.");
     } else if (paymentStatus === "pending") {
-      toast.info("Pagamento pendente. Você será notificado quando for confirmado.");
+      toast.info("Pagamento pendente. Voce sera notificado quando for confirmado.");
     }
-    // Clean URL params
     if (paymentStatus) {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
-  const handleAction = async (action: () => Promise<any>, successMessage?: string) => {
+  const handleAction = async (action: () => Promise<any>, successMsg?: string) => {
     try {
       setActionLoading(true);
       setError(null);
       await action();
       await loadOrder();
-      toast.success(successMessage || "Ação realizada com sucesso!");
+      toast.success(successMsg || "Acao realizada com sucesso");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao executar ação";
+      const msg = err?.response?.data?.message || "Erro ao executar acao";
       setError(msg);
       toast.error("Erro", msg);
     } finally {
@@ -143,19 +304,14 @@ const OrderDetails: React.FC = () => {
 
   const handleConfirmedAction = async () => {
     if (!confirmAction) return;
-    await handleAction(confirmAction.action, confirmAction.successMessage);
+    await handleAction(confirmAction.action);
     setConfirmAction(null);
   };
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !order) return;
-    try {
-      await sendMessage(order.id, newMessage.trim());
-      setNewMessage("");
-      await loadOrder();
-    } catch (err) {
-      setError("Erro ao enviar mensagem");
-    }
+  const handlePayment = () => {
+    if (!order) return;
+    // Redirect to checkout page with the full MercadoPago flow
+    navigate(`/client/orders/${order.id}/checkout`);
   };
 
   if (loading) return (
@@ -165,23 +321,21 @@ const OrderDetails: React.FC = () => {
       <SkeletonText lines={5} />
     </div>
   );
-  if (!order) return <div className="text-center py-12 text-slate-600 dark:text-slate-400">Pedido nao encontrado</div>;
 
-  const activePayment = order.payments?.find((p) => p.status === "HELD" || p.status === "RELEASED" || p.status === "PENDING");
+  if (!order) return (
+    <div className="text-center py-12 text-slate-600 dark:text-slate-400">
+      Pedido nao encontrado
+    </div>
+  );
+
+  const activePayment = order.payments?.find((p) => p.status === "HELD" || p.status === "RELEASED");
   const hasPendingPayment = order.payments?.some((p) => p.status === "HELD");
   const hasReleasedPayment = order.payments?.some((p) => p.status === "RELEASED");
   const needsPayment = !order.payments?.length || order.payments.every((p) => p.status === "FAILED" || p.status === "REFUNDED");
+  const paymentApproved = !!activePayment;
 
-  // Timeline steps
-  const timelineSteps = [
-    { label: "Pedido Criado", date: order.createdAt, done: true },
-    { label: "Aceito", date: order.status !== "PENDING" && order.status !== "CANCELLED" ? order.startedAt || order.createdAt : null, done: ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION", "COMPLETED"].includes(order.status) },
-    { label: "Pagamento", date: activePayment?.paidAt, done: !!activePayment },
-    { label: "Em Andamento", date: order.startedAt, done: ["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION", "COMPLETED"].includes(order.status) },
-    { label: "Aguardando confirmacao", date: order.status === "AWAITING_CLIENT_CONFIRMATION" ? order.updatedAt : null, done: ["AWAITING_CLIENT_CONFIRMATION", "COMPLETED"].includes(order.status) },
-    { label: "Concluido", date: order.completedAt, done: order.status === "COMPLETED" },
-    { label: "Pagamento Liberado", date: hasReleasedPayment ? activePayment?.releasedAt : null, done: !!hasReleasedPayment },
-  ];
+  const isCheckoutPhase = isOrderClient && needsPayment && ["PENDING", "ACCEPTED"].includes(order.status);
+  const isTrackingPhase = paymentApproved || ["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION", "AWAITING_PROFESSIONAL_CONFIRMATION", "COMPLETED"].includes(order.status);
 
   return (
     <div className="space-y-6">
@@ -192,12 +346,14 @@ const OrderDetails: React.FC = () => {
         </button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{order.title}</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Pedido #{order.id} - {formatRelativeTime(order.createdAt)}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Pedido #{order.id} - {formatRelativeTime(order.createdAt)}
+          </p>
         </div>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
           order.status === "COMPLETED" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
           order.status === "CANCELLED" ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" :
-          order.status === "AWAITING_CLIENT_CONFIRMATION" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
+          order.status === "AWAITING_CLIENT_CONFIRMATION" || order.status === "AWAITING_PROFESSIONAL_CONFIRMATION" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
           order.status === "IN_PROGRESS" ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400" :
           order.status === "PENDING" ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400" :
           "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
@@ -213,39 +369,12 @@ const OrderDetails: React.FC = () => {
         </div>
       )}
 
-      {/* Service Flow Stepper */}
-      <ServiceFlowStepper
-        status={order.status}
-        hasPayment={!!activePayment}
-        hasReview={reviewSubmitted || (order.reviews && order.reviews.length > 0)}
-      />
-
-      {/* Flow Status Banner */}
-      <FlowStatusBanner
-        status={order.status}
-        isClient={isOrderClient}
-        isProfessional={isOrderProfessional}
-        hasPayment={!!activePayment}
-        orderId={order.id}
-        onAction={
-          order.status === "ACCEPTED" && isOrderClient && needsPayment
-            ? () => navigate(`/client/orders/${order.id}/checkout`)
-            : order.status === "PENDING" && isOrderProfessional
-              ? () => handleAction(() => acceptOrder(order.id), "✅ Pedido aceito! O cliente será notificado.")
-              : order.status === "IN_PROGRESS" && isOrderProfessional
-                ? () => handleAction(() => submitOrderCompletion(order.id), "🔔 Serviço marcado como concluído! Aguardando confirmação do cliente.")
-                : order.status === "AWAITING_CLIENT_CONFIRMATION" && isOrderClient
-                  ? () => setConfirmAction({
-                      title: "Confirmar conclusao",
-                      message: "Ao confirmar, voce atesta que o servico foi entregue conforme combinado.",
-                      variant: "warning",
-                      confirmLabel: "Confirmar",
-                      action: () => confirmOrderCompletion(order.id),
-                      successMessage: "✅ Serviço confirmado! O pagamento será liberado ao profissional.",
-                    })
-                  : undefined
-        }
-      />
+      {/* CHECKOUT STEPPER (pre-pagamento) */}
+      {isCheckoutPhase && (
+        <div className="card">
+          <CheckoutStepper currentStep={order.scheduledDate ? 2 : 1} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content */}
@@ -264,13 +393,7 @@ const OrderDetails: React.FC = () => {
               {order.scheduledDate && (
                 <div>
                   <span className="text-slate-500 dark:text-slate-400">Agendado para</span>
-                  <p className="font-medium">{formatDate(order.scheduledDate)}</p>
-                </div>
-              )}
-              {order.deadlineDate && (
-                <div>
-                  <span className="text-slate-500 dark:text-slate-400">Prazo</span>
-                  <p className="font-medium">{formatDate(order.deadlineDate)}</p>
+                  <p className="font-medium">{formatDateTime(order.scheduledDate)}</p>
                 </div>
               )}
               <div>
@@ -280,11 +403,52 @@ const OrderDetails: React.FC = () => {
             </div>
           </div>
 
-          {/* Timeline */}
-          <div className="card">
-            <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Progresso</h2>
-            <OrderTimeline steps={timelineSteps} deadlineDate={order.deadlineDate} />
-          </div>
+          {/* CHECKOUT: Pagamento (apenas se esta na fase de checkout) */}
+          {isCheckoutPhase && isOrderClient && (
+            <div className="card">
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">
+                <CreditCard className="w-5 h-5 inline mr-2" />
+                Pagamento
+              </h2>
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Selecione o metodo de pagamento para confirmar seu pedido:
+                </p>
+                <div className="flex gap-3">
+                  {["pix", "cartao", "boleto"].map((method) => (
+                    <button
+                      key={method}
+                      onClick={() => setPaymentMethod(method)}
+                      className={`px-4 py-3 rounded-lg text-sm font-medium border transition-colors flex-1 ${
+                        paymentMethod === method
+                          ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400"
+                          : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      {method === "pix" ? "PIX" : method === "cartao" ? "Cartao" : "Boleto"}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handlePayment}
+                  disabled={actionLoading}
+                  className="btn btn-primary w-full py-3 flex items-center justify-center gap-2"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      Pagar {formatCurrency(order.price)}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Proposals (visible for PENDING orders) */}
           {order.status === "PENDING" && (
@@ -295,106 +459,135 @@ const OrderDetails: React.FC = () => {
             />
           )}
 
-          {/* Dual Confirmation (visible for AWAITING_CLIENT_CONFIRMATION and COMPLETED) */}
-          {(order.status === "AWAITING_CLIENT_CONFIRMATION" || order.status === "COMPLETED") && (
-            <DualConfirmation
-              professionalConfirmedAt={order.professionalConfirmedAt}
-              clientConfirmedAt={order.clientConfirmedAt}
-              professionalName={order.professional?.name}
-              clientName={order.client?.name}
-              isClient={isOrderClient}
-              onConfirm={
-                isOrderClient && order.status === "AWAITING_CLIENT_CONFIRMATION"
-                  ? () => handleAction(() => confirmOrderCompletion(order.id), "✅ Serviço confirmado! O pagamento será liberado ao profissional.")
-                  : undefined
-              }
-              loading={actionLoading}
-            />
+          {/* TRACKING: Progresso do servico (apos pagamento) */}
+          {isTrackingPhase && (
+            <div className="card">
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Progresso do Servico</h2>
+              <OrderProgressStepper order={order} />
+            </div>
           )}
 
-          {/* Ações */}
-          <div className="card">
-            <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Acoes</h2>
-            <div className="mb-4">
-              <button
-                onClick={() => navigate(chatRoute)}
-                className="btn btn-outline"
-              >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Abrir chat do servico
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {/* Profissional: aceitar pedido pendente */}
-              {isOrderProfessional && order.status === "PENDING" && (
-                <>
+          {/* Acoes do profissional (somente visivel para o profissional) */}
+          {isOrderProfessional && (
+            <div className="card">
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Acoes</h2>
+              <div className="flex flex-wrap gap-3">
+                {order.status === "PENDING" && (
+                  <>
+                    <button
+                      onClick={() => handleAction(() => acceptOrder(order.id), "Pedido aceito!")}
+                      disabled={actionLoading}
+                      className="btn btn-primary"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Aceitar Pedido
+                    </button>
+                    <button
+                      onClick={() =>
+                        setConfirmAction({
+                          title: "Recusar pedido",
+                          message: "Tem certeza que deseja recusar este pedido?",
+                          variant: "danger",
+                          confirmLabel: "Recusar",
+                          action: () => cancelOrder(order.id, "Recusado pelo profissional"),
+                        })
+                      }
+                      disabled={actionLoading}
+                      className="btn btn-outline text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Recusar
+                    </button>
+                  </>
+                )}
+                {order.status === "ACCEPTED" && (
                   <button
-                    onClick={() => handleAction(() => acceptOrder(order.id), "✅ Pedido aceito! O cliente será notificado.")}
+                    onClick={() => handleAction(() => startOrder(order.id), "Servico iniciado!")}
+                    disabled={actionLoading}
+                    className="btn btn-primary"
+                  >
+                    <Clock className="w-4 h-4 mr-2" />
+                    Iniciar Servico
+                  </button>
+                )}
+                {order.status === "IN_PROGRESS" && (
+                  <button
+                    onClick={() => handleAction(() => submitOrderCompletion(order.id), "Servico marcado como entregue!")}
                     disabled={actionLoading}
                     className="btn btn-primary"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Aceitar Pedido
+                    Marcar como Entregue
                   </button>
+                )}
+                {order.status === "AWAITING_PROFESSIONAL_CONFIRMATION" && (
                   <button
                     onClick={() =>
                       setConfirmAction({
-                        title: "Recusar pedido",
-                        message: "Tem certeza que deseja recusar este pedido?",
-                        variant: "danger",
-                        confirmLabel: "Recusar",
-                        action: () => cancelOrder(order.id, "Recusado pelo profissional"),
-                        successMessage: "❌ Pedido recusado. O cliente será notificado.",
+                        title: "Confirmar conclusao",
+                        message: "Confirme que o servico foi concluido conforme combinado.",
+                        variant: "warning",
+                        confirmLabel: "Confirmar Conclusao",
+                        action: () => confirmProfessionalCompletion(order.id),
                       })
                     }
                     disabled={actionLoading}
+                    className="btn btn-primary"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Confirmar Conclusao
+                  </button>
+                )}
+                {order.status === "AWAITING_CLIENT_CONFIRMATION" && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Aguardando o cliente confirmar para finalizar o pedido.
+                  </p>
+                )}
+
+                {/* Reagendar (aceito ou em andamento) */}
+                {["ACCEPTED", "IN_PROGRESS"].includes(order.status) && order.professionalId && (
+                  <button
+                    onClick={() => setShowReschedule(true)}
+                    disabled={actionLoading}
+                    className="btn btn-outline"
+                  >
+                    <CalendarClock className="w-4 h-4 mr-2" />
+                    Reagendar
+                  </button>
+                )}
+
+                {/* Abrir Disputa (em andamento ou aguardando confirmacao) */}
+                {["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION"].includes(order.status) && (
+                  <button
+                    onClick={() => setShowDispute(true)}
+                    disabled={actionLoading}
                     className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Recusar
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Abrir Disputa
                   </button>
-                </>
-              )}
+                )}
+              </div>
+            </div>
+          )}
 
-              {/* Cliente: pagar pedido aceito */}
-              {isOrderClient && (order.status === "PENDING" || order.status === "ACCEPTED") && needsPayment && (
-                <button
-                  onClick={() => navigate(`/client/orders/${order.id}/checkout`)}
-                  className="btn btn-primary"
-                >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Pagar {formatCurrency(order.price)}
-                </button>
-              )}
+          {/* Acoes do cliente */}
+          {isOrderClient && (
+            <div className="card">
+              <div className="flex flex-wrap gap-3">
+                {/* Botao de Chat - so aparece apos pagamento aprovado */}
+                {paymentApproved && !["CANCELLED", "EXPIRED"].includes(order.status) && (
+                  <button
+                    onClick={() => navigate(chatRoute)}
+                    className="btn btn-outline flex items-center gap-2"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Abrir chat do servico
+                  </button>
+                )}
 
-              {/* Profissional: iniciar serviço */}
-              {isOrderProfessional && order.status === "ACCEPTED" && (
-                <button
-                  onClick={() => handleAction(() => startOrder(order.id), "🚀 Serviço iniciado! O cliente foi notificado.")}
-                  disabled={actionLoading}
-                  className="btn btn-primary"
-                >
-                  <Clock className="w-4 h-4 mr-2" />
-                  Iniciar Servico
-                </button>
-              )}
-
-              {/* Profissional: concluir serviço */}
-              {isOrderProfessional && order.status === "IN_PROGRESS" && (
-                <button
-                  onClick={() =>
-                    handleAction(() => submitOrderCompletion(order.id), "🔔 Serviço marcado como concluído! Aguardando confirmação do cliente.")
-                  }
-                  disabled={actionLoading}
-                  className="btn btn-primary"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Marcar como Entregue
-                </button>
-              )}
-
-              {isOrderClient &&
-                order.status === "AWAITING_CLIENT_CONFIRMATION" && (
+                {/* Cliente confirma conclusao */}
+                {order.status === "AWAITING_CLIENT_CONFIRMATION" && (
                   <button
                     onClick={() =>
                       setConfirmAction({
@@ -403,7 +596,6 @@ const OrderDetails: React.FC = () => {
                         variant: "warning",
                         confirmLabel: "Confirmar",
                         action: () => confirmOrderCompletion(order.id),
-                        successMessage: "✅ Serviço confirmado! O pagamento será liberado ao profissional.",
                       })
                     }
                     disabled={actionLoading}
@@ -414,92 +606,92 @@ const OrderDetails: React.FC = () => {
                   </button>
                 )}
 
-              {/* Cliente: liberar pagamento */}
-              {isOrderClient && order.status === "COMPLETED" && hasPendingPayment && (
-                <button
-                  onClick={() =>
-                    setConfirmAction({
-                      title: "Liberar pagamento",
-                      message: "Ao liberar, o valor sera transferido ao profissional. Esta acao nao pode ser desfeita.",
-                      variant: "warning",
-                      confirmLabel: "Liberar",
-                      action: () => releasePayment(order.id),
-                      successMessage: "💰 Pagamento liberado com sucesso! O profissional será notificado.",
-                    })
-                  }
-                  disabled={actionLoading}
-                  className="btn btn-primary"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Liberar Pagamento
-                </button>
-              )}
-
-              {/* Cancelar (ambos, somente pendente/aceito) */}
-              {(isOrderClient || isOrderProfessional) &&
-                ["PENDING", "ACCEPTED"].includes(order.status) && (
-                <button
-                  onClick={() =>
-                    setConfirmAction({
-                      title: "Cancelar pedido",
-                      message: "Tem certeza que deseja cancelar este pedido? Esta acao nao pode ser desfeita.",
-                      variant: "danger",
-                      confirmLabel: "Cancelar pedido",
-                      action: () => cancelOrder(order.id, "Cancelado pelo usuario"),
-                      successMessage: "🚫 Pedido cancelado. Pagamentos pendentes serão reembolsados.",
-                    })
-                  }
-                  disabled={actionLoading}
-                  className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Cancelar Pedido
-                </button>
-              )}
-
-              {/* Reagendar (ambos, aceito ou em andamento) */}
-              {(isOrderClient || isOrderProfessional) &&
-                ["ACCEPTED", "IN_PROGRESS"].includes(order.status) && order.professionalId && (
-                <button
-                  onClick={() => setShowReschedule(true)}
-                  disabled={actionLoading}
-                  className="btn btn-outline"
-                >
-                  <CalendarClock className="w-4 h-4 mr-2" />
-                  Reagendar
-                </button>
-              )}
-
-              {/* Abrir Disputa (ambos, em andamento ou aguardando confirmação) */}
-              {(isOrderClient || isOrderProfessional) &&
-                ["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION"].includes(order.status) && (
-                <button
-                  onClick={() => setShowDispute(true)}
-                  disabled={actionLoading}
-                  className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Abrir Disputa
-                </button>
-              )}
-
-              {/* Status finais */}
-              {order.status === "CANCELLED" && (
-                <p className="text-sm text-slate-500 dark:text-slate-400">Este pedido foi cancelado.</p>
-              )}
-              {isOrderProfessional &&
-                order.status === "AWAITING_CLIENT_CONFIRMATION" && (
-                  <p className="text-sm text-amber-600">
-                    Aguardando o cliente confirmar para finalizar o pedido.
-                  </p>
+                {/* Aguardando confirmacao do profissional */}
+                {order.status === "AWAITING_PROFESSIONAL_CONFIRMATION" && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      Voce ja confirmou! Aguardando o profissional confirmar a conclusao do servico.
+                    </p>
+                  </div>
                 )}
-              {order.status === "COMPLETED" && hasReleasedPayment && (
-                <p className="text-sm text-green-600">Pagamento liberado com sucesso!</p>
-              )}
-            </div>
-          </div>
 
-          {/* Avaliação - ReviewCTA */}
+                {/* Liberar pagamento */}
+                {order.status === "COMPLETED" && hasPendingPayment && (
+                  <button
+                    onClick={() =>
+                      setConfirmAction({
+                        title: "Liberar pagamento",
+                        message: "Ao liberar, o valor sera transferido ao profissional. Esta acao nao pode ser desfeita.",
+                        variant: "warning",
+                        confirmLabel: "Liberar",
+                        action: () => releasePayment(order.id),
+                      })
+                    }
+                    disabled={actionLoading}
+                    className="btn btn-primary"
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Liberar Pagamento
+                  </button>
+                )}
+
+                {/* Cancelar pedido (somente pre-pagamento) */}
+                {["PENDING", "ACCEPTED"].includes(order.status) && needsPayment && (
+                  <button
+                    onClick={() =>
+                      setConfirmAction({
+                        title: "Cancelar pedido",
+                        message: "Tem certeza que deseja cancelar este pedido?",
+                        variant: "danger",
+                        confirmLabel: "Cancelar pedido",
+                        action: () => cancelOrder(order.id, "Cancelado pelo cliente"),
+                      })
+                    }
+                    disabled={actionLoading}
+                    className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Cancelar Pedido
+                  </button>
+                )}
+
+                {/* Reagendar (aceito ou em andamento) */}
+                {["ACCEPTED", "IN_PROGRESS"].includes(order.status) && order.professionalId && (
+                  <button
+                    onClick={() => setShowReschedule(true)}
+                    disabled={actionLoading}
+                    className="btn btn-outline"
+                  >
+                    <CalendarClock className="w-4 h-4 mr-2" />
+                    Reagendar
+                  </button>
+                )}
+
+                {/* Abrir Disputa (em andamento ou aguardando confirmacao) */}
+                {["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION"].includes(order.status) && (
+                  <button
+                    onClick={() => setShowDispute(true)}
+                    disabled={actionLoading}
+                    className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Abrir Disputa
+                  </button>
+                )}
+
+                {/* Status finais */}
+                {order.status === "CANCELLED" && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Este pedido foi cancelado.</p>
+                )}
+                {order.status === "COMPLETED" && hasReleasedPayment && (
+                  <p className="text-sm text-green-600">Pagamento liberado com sucesso!</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Avaliacao - ReviewCTA (apenas apos conclusao, apenas cliente) */}
           {order.status === "COMPLETED" && isOrderClient && (
             <ReviewCTA
               onSubmit={async (data) => {
@@ -516,7 +708,7 @@ const OrderDetails: React.FC = () => {
           {/* Existing reviews display */}
           {order.status === "COMPLETED" && order.reviews && order.reviews.length > 0 && (
             <div className="card">
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Avaliações</h2>
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Avaliacoes</h2>
               <div className="space-y-3">
                 {order.reviews.map((review) => (
                   <div key={review.id} className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
@@ -526,9 +718,13 @@ const OrderDetails: React.FC = () => {
                           <Star key={s} className={`w-4 h-4 ${s <= review.rating ? "text-yellow-500 fill-current" : "text-slate-300 dark:text-slate-600"}`} />
                         ))}
                       </div>
-                      <span className="text-sm text-slate-500 dark:text-slate-400">por {review.author?.name}</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                        por {review.author?.name}
+                      </span>
                     </div>
-                    {review.comment && <p className="text-sm text-slate-600 dark:text-slate-400">{review.comment}</p>}
+                    {review.comment && (
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{review.comment}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -542,7 +738,7 @@ const OrderDetails: React.FC = () => {
                       const newOrder = await createOrder({
                         serviceListingId: order.serviceListingId!,
                         title: order.title,
-                        description: `Recontratação do serviço "${order.title}"`,
+                        description: `Recontratacao do servico "${order.title}"`,
                       });
                       navigate(`/client/orders/${newOrder.id}`);
                     } catch (err: any) {
@@ -560,56 +756,6 @@ const OrderDetails: React.FC = () => {
               )}
             </div>
           )}
-
-          {/* Mensagens */}
-          <div className="card">
-            <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">
-              <MessageSquare className="w-5 h-5 inline mr-2" />
-              Mensagens
-            </h2>
-            <div className="space-y-3 max-h-80 overflow-y-auto mb-4">
-              {(!order.messages || order.messages.length === 0) ? (
-                <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">Nenhuma mensagem ainda</p>
-              ) : (
-                order.messages.map((msg: any) => {
-                  const isOwn = msg.senderId === user?.id;
-                  return (
-                    <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[70%] px-4 py-2 rounded-lg ${
-                        isOwn
-                          ? "bg-primary-600 text-white"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                      }`}>
-                        <p className="text-sm">{msg.content}</p>
-                        <p className={`text-xs mt-1 ${isOwn ? "text-primary-200" : "text-slate-500 dark:text-slate-400"}`}>
-                          {formatRelativeTime(msg.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-            {!["CANCELLED", "EXPIRED"].includes(order.status) && (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                  placeholder="Digite sua mensagem..."
-                  className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
-                  className="btn btn-primary px-4"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Sidebar */}
@@ -628,7 +774,9 @@ const OrderDetails: React.FC = () => {
                     {otherUser.profileImage ? (
                       <img src={otherUser.profileImage} alt={otherUser.name} className="w-full h-full rounded-full object-cover" />
                     ) : (
-                      <span className="text-lg font-semibold text-slate-500 dark:text-slate-400">{otherUser.name.charAt(0)}</span>
+                      <span className="text-lg font-semibold text-slate-500 dark:text-slate-400">
+                        {otherUser.name.charAt(0)}
+                      </span>
                     )}
                   </div>
                   <div>
@@ -647,13 +795,13 @@ const OrderDetails: React.FC = () => {
             })()}
           </div>
 
-          {/* Pagamento */}
+          {/* Pagamento info (apos pago) */}
           {activePayment && (
             <div className="card">
               <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Pagamento</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Valor</span>
+                  <span className="text-slate-500 dark:text-slate-400">Valor</span>
                   <span className="font-medium">{formatCurrency(activePayment.amount)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -683,10 +831,9 @@ const OrderDetails: React.FC = () => {
                   </div>
                 )}
               </div>
-              {/* Payment status explanation */}
               {activePayment.status === "HELD" && (
                 <div className="mt-3 p-2.5 bg-amber-50 dark:bg-amber-900/10 rounded-lg text-xs text-amber-700 dark:text-amber-400">
-                  Pagamento recebido. Sera liberado ao profissional quando voce confirmar a conclusao do servico.
+                  Pagamento recebido. Sera liberado ao profissional quando ambos confirmarem a conclusao do servico.
                 </div>
               )}
               {activePayment.status === "RELEASED" && (
@@ -698,7 +845,7 @@ const OrderDetails: React.FC = () => {
             </div>
           )}
 
-          {/* Endereço */}
+          {/* Endereco */}
           {order.address && (
             <div className="card">
               <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Endereco</h3>
