@@ -3,13 +3,25 @@ import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { env } from "../../config/env";
 import { NotificationType } from "@prisma/client";
-import { createPaymentPreference, getMPPaymentStatus } from "../../services/mercadopagoService";
+import {
+  createPaymentPreference,
+  getMPPaymentStatus,
+  createCardPayment,
+  createPixPayment,
+  createBoletoPayment,
+} from "../../services/mercadopagoService";
 
-// Tipos para request bodies
-interface CreatePaymentBody {
-  paymentMethod: string;
-  transactionId?: string;
-  metadata?: any;
+// Tipos para checkout transparente
+interface CheckoutTransparenteBody {
+  paymentMethod: "credit_card" | "pix" | "boleto";
+  // Para cartão de crédito
+  token?: string;
+  paymentMethodId?: string;
+  installments?: number;
+  // Dados do pagador (todos os métodos)
+  payerEmail?: string;
+  payerName?: string;
+  payerCPF?: string;
 }
 
 // Utilitário para respostas padronizadas
@@ -77,7 +89,7 @@ export const getMercadoPagoPublicKey = async (
   }
 };
 
-// Criar pagamento para um pedido (apenas cliente)
+// Criar pagamento para um pedido (apenas cliente) - Checkout Transparente
 export const createPayment = async (
   req: AuthRequest,
   res: Response,
@@ -94,16 +106,29 @@ export const createPayment = async (
     }
 
     const orderId = parseInt(String(req.params.orderId), 10);
-    const { paymentMethod }: CreatePaymentBody = req.body;
+    const body: CheckoutTransparenteBody = req.body;
 
     if (isNaN(orderId)) {
       res.status(400).json(errorResponse("Invalid order ID"));
       return;
     }
 
-    if (!paymentMethod) {
+    if (!body.paymentMethod) {
       res.status(400).json(errorResponse("Payment method is required"));
       return;
+    }
+
+    if (!body.payerEmail || !body.payerName || !body.payerCPF) {
+      res.status(400).json(errorResponse("Payer email, name and CPF are required"));
+      return;
+    }
+
+    // Validar campos específicos do cartão
+    if (body.paymentMethod === "credit_card") {
+      if (!body.token || !body.paymentMethodId) {
+        res.status(400).json(errorResponse("Card token and payment method ID are required for credit card payments"));
+        return;
+      }
     }
 
     // Buscar pedido
@@ -141,37 +166,95 @@ export const createPayment = async (
       return;
     }
 
-    // Calcular taxa da plataforma
+    // Calcular taxas
     const platformFeePercentage = env.PLATFORM_FEE_PERCENTAGE;
     const platformFee = (serviceOrder.price * platformFeePercentage) / 100;
     const professionalAmount = serviceOrder.price - platformFee;
-
-    // Criar preferência MercadoPago
     const externalReference = `order-${orderId}-${Date.now()}`;
 
-    let mpPreference: any = null;
+    let mpResult: any = null;
+    let paymentData: any = {};
+
     try {
-      mpPreference = await createPaymentPreference({
-        orderId,
-        title: serviceOrder.title,
-        description: serviceOrder.description || serviceOrder.title,
-        amount: serviceOrder.price,
-        payerEmail: serviceOrder.client.email,
-        payerName: serviceOrder.client.name,
-        externalReference,
-      });
-    } catch (mpError) {
-      console.error("MercadoPago preference creation failed:", mpError);
-      // Fallback: create payment record without MP (for development)
+      if (body.paymentMethod === "credit_card") {
+        const result = await createCardPayment({
+          orderId,
+          token: body.token!,
+          paymentMethodId: body.paymentMethodId!,
+          installments: body.installments || 1,
+          amount: serviceOrder.price,
+          payerEmail: body.payerEmail,
+          payerName: body.payerName,
+          payerCPF: body.payerCPF,
+          externalReference,
+          description: serviceOrder.title,
+        });
+        mpResult = result;
+        paymentData = {
+          mpPaymentId: result.id,
+          mpStatus: result.status,
+          mpStatusDetail: result.statusDetail,
+          paymentType: "credit_card",
+        };
+      } else if (body.paymentMethod === "pix") {
+        const result = await createPixPayment({
+          orderId,
+          amount: serviceOrder.price,
+          payerEmail: body.payerEmail,
+          payerName: body.payerName,
+          payerCPF: body.payerCPF,
+          externalReference,
+          description: serviceOrder.title,
+        });
+        mpResult = result;
+        paymentData = {
+          mpPaymentId: result.id,
+          mpStatus: result.status,
+          mpStatusDetail: result.statusDetail,
+          paymentType: "pix",
+          qrCode: result.qrCode,
+          qrCodeBase64: result.qrCodeBase64,
+          ticketUrl: result.ticketUrl,
+          expirationDate: result.expirationDate,
+        };
+      } else if (body.paymentMethod === "boleto") {
+        const result = await createBoletoPayment({
+          orderId,
+          amount: serviceOrder.price,
+          payerEmail: body.payerEmail,
+          payerName: body.payerName,
+          payerCPF: body.payerCPF,
+          externalReference,
+          description: serviceOrder.title,
+        });
+        mpResult = result;
+        paymentData = {
+          mpPaymentId: result.id,
+          mpStatus: result.status,
+          mpStatusDetail: result.statusDetail,
+          paymentType: "boleto",
+          boletoUrl: result.boletoUrl,
+          barcode: result.barcode,
+          expirationDate: result.expirationDate,
+        };
+      }
+    } catch (mpError: any) {
+      console.error("MercadoPago payment creation failed:", mpError);
+
+      // Em dev, criar pagamento local como fallback
       if (env.NODE_ENV !== "production") {
         console.warn("⚠️ MercadoPago unavailable — creating local payment record");
+        mpResult = { status: "approved", id: `local-${Date.now()}` };
+        paymentData = { paymentType: body.paymentMethod, localFallback: true };
       } else {
         res.status(502).json(errorResponse("Payment gateway unavailable. Try again later.", 502));
         return;
       }
     }
 
-    // Criar pagamento PENDING (será atualizado via webhook quando MP confirmar)
+    // Determinar status do pagamento com base na resposta do MP
+    const isApproved = mpResult?.status === "approved";
+    const isPending = mpResult?.status === "pending" || mpResult?.status === "in_process";
     const now = new Date();
     const heldUntil = new Date();
     heldUntil.setDate(heldUntil.getDate() + env.DEFAULT_ESCROW_HOLD_DAYS);
@@ -179,20 +262,18 @@ export const createPayment = async (
     const payment = await prisma.payment.create({
       data: {
         amount: serviceOrder.price,
-        status: mpPreference ? "PENDING" : "HELD", // PENDING if MP, HELD if fallback
-        paymentMethod,
-        transactionId: mpPreference?.preferenceId || null,
+        status: isApproved ? "HELD" : "PENDING",
+        paymentMethod: body.paymentMethod,
+        transactionId: String(mpResult?.id || ""),
         metadata: {
           externalReference,
-          preferenceId: mpPreference?.preferenceId || null,
-          initPoint: mpPreference?.initPoint || null,
-          sandboxInitPoint: mpPreference?.sandboxInitPoint || null,
+          ...paymentData,
           platformFee,
           professionalAmount,
           platformFeePercentage,
         },
-        paidAt: mpPreference ? null : now, // Only set paidAt if fallback (no MP)
-        heldUntil: mpPreference ? null : heldUntil,
+        paidAt: isApproved ? now : null,
+        heldUntil: isApproved ? heldUntil : null,
         serviceOrderId: orderId,
         clientId: req.user.id,
         professionalId: serviceOrder.professionalId || undefined,
@@ -204,13 +285,13 @@ export const createPayment = async (
       },
     });
 
-    // Se fallback (sem MP), criar transação e notificar
-    if (!mpPreference) {
+    // Se aprovado, criar transação e notificar
+    if (isApproved) {
       await prisma.transaction.create({
         data: {
           type: "PAYMENT",
           amount: serviceOrder.price,
-          description: `Payment for order #${orderId}: ${serviceOrder.title}`,
+          description: `Pagamento confirmado para pedido #${orderId}: ${serviceOrder.title}`,
           balanceBefore: 0,
           balanceAfter: 0,
           userId: req.user.id,
@@ -218,11 +299,11 @@ export const createPayment = async (
         },
       });
 
-      // Criar mensagem de sistema automática no chat
+      // Criar mensagem de sistema no chat
       if (serviceOrder.professionalId) {
         await prisma.message.create({
           data: {
-            content: `✅ Pagamento confirmado! O chat para o serviço "${serviceOrder.title}" está aberto. Use este canal para combinar detalhes do serviço. Lembre-se: informações pessoais de contato são bloqueadas automaticamente para sua segurança.`,
+            content: `✅ Pagamento confirmado! O chat para o serviço "${serviceOrder.title}" está aberto. Use este canal para combinar detalhes do serviço.`,
             type: "SYSTEM",
             senderId: serviceOrder.clientId,
             recipientId: serviceOrder.professionalId,
@@ -231,30 +312,39 @@ export const createPayment = async (
         });
       }
 
+      // Notificar profissional sobre pagamento
       if (serviceOrder.professionalId) {
         await createNotification(
           serviceOrder.professionalId,
           NotificationType.PAYMENT_RECEIVED,
-          "Pagamento recebido",
-          `Pagamento de R$${serviceOrder.price.toFixed(2)} recebido para "${serviceOrder.title}"`,
+          "💰 Pagamento confirmado",
+          `Pagamento de R$${serviceOrder.price.toFixed(2)} confirmado para "${serviceOrder.title}". Verifique os detalhes do serviço e entre em contato com o cliente.`,
           orderId,
-          { amount: serviceOrder.price, platformFee, professionalAmount },
+          { amount: serviceOrder.price, platformFee, professionalAmount, paymentMethod: body.paymentMethod },
         );
       }
+
+      // Notificar cliente sobre pagamento aprovado
+      await createNotification(
+        req.user.id,
+        NotificationType.PAYMENT_RECEIVED,
+        "✅ Pagamento aprovado",
+        `Seu pagamento de R$${serviceOrder.price.toFixed(2)} para "${serviceOrder.title}" foi aprovado! O profissional será notificado.`,
+        orderId,
+        { amount: serviceOrder.price, paymentMethod: body.paymentMethod },
+      );
     }
 
+    // Resposta com dados específicos do método de pagamento
     res.status(201).json(
       successResponse(
         {
           payment,
-          checkout: mpPreference
-            ? {
-                preferenceId: mpPreference.preferenceId,
-                checkoutUrl: env.MP_SANDBOX
-                  ? mpPreference.sandboxInitPoint
-                  : mpPreference.initPoint,
-              }
-            : null,
+          paymentData: {
+            status: mpResult?.status || "unknown",
+            statusDetail: mpResult?.statusDetail || "",
+            ...paymentData,
+          },
           feeBreakdown: {
             totalAmount: serviceOrder.price,
             platformFeePercentage,
@@ -262,9 +352,11 @@ export const createPayment = async (
             professionalAmount,
           },
         },
-        mpPreference
-          ? "Payment preference created. Redirect user to checkout."
-          : "Payment created successfully. Amount held in escrow.",
+        isApproved
+          ? "Pagamento aprovado! O profissional será notificado."
+          : isPending
+            ? "Pagamento em processamento. Você será notificado quando for confirmado."
+            : "Pagamento criado.",
       ),
     );
   } catch (error) {

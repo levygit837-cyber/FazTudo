@@ -168,10 +168,17 @@ export const createOrderSchema = z.object({
 // ============================================
 
 export const createPaymentSchema = z.object({
-  paymentMethod: z.enum(['PIX', 'CREDIT_CARD', 'DEBIT_CARD', 'BOLETO'], {
-    error: 'Metodo de pagamento invalido. Use: PIX, CREDIT_CARD, DEBIT_CARD ou BOLETO',
+  paymentMethod: z.enum(['pix', 'credit_card', 'boleto'], {
+    error: 'Metodo de pagamento invalido. Use: pix, credit_card ou boleto',
   }),
-  transactionId: z.string().max(200).optional(),
+  // Dados do pagador (obrigatórios)
+  payerEmail: z.string().email('Email invalido'),
+  payerName: z.string().min(2, 'Nome muito curto').max(200),
+  payerCPF: z.string().min(11, 'CPF invalido').max(14),
+  // Campos para cartão de crédito (opcionais)
+  token: z.string().max(500).optional(),
+  paymentMethodId: z.string().max(100).optional(),
+  installments: z.number().int().min(1).max(24).optional(),
 });
 
 // ============================================
