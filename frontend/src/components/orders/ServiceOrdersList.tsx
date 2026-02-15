@@ -29,6 +29,7 @@ const roleConfigs: Record<"client" | "professional", RoleConfig> = {
     statusLabels: {
       [ServiceOrderStatus.PENDING]: "Pendentes",
       [ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION]: "Aguardando Confirmacao",
+      [ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION]: "Aguardando Profissional",
     },
   },
   professional: {
@@ -41,6 +42,7 @@ const roleConfigs: Record<"client" | "professional", RoleConfig> = {
     statusLabels: {
       [ServiceOrderStatus.PENDING]: "Aguardando Resposta",
       [ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION]: "Aguardando Cliente",
+      [ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION]: "Aguardando Sua Confirmacao",
     },
   },
 };
@@ -68,6 +70,7 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
     { id: ServiceOrderStatus.ACCEPTED, label: "Aceitos" },
     { id: ServiceOrderStatus.IN_PROGRESS, label: "Em Andamento" },
     { id: ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION, label: config.statusLabels[ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION] || "Aguardando Confirmacao" },
+    { id: ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION, label: config.statusLabels[ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION] || "Aguardando Profissional" },
     { id: ServiceOrderStatus.COMPLETED, label: "Concluidos" },
     { id: ServiceOrderStatus.CANCELLED, label: "Cancelados" },
   ];
