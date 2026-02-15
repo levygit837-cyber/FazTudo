@@ -201,6 +201,16 @@ export const createServiceOrder = async (
       { clientId: req.user.id, clientName: req.user.name },
     );
 
+    // Notificar o cliente de que o pedido foi criado com sucesso
+    await createNotification(
+      req.user.id,
+      NotificationType.ORDER_CREATED,
+      "📋 Pedido criado",
+      `Seu pedido "${title}" foi enviado para o profissional ${serviceListing.professional.name}. Aguarde a aceitação.`,
+      serviceOrder.id,
+      { professionalId: serviceListing.professionalId, professionalName: serviceListing.professional.name },
+    );
+
     res
       .status(201)
       .json(
@@ -670,8 +680,8 @@ export const startServiceOrder = async (
     await createNotification(
       serviceOrder.clientId,
       NotificationType.ORDER_ACCEPTED,
-      "Serviço iniciado",
-      `O profissional ${req.user.name} iniciou o serviço "${serviceOrder.title}"`,
+      "🚀 Profissional a caminho",
+      `O profissional ${req.user.name} iniciou o serviço "${serviceOrder.title}" e está a caminho do local.`,
       orderId,
       { professionalId: req.user.id, professionalName: req.user.name },
     );
