@@ -8,6 +8,16 @@ import { filterChatContent, getBlockedContentMessage } from "../../middleware/ch
 interface SendMessageBody {
   content: string;
   serviceOrderId: number;
+  type?: "TEXT" | "ATTACHMENT" | "LOCATION";
+  // Attachment fields
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
+  // Location fields
+  locationLat?: number;
+  locationLng?: number;
+  locationLabel?: string;
 }
 
 interface ListOrderMessagesQuery {
@@ -86,12 +96,24 @@ export const sendMessage = async (
       return;
     }
 
-    // Filter personal contact information
-    const filterResult = filterChatContent(content.trim());
-    const filteredContent = filterResult.sanitized;
-    const filterWarning = filterResult.clean
-      ? undefined
-      : getBlockedContentMessage(filterResult.blockedTypes);
+    // Determine message type and process content accordingly
+    const messageType = req.body.type || "TEXT";
+
+    let finalContent = content.trim();
+    let filterWarning: string | undefined;
+
+    if (messageType === "TEXT") {
+      // Filter personal contact information only for text messages
+      const filterResult = filterChatContent(finalContent);
+      finalContent = filterResult.sanitized;
+      filterWarning = filterResult.clean
+        ? undefined
+        : getBlockedContentMessage(filterResult.blockedTypes);
+    } else if (messageType === "LOCATION") {
+      finalContent = req.body.locationLabel || "Localização compartilhada";
+    } else if (messageType === "ATTACHMENT") {
+      finalContent = req.body.attachmentName || "Arquivo anexado";
+    }
 
     // Buscar pedido
     const serviceOrder = await prisma.serviceOrder.findUnique({
@@ -134,10 +156,24 @@ export const sendMessage = async (
     // Criar mensagem
     const message = await prisma.message.create({
       data: {
-        content: filteredContent,
+        content: finalContent,
+        type: messageType,
         senderId,
         recipientId,
         serviceOrderId: orderId,
+        // Attachment fields
+        ...(messageType === "ATTACHMENT" && {
+          attachmentUrl: req.body.attachmentUrl,
+          attachmentName: req.body.attachmentName,
+          attachmentType: req.body.attachmentType,
+          attachmentSize: req.body.attachmentSize,
+        }),
+        // Location fields
+        ...(messageType === "LOCATION" && {
+          locationLat: req.body.locationLat,
+          locationLng: req.body.locationLng,
+          locationLabel: req.body.locationLabel,
+        }),
       },
       include: {
         sender: {
