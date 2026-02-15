@@ -227,6 +227,9 @@ router.post(
 // ROTAS DE PAGAMENTOS
 // ============================================
 
+// Configuração do MercadoPago (public key para checkout transparente)
+router.get("/payments/config", verifyToken, serviceController.getMercadoPagoPublicKey);
+
 // Criar pagamento para um pedido (apenas cliente)
 router.post(
   "/orders/:orderId/payments",

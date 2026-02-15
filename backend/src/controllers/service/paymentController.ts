@@ -50,6 +50,33 @@ const createNotification = async (
   }
 };
 
+// Retorna public key do MercadoPago para o frontend
+export const getMercadoPagoPublicKey = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    const publicKey = env.MP_PUBLIC_KEY;
+    if (!publicKey) {
+      res.status(500).json(errorResponse("MercadoPago public key not configured", 500));
+      return;
+    }
+
+    res.status(200).json(successResponse({
+      publicKey,
+      sandbox: env.MP_SANDBOX,
+    }, "MercadoPago config retrieved"));
+  } catch (error) {
+    console.error("Get MP config error:", error);
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
 // Criar pagamento para um pedido (apenas cliente)
 export const createPayment = async (
   req: AuthRequest,
