@@ -1,17 +1,35 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  Send,
+  Paperclip,
+  MapPin,
+  X,
+  FileText,
+  Download,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Skeleton } from "../../components/common/Skeleton";
 import {
   getOrderById,
   getOrderMessages,
   sendMessage,
+  uploadChatFile,
 } from "../../services/serviceService";
 import { Message, ServiceOrder } from "../../types";
-import { formatDateTime, formatRelativeTime } from "../../utils/formatters";
+import { formatRelativeTime } from "../../utils/formatters";
 
 const POLLING_INTERVAL_MS = 5000;
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const ServiceChat: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,17 +39,21 @@ const ServiceChat: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [order, setOrder] = useState<ServiceOrder | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [filterWarning, setFilterWarning] = useState<string | null>(null);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isProfessionalRoute = location.pathname.includes("/professional/");
 
   const chatTitle = useMemo(() => {
-    if (!order || !user) return "Chat do Servico";
+    if (!order || !user) return "Chat do Serviço";
     if (isProfessionalRoute) return order.client?.name || "Cliente";
     return order.professional?.name || "Profissional";
   }, [order, user, isProfessionalRoute]);
@@ -57,7 +79,7 @@ const ServiceChat: React.FC = () => {
       await Promise.all([loadOrder(orderId), loadMessages(orderId)]);
     } catch (err: any) {
       setError(
-        err?.response?.data?.message || "Nao foi possivel carregar o chat.",
+        err?.response?.data?.message || "Não foi possível carregar o chat.",
       );
     } finally {
       if (showLoading) setLoading(false);
@@ -96,15 +118,264 @@ const ServiceChat: React.FC = () => {
     try {
       setSending(true);
       setError(null);
-      await sendMessage(orderId, text.trim());
+      setFilterWarning(null);
+      const result = await sendMessage(orderId, text.trim());
       setText("");
+      // Checar se houve warning de filtro na resposta
+      if ((result as any).filterWarning) {
+        setFilterWarning((result as any).filterWarning);
+        setTimeout(() => setFilterWarning(null), 8000);
+      }
       await loadMessages(orderId);
     } catch (err: any) {
       setError(
-        err?.response?.data?.message || "Nao foi possivel enviar a mensagem.",
+        err?.response?.data?.message || "Não foi possível enviar a mensagem.",
       );
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !id) return;
+    const orderId = parseInt(id, 10);
+    if (Number.isNaN(orderId)) return;
+
+    try {
+      setUploading(true);
+      setError(null);
+      const uploaded = await uploadChatFile(orderId, file);
+      await sendMessage(orderId, file.name, {
+        type: "ATTACHMENT",
+        attachmentUrl: uploaded.url,
+        attachmentName: uploaded.originalName,
+        attachmentType: uploaded.mimeType,
+        attachmentSize: uploaded.size,
+      });
+      await loadMessages(orderId);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message || "Não foi possível enviar o arquivo.",
+      );
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleShareLocation = async () => {
+    if (!id) return;
+    const orderId = parseInt(id, 10);
+    if (Number.isNaN(orderId)) return;
+
+    if (!navigator.geolocation) {
+      setError("Geolocalização não suportada pelo navegador.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          setSending(true);
+          setError(null);
+          await sendMessage(orderId, "Localização compartilhada", {
+            type: "LOCATION",
+            locationLat: position.coords.latitude,
+            locationLng: position.coords.longitude,
+            locationLabel: "Minha localização atual",
+          });
+          setShowLocationPicker(false);
+          await loadMessages(orderId);
+        } catch (err: any) {
+          setError("Não foi possível compartilhar a localização.");
+        } finally {
+          setSending(false);
+        }
+      },
+      () => {
+        setError("Não foi possível obter sua localização. Verifique as permissões.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
+  const handleShareOrderAddress = async () => {
+    if (!id || !order?.address) return;
+    const orderId = parseInt(id, 10);
+    if (Number.isNaN(orderId)) return;
+
+    try {
+      setSending(true);
+      setError(null);
+      const addr = order.address;
+      const label = `${addr.street}, ${addr.number}${addr.complement ? ` - ${addr.complement}` : ""} - ${addr.neighborhood}, ${addr.city}/${addr.state}`;
+      await sendMessage(orderId, label, {
+        type: "LOCATION",
+        locationLat: addr.latitude || undefined,
+        locationLng: addr.longitude || undefined,
+        locationLabel: label,
+      });
+      setShowLocationPicker(false);
+      await loadMessages(orderId);
+    } catch (err: any) {
+      setError("Não foi possível compartilhar o endereço.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Render de mensagem de acordo com o tipo
+  const renderMessageContent = (message: Message) => {
+    const msgType = message.type || "TEXT";
+    const isOwn = message.senderId === user?.id;
+
+    switch (msgType) {
+      case "SYSTEM":
+        return (
+          <div className="flex items-center justify-center py-2">
+            <div className="flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800 px-4 py-2 text-center text-xs text-slate-500 dark:text-slate-400">
+              <Info className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>{message.content}</span>
+            </div>
+          </div>
+        );
+
+      case "ATTACHMENT": {
+        const isImage = message.attachmentType?.startsWith("image/");
+        const fileUrl = message.attachmentUrl
+          ? `${API_BASE}${message.attachmentUrl}`
+          : "#";
+
+        return (
+          <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+            <div
+              className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                isOwn
+                  ? "rounded-br-sm bg-primary-600 text-white"
+                  : "rounded-bl-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              }`}
+            >
+              {isImage ? (
+                <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={fileUrl}
+                    alt={message.attachmentName || "Imagem"}
+                    className="max-h-48 rounded-lg object-cover"
+                  />
+                </a>
+              ) : (
+                <a
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center gap-3 rounded-lg p-2 ${
+                    isOwn
+                      ? "bg-primary-700 hover:bg-primary-800"
+                      : "bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600"
+                  }`}
+                >
+                  <FileText className="h-8 w-8 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">
+                      {message.attachmentName || "Arquivo"}
+                    </p>
+                    {message.attachmentSize && (
+                      <p className={`text-xs ${isOwn ? "text-primary-200" : "text-slate-500 dark:text-slate-400"}`}>
+                        {formatFileSize(message.attachmentSize)}
+                      </p>
+                    )}
+                  </div>
+                  <Download className="h-4 w-4 flex-shrink-0" />
+                </a>
+              )}
+              <p
+                className={`mt-1 text-[11px] ${
+                  isOwn ? "text-primary-100" : "text-slate-500 dark:text-slate-400"
+                }`}
+              >
+                {formatRelativeTime(message.createdAt)}
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      case "LOCATION": {
+        const lat = message.locationLat;
+        const lng = message.locationLng;
+        const mapsUrl = lat && lng
+          ? `https://www.google.com/maps?q=${lat},${lng}`
+          : "#";
+
+        return (
+          <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+            <div
+              className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                isOwn
+                  ? "rounded-br-sm bg-primary-600 text-white"
+                  : "rounded-bl-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              }`}
+            >
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-2 rounded-lg p-2 ${
+                  isOwn
+                    ? "bg-primary-700 hover:bg-primary-800"
+                    : "bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600"
+                }`}
+              >
+                <MapPin className="h-6 w-6 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">
+                    {message.locationLabel || "Localização"}
+                  </p>
+                  {lat && lng && (
+                    <p className={`text-xs ${isOwn ? "text-primary-200" : "text-slate-500 dark:text-slate-400"}`}>
+                      Abrir no Google Maps
+                    </p>
+                  )}
+                </div>
+              </a>
+              <p
+                className={`mt-1 text-[11px] ${
+                  isOwn ? "text-primary-100" : "text-slate-500 dark:text-slate-400"
+                }`}
+              >
+                {formatRelativeTime(message.createdAt)}
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      default:
+        return (
+          <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+            <div
+              className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                isOwn
+                  ? "rounded-br-sm bg-primary-600 text-white"
+                  : "rounded-bl-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              }`}
+            >
+              <p className="text-sm leading-relaxed">{message.content}</p>
+              <p
+                className={`mt-1 text-[11px] ${
+                  isOwn
+                    ? "text-primary-100"
+                    : "text-slate-500 dark:text-slate-400"
+                }`}
+              >
+                {formatRelativeTime(message.createdAt)}
+              </p>
+            </div>
+          </div>
+        );
     }
   };
 
@@ -119,18 +390,10 @@ const ServiceChat: React.FC = () => {
           </div>
         </div>
         <div className="flex-1 space-y-4 px-4 py-6">
-          <div className="flex justify-start">
-            <Skeleton className="h-16 w-2/3 rounded-2xl" />
-          </div>
-          <div className="flex justify-end">
-            <Skeleton className="h-12 w-1/2 rounded-2xl" />
-          </div>
-          <div className="flex justify-start">
-            <Skeleton className="h-20 w-3/5 rounded-2xl" />
-          </div>
-          <div className="flex justify-end">
-            <Skeleton className="h-10 w-2/5 rounded-2xl" />
-          </div>
+          <div className="flex justify-start"><Skeleton className="h-16 w-2/3 rounded-2xl" /></div>
+          <div className="flex justify-end"><Skeleton className="h-12 w-1/2 rounded-2xl" /></div>
+          <div className="flex justify-start"><Skeleton className="h-20 w-3/5 rounded-2xl" /></div>
+          <div className="flex justify-end"><Skeleton className="h-10 w-2/5 rounded-2xl" /></div>
         </div>
         <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3">
           <Skeleton className="h-10 w-full rounded-lg" />
@@ -139,17 +402,22 @@ const ServiceChat: React.FC = () => {
     );
 
   const backPath = isProfessionalRoute
-    ? `/professional/services/${id}`
-    : `/client/orders/${id}`;
+    ? `/professional/messages`
+    : `/client/messages`;
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-9rem)] w-full max-w-6xl flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900" role="region" aria-label="Chat do servico">
+    <div
+      className="mx-auto flex h-[calc(100vh-9rem)] w-full max-w-6xl flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+      role="region"
+      aria-label="Chat do serviço"
+    >
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(backPath)}
             className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-700"
-            aria-label="Voltar"
+            aria-label="Voltar para mensagens"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -159,19 +427,32 @@ const ServiceChat: React.FC = () => {
             </h1>
             {order && (
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Pedido #{order.id} · {order.title}
+                {order.title}
               </p>
             )}
           </div>
         </div>
       </div>
 
+      {/* Filter Warning */}
+      {filterWarning && (
+        <div className="mx-4 mt-2 flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+          <span>{filterWarning}</span>
+          <button onClick={() => setFilterWarning(null)} className="ml-auto">
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
+      {/* Error */}
       {error && (
-        <div className="mx-4 mt-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-400">
+        <div className="mx-4 mt-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
 
+      {/* Messages */}
       <div
         ref={scrollContainerRef}
         className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
@@ -184,42 +465,81 @@ const ServiceChat: React.FC = () => {
             Nenhuma mensagem ainda. Envie a primeira para iniciar a conversa.
           </div>
         ) : (
-          messages.map((message) => {
-            const isOwnMessage = message.senderId === user?.id;
-            return (
-              <div
-                key={message.id}
-                className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                    isOwnMessage
-                      ? "rounded-br-sm bg-primary-600 text-white"
-                      : "rounded-bl-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                  }`}
-                >
-                  <p className="text-sm leading-relaxed">{message.content}</p>
-                  <p
-                    className={`mt-1 text-[11px] ${
-                      isOwnMessage
-                        ? "text-primary-100"
-                        : "text-slate-500 dark:text-slate-400"
-                    }`}
-                  >
-                    {formatRelativeTime(message.createdAt)}
-                  </p>
-                </div>
-              </div>
-            );
-          })
+          messages.map((message) => (
+            <React.Fragment key={message.id}>
+              {renderMessageContent(message)}
+            </React.Fragment>
+          ))
         )}
       </div>
 
-      <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3">
-        <div className="mb-2 text-xs text-slate-500 dark:text-slate-400">
-          Ultima atualizacao: {formatDateTime(new Date())}
+      {/* Location Picker */}
+      {showLocationPicker && (
+        <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 bg-slate-50 dark:bg-slate-800/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Compartilhar localização
+            </span>
+            <button onClick={() => setShowLocationPicker(false)}>
+              <X className="h-4 w-4 text-slate-400" />
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleShareLocation}
+              disabled={sending}
+              className="btn btn-primary flex-1 text-sm"
+            >
+              <MapPin className="h-4 w-4 mr-1" />
+              Minha localização atual
+            </button>
+            {order?.address && (
+              <button
+                onClick={handleShareOrderAddress}
+                disabled={sending}
+                className="btn btn-secondary flex-1 text-sm"
+              >
+                <MapPin className="h-4 w-4 mr-1" />
+                Endereço do serviço
+              </button>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* Input */}
+      <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3">
         <div className="flex gap-2">
+          {/* File upload */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            className="hidden"
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-50"
+            aria-label="Anexar arquivo"
+            title="Anexar arquivo"
+          >
+            <Paperclip className="h-5 w-5" />
+          </button>
+
+          {/* Location */}
+          <button
+            onClick={() => setShowLocationPicker(!showLocationPicker)}
+            disabled={sending}
+            className={`rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 ${showLocationPicker ? "text-primary-600" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"}`}
+            aria-label="Compartilhar localização"
+            title="Compartilhar localização"
+          >
+            <MapPin className="h-5 w-5" />
+          </button>
+
+          {/* Text input */}
           <input
             value={text}
             onChange={(event) => setText(event.target.value)}
@@ -231,16 +551,22 @@ const ServiceChat: React.FC = () => {
             }}
             placeholder="Digite uma mensagem..."
             className="input flex-1"
-            disabled={sending}
+            disabled={sending || uploading}
             aria-label="Mensagem"
           />
+
+          {/* Send */}
           <button
             onClick={handleSend}
             className="btn btn-primary"
-            disabled={sending || !text.trim()}
+            disabled={sending || uploading || !text.trim()}
             aria-label="Enviar mensagem"
           >
-            <Send className="h-4 w-4" />
+            {uploading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </button>
         </div>
       </div>
