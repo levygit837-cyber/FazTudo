@@ -1,5 +1,5 @@
 import api, { ApiResponse, extractData } from "./api";
-import { CheckoutResponse, Message, ServiceListing, ServiceOrder, ServiceOrderStatus } from "../types";
+import { ChatConversation, CheckoutResponse, Message, ServiceListing, ServiceOrder, ServiceOrderStatus } from "../types";
 
 // ==================== TIPOS ====================
 
@@ -388,6 +388,46 @@ export const createReview = async (
   return extractData(response);
 };
 
+// ==================== SERVIÇOS - CHATS ====================
+
+/**
+ * Lista conversas ativas do usuário
+ */
+export const getUserChats = async (): Promise<ChatConversation[]> => {
+  const response = await api.get<ApiResponse<any>>("/services/chats");
+  const data = extractData(response);
+  return data.chats || [];
+};
+
+/**
+ * Upload de arquivo para o chat
+ */
+export const uploadChatFile = async (
+  orderId: number,
+  file: File,
+): Promise<{
+  url: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+}> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/messages/upload`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+
+  const data = extractData(response);
+  return data.file;
+};
+
 // ==================== SERVIÇOS - MESSAGES ====================
 
 /**
@@ -396,10 +436,20 @@ export const createReview = async (
 export const sendMessage = async (
   orderId: number,
   content: string,
+  options?: {
+    type?: "TEXT" | "ATTACHMENT" | "LOCATION";
+    attachmentUrl?: string;
+    attachmentName?: string;
+    attachmentType?: string;
+    attachmentSize?: number;
+    locationLat?: number;
+    locationLng?: number;
+    locationLabel?: string;
+  },
 ): Promise<Message> => {
   const response = await api.post<ApiResponse<any>>(
     `/services/orders/${orderId}/messages`,
-    { content },
+    { content, ...options },
   );
   const payload = extractData(response);
   return payload.message || payload;
@@ -592,6 +642,9 @@ export default {
   releasePayment,
   // Reviews
   createReview,
+  // Chats
+  getUserChats,
+  uploadChatFile,
   // Messages
   sendMessage,
   getOrderMessages,
