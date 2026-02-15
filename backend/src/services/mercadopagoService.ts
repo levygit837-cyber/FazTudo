@@ -80,3 +80,198 @@ export async function getMPPaymentStatus(mpPaymentId: string) {
     dateApproved: response.date_approved,
   };
 }
+
+// ============================================
+// CHECKOUT TRANSPARENTE - Payment Functions
+// ============================================
+
+export interface CreateCardPaymentParams {
+  orderId: number;
+  token: string;
+  paymentMethodId: string;
+  installments: number;
+  amount: number;
+  payerEmail: string;
+  payerName: string;
+  payerCPF: string;
+  externalReference: string;
+  description: string;
+}
+
+export interface MPPaymentResult {
+  id: number;
+  status: string;
+  statusDetail: string;
+  paymentMethodId: string;
+  installments: number;
+  transactionAmount: number;
+  dateApproved: string | null;
+}
+
+/**
+ * Cria pagamento com cartão de crédito via Checkout Transparente
+ */
+export async function createCardPayment(
+  params: CreateCardPaymentParams
+): Promise<MPPaymentResult> {
+  const payment = getPaymentClient();
+
+  const response = await payment.create({
+    body: {
+      transaction_amount: params.amount,
+      token: params.token,
+      description: params.description,
+      installments: params.installments,
+      payment_method_id: params.paymentMethodId,
+      payer: {
+        email: params.payerEmail,
+        first_name: params.payerName.split(" ")[0],
+        last_name: params.payerName.split(" ").slice(1).join(" ") || params.payerName,
+        identification: {
+          type: "CPF",
+          number: params.payerCPF,
+        },
+      },
+      external_reference: params.externalReference,
+      notification_url: `${process.env.BACKEND_URL || `http://localhost:${env.PORT}`}/api/services/payments/webhook`,
+      statement_descriptor: "FAZTUDO",
+    },
+    requestOptions: {
+      idempotencyKey: `card-${params.externalReference}`,
+    },
+  });
+
+  return {
+    id: response.id!,
+    status: response.status!,
+    statusDetail: response.status_detail!,
+    paymentMethodId: response.payment_method_id!,
+    installments: response.installments!,
+    transactionAmount: response.transaction_amount!,
+    dateApproved: response.date_approved || null,
+  };
+}
+
+export interface CreatePixPaymentParams {
+  orderId: number;
+  amount: number;
+  payerEmail: string;
+  payerName: string;
+  payerCPF: string;
+  externalReference: string;
+  description: string;
+}
+
+export interface MPPixResult {
+  id: number;
+  status: string;
+  statusDetail: string;
+  qrCode: string;
+  qrCodeBase64: string;
+  ticketUrl: string;
+  expirationDate: string;
+}
+
+/**
+ * Cria pagamento PIX via Checkout Transparente
+ */
+export async function createPixPayment(
+  params: CreatePixPaymentParams
+): Promise<MPPixResult> {
+  const payment = getPaymentClient();
+
+  const response = await payment.create({
+    body: {
+      transaction_amount: params.amount,
+      description: params.description,
+      payment_method_id: "pix",
+      payer: {
+        email: params.payerEmail,
+        first_name: params.payerName.split(" ")[0],
+        last_name: params.payerName.split(" ").slice(1).join(" ") || params.payerName,
+        identification: {
+          type: "CPF",
+          number: params.payerCPF,
+        },
+      },
+      external_reference: params.externalReference,
+      notification_url: `${process.env.BACKEND_URL || `http://localhost:${env.PORT}`}/api/services/payments/webhook`,
+    },
+    requestOptions: {
+      idempotencyKey: `pix-${params.externalReference}`,
+    },
+  });
+
+  const pointOfInteraction = (response as any).point_of_interaction?.transaction_data;
+
+  return {
+    id: response.id!,
+    status: response.status!,
+    statusDetail: response.status_detail!,
+    qrCode: pointOfInteraction?.qr_code || "",
+    qrCodeBase64: pointOfInteraction?.qr_code_base64 || "",
+    ticketUrl: pointOfInteraction?.ticket_url || "",
+    expirationDate: (response as any).date_of_expiration || "",
+  };
+}
+
+export interface CreateBoletoPaymentParams {
+  orderId: number;
+  amount: number;
+  payerEmail: string;
+  payerName: string;
+  payerCPF: string;
+  externalReference: string;
+  description: string;
+}
+
+export interface MPBoletoResult {
+  id: number;
+  status: string;
+  statusDetail: string;
+  boletoUrl: string;
+  barcode: string;
+  expirationDate: string;
+}
+
+/**
+ * Cria pagamento com Boleto Bancário via Checkout Transparente
+ */
+export async function createBoletoPayment(
+  params: CreateBoletoPaymentParams
+): Promise<MPBoletoResult> {
+  const payment = getPaymentClient();
+
+  const response = await payment.create({
+    body: {
+      transaction_amount: params.amount,
+      description: params.description,
+      payment_method_id: "bolbradesco",
+      payer: {
+        email: params.payerEmail,
+        first_name: params.payerName.split(" ")[0],
+        last_name: params.payerName.split(" ").slice(1).join(" ") || params.payerName,
+        identification: {
+          type: "CPF",
+          number: params.payerCPF,
+        },
+      },
+      external_reference: params.externalReference,
+      notification_url: `${process.env.BACKEND_URL || `http://localhost:${env.PORT}`}/api/services/payments/webhook`,
+    },
+    requestOptions: {
+      idempotencyKey: `boleto-${params.externalReference}`,
+    },
+  });
+
+  const transactionData = (response as any).transaction_details;
+
+  return {
+    id: response.id!,
+    status: response.status!,
+    statusDetail: response.status_detail!,
+    boletoUrl: transactionData?.external_resource_url || "",
+    barcode: transactionData?.barcode?.content || (response as any).barcode?.content || "",
+    expirationDate: (response as any).date_of_expiration || "",
+  };
+}
