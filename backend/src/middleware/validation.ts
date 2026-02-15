@@ -181,6 +181,16 @@ export const createPaymentSchema = z.object({
 export const sendMessageSchema = z.object({
   content: sanitizedString
     .pipe(z.string().min(1, 'Mensagem nao pode ser vazia').max(2000, 'Mensagem muito longa')),
+  type: z.enum(["TEXT", "ATTACHMENT", "LOCATION"]).optional().default("TEXT"),
+  // Attachment fields
+  attachmentUrl: z.string().optional(),
+  attachmentName: z.string().optional(),
+  attachmentType: z.string().optional(),
+  attachmentSize: z.number().optional(),
+  // Location fields
+  locationLat: z.number().min(-90).max(90).optional(),
+  locationLng: z.number().min(-180).max(180).optional(),
+  locationLabel: z.string().max(500).optional(),
 });
 
 // ============================================
