@@ -166,14 +166,19 @@ const OrderDetails: React.FC = () => {
     try {
       setActionLoading(true);
       setError(null);
-      const result = await createPayment(order.id, paymentMethod);
-      if (result.checkout?.checkoutUrl) {
-        // Redirect to MercadoPago checkout
-        window.location.href = result.checkout.checkoutUrl;
-      } else {
-        // Fallback: payment processed locally
+      // TODO: Will be replaced by navigation to /client/orders/{id}/checkout in Task 13
+      const result = await createPayment(order.id, {
+        paymentMethod: paymentMethod as "credit_card" | "pix" | "boleto",
+        payerEmail: "",
+        payerName: "",
+        payerCPF: "",
+      });
+      if (result.paymentData?.status === "approved") {
         await loadOrder();
         toast.success("Pagamento realizado com sucesso!");
+      } else {
+        await loadOrder();
+        toast.info("Pagamento em processamento...");
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Erro ao processar pagamento";

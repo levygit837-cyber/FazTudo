@@ -1,5 +1,5 @@
 import api, { ApiResponse, extractData } from "./api";
-import { ChatConversation, CheckoutResponse, Message, ServiceListing, ServiceOrder, ServiceOrderStatus } from "../types";
+import { ChatConversation, CheckoutFormData, TransparentCheckoutResponse, MPConfig, Message, ServiceListing, ServiceOrder, ServiceOrderStatus } from "../types";
 
 // ==================== TIPOS ====================
 
@@ -348,16 +348,23 @@ export const cancelOrder = async (
 // ==================== SERVIÇOS - PAYMENTS ====================
 
 /**
- * Cria pagamento para um pedido (cliente)
- * Retorna checkout URL do MercadoPago ou fallback local
+ * Obtém configuração do MercadoPago (public key)
+ */
+export const getMPConfig = async (): Promise<MPConfig> => {
+  const response = await api.get<ApiResponse<MPConfig>>("/services/payments/config");
+  return extractData(response);
+};
+
+/**
+ * Cria pagamento via checkout transparente (cartão/PIX/boleto)
  */
 export const createPayment = async (
   orderId: number,
-  paymentMethod: string,
-): Promise<CheckoutResponse> => {
-  const response = await api.post<ApiResponse<CheckoutResponse>>(
+  data: CheckoutFormData,
+): Promise<TransparentCheckoutResponse> => {
+  const response = await api.post<ApiResponse<TransparentCheckoutResponse>>(
     `/services/orders/${orderId}/payments`,
-    { paymentMethod },
+    data,
   );
   return extractData(response);
 };
@@ -638,6 +645,7 @@ export default {
   confirmOrderCompletion,
   cancelOrder,
   // Payments
+  getMPConfig,
   createPayment,
   releasePayment,
   // Reviews

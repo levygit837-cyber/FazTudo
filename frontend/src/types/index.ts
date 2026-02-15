@@ -160,6 +160,10 @@ export interface ServiceOrder {
   completedAt?: string;
   cancelledAt?: string;
 
+  // Confirmação dupla
+  clientConfirmedAt?: string;
+  professionalConfirmedAt?: string;
+
   addressId?: number;
   addressNotes?: string;
 
@@ -398,6 +402,47 @@ export interface CheckoutResponse {
     platformFee: number;
     professionalAmount: number;
   };
+}
+
+export interface TransparentCheckoutResponse {
+  payment: Payment;
+  paymentData: {
+    status: string;
+    statusDetail: string;
+    paymentType: string;
+    // PIX
+    qrCode?: string;
+    qrCodeBase64?: string;
+    ticketUrl?: string;
+    // Boleto
+    boletoUrl?: string;
+    barcode?: string;
+    // Comum
+    expirationDate?: string;
+    mpPaymentId?: number;
+  };
+  feeBreakdown: {
+    totalAmount: number;
+    platformFeePercentage: number;
+    platformFee: number;
+    professionalAmount: number;
+  };
+}
+
+export interface CheckoutFormData {
+  paymentMethod: "credit_card" | "pix" | "boleto";
+  payerEmail: string;
+  payerName: string;
+  payerCPF: string;
+  // Cartão
+  token?: string;
+  paymentMethodId?: string;
+  installments?: number;
+}
+
+export interface MPConfig {
+  publicKey: string;
+  sandbox: boolean;
 }
 
 export interface ApiResponse<T = any> {
