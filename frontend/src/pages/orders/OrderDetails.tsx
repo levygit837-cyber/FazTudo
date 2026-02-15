@@ -37,7 +37,7 @@ import {
   createReview,
   createOrder,
 } from "../../services/serviceService";
-import { ServiceOrder, ServiceOrderStatus } from "../../types";
+import { ServiceOrder } from "../../types";
 import {
   formatCurrency,
   formatDate,
