@@ -32,6 +32,7 @@ import ProfessionalReputation from "./pages/professional/Reputation";
 import ServiceChat from "./pages/services/ServiceChat";
 import ServiceDetails from "./pages/services/ServiceDetails";
 import ServiceSearch from "./pages/services/ServiceSearch";
+import Messages from "./pages/Messages";
 import Security from "./pages/Security";
 import Notifications from "./pages/Notifications";
 import Wallet from "./pages/Wallet";
@@ -82,7 +83,7 @@ const App: React.FC = () => {
                 <Route path="orders/new" element={<NewOrder />} />
                 <Route path="orders/:id" element={<OrderDetails />} />
                 <Route path="orders/:id/chat" element={<ServiceChat />} />
-                <Route path="messages" element={<Navigate to="../orders" replace />} />
+                <Route path="messages" element={<Messages />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="carteira" element={<Wallet />} />
               </Route>
@@ -109,7 +110,7 @@ const App: React.FC = () => {
                 <Route path="catalog/:id/edit" element={<EditService />} />
                 <Route
                   path="messages"
-                  element={<Navigate to="../services" replace />}
+                  element={<Messages />}
                 />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="carteira" element={<Wallet />} />
