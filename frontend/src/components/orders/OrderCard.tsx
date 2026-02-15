@@ -61,6 +61,11 @@ const statusConfig: Record<
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
     icon: <Clock className="w-4 h-4" />,
   },
+  [ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION]: {
+    color: "text-orange-600",
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+    icon: <Clock className="w-4 h-4" />,
+  },
   [ServiceOrderStatus.COMPLETED]: {
     color: "text-green-600",
     bgColor: "bg-green-100 dark:bg-green-900/30",
@@ -161,7 +166,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         {deadlineDate &&
           (status === ServiceOrderStatus.ACCEPTED ||
             status === ServiceOrderStatus.IN_PROGRESS ||
-            status === ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION) && (
+            status === ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION ||
+            status === ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION) && (
             <div
               className={`flex items-center gap-2 text-sm ${isOverdue ? "text-red-600" : isDeadlineNear ? "text-yellow-600" : "text-slate-600 dark:text-slate-400"}`}
             >
