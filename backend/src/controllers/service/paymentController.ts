@@ -191,6 +191,19 @@ export const createPayment = async (
         },
       });
 
+      // Criar mensagem de sistema automática no chat
+      if (serviceOrder.professionalId) {
+        await prisma.message.create({
+          data: {
+            content: `✅ Pagamento confirmado! O chat para o serviço "${serviceOrder.title}" está aberto. Use este canal para combinar detalhes do serviço. Lembre-se: informações pessoais de contato são bloqueadas automaticamente para sua segurança.`,
+            type: "SYSTEM",
+            senderId: serviceOrder.clientId,
+            recipientId: serviceOrder.professionalId,
+            serviceOrderId: serviceOrder.id,
+          },
+        });
+      }
+
       if (serviceOrder.professionalId) {
         await createNotification(
           serviceOrder.professionalId,
@@ -487,6 +500,20 @@ export const mercadoPagoWebhook = async (
             paymentId: payment.id,
           },
         }),
+        // Criar mensagem de sistema automática no chat
+        ...(payment.serviceOrder.professionalId
+          ? [
+              prisma.message.create({
+                data: {
+                  content: `✅ Pagamento confirmado! O chat para o serviço "${payment.serviceOrder.title}" está aberto. Use este canal para combinar detalhes do serviço. Lembre-se: informações pessoais de contato são bloqueadas automaticamente para sua segurança.`,
+                  type: "SYSTEM",
+                  senderId: payment.serviceOrder.clientId,
+                  recipientId: payment.serviceOrder.professionalId,
+                  serviceOrderId: payment.serviceOrder.id,
+                },
+              }),
+            ]
+          : []),
       ]);
 
       // Notificar profissional
