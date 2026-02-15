@@ -522,16 +522,21 @@ export const releasePayment = async (
   }
 };
 
-// Webhook do MercadoPago
+// Webhook do MercadoPago (v1 + v2 notification formats)
 export const mercadoPagoWebhook = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
   try {
-    const { type, data } = req.body;
+    const { type, data, action } = req.body;
 
-    // MercadoPago envia notificações de diferentes tipos
-    if (type !== "payment") {
+    // MP pode enviar type="payment" ou action="payment.created"/"payment.updated"
+    const isPaymentNotification =
+      type === "payment" ||
+      action === "payment.created" ||
+      action === "payment.updated";
+
+    if (!isPaymentNotification) {
       res.status(200).json({ received: true });
       return;
     }
@@ -542,7 +547,7 @@ export const mercadoPagoWebhook = async (
       return;
     }
 
-    // Buscar status do pagamento no MercadoPago
+    // Buscar status real do pagamento no MP
     let mpPayment;
     try {
       mpPayment = await getMPPaymentStatus(String(mpPaymentId));
@@ -552,44 +557,42 @@ export const mercadoPagoWebhook = async (
       return;
     }
 
-    if (!mpPayment.externalReference) {
-      res.status(200).json({ received: true });
-      return;
-    }
-
-    // Extrair orderId do external_reference (formato: "order-{id}-{timestamp}")
-    const refParts = mpPayment.externalReference.split("-");
-    const orderId = parseInt(refParts[1] || "", 10);
-
-    if (isNaN(orderId)) {
-      console.error("Invalid external_reference:", mpPayment.externalReference);
-      res.status(200).json({ received: true });
-      return;
-    }
-
-    // Buscar pagamento pendente para esta ordem
-    const payment = await prisma.payment.findFirst({
+    // Buscar pagamento no nosso banco: por transactionId ou externalReference
+    let payment = await prisma.payment.findFirst({
       where: {
-        serviceOrderId: orderId,
-        status: "PENDING",
+        transactionId: String(mpPaymentId),
+        status: { in: ["PENDING", "HELD"] },
       },
-      include: {
-        serviceOrder: true,
-      },
+      include: { serviceOrder: true },
     });
+
+    // Fallback: buscar por externalReference
+    if (!payment && mpPayment.externalReference) {
+      const refParts = mpPayment.externalReference.split("-");
+      const orderId = parseInt(refParts[1] || "", 10);
+      if (!isNaN(orderId)) {
+        payment = await prisma.payment.findFirst({
+          where: {
+            serviceOrderId: orderId,
+            status: "PENDING",
+          },
+          include: { serviceOrder: true },
+        });
+      }
+    }
 
     if (!payment) {
       res.status(200).json({ received: true });
       return;
     }
 
-    // Processar baseado no status do MP
+    const orderId = payment.serviceOrderId;
+
     if (mpPayment.status === "approved") {
       const now = new Date();
       const heldUntil = new Date();
       heldUntil.setDate(heldUntil.getDate() + env.DEFAULT_ESCROW_HOLD_DAYS);
 
-      // Atualizar pagamento para HELD (escrow)
       await prisma.$transaction([
         prisma.payment.update({
           where: { id: payment.id },
@@ -612,7 +615,7 @@ export const mercadoPagoWebhook = async (
           data: {
             type: "PAYMENT",
             amount: payment.amount,
-            description: `Payment confirmed via MercadoPago for order #${orderId}`,
+            description: `Pagamento confirmado via MercadoPago para pedido #${orderId}`,
             balanceBefore: 0,
             balanceAfter: 0,
             userId: payment.clientId,
@@ -624,7 +627,7 @@ export const mercadoPagoWebhook = async (
           ? [
               prisma.message.create({
                 data: {
-                  content: `✅ Pagamento confirmado! O chat para o serviço "${payment.serviceOrder.title}" está aberto. Use este canal para combinar detalhes do serviço. Lembre-se: informações pessoais de contato são bloqueadas automaticamente para sua segurança.`,
+                  content: `✅ Pagamento confirmado! O chat para o serviço "${payment.serviceOrder.title}" está aberto. Use este canal para combinar detalhes do serviço.`,
                   type: "SYSTEM",
                   senderId: payment.serviceOrder.clientId,
                   recipientId: payment.serviceOrder.professionalId,
@@ -641,12 +644,23 @@ export const mercadoPagoWebhook = async (
         await createNotification(
           payment.serviceOrder.professionalId,
           NotificationType.PAYMENT_RECEIVED,
-          "Pagamento confirmado",
-          `Pagamento de R$${payment.amount.toFixed(2)} confirmado para "${payment.serviceOrder.title}"`,
+          "💰 Pagamento confirmado",
+          `Pagamento de R$${payment.amount.toFixed(2)} confirmado para "${payment.serviceOrder.title}". O cliente está aguardando o serviço.`,
           orderId,
           { amount: payment.amount, platformFee },
         );
       }
+
+      // Notificar cliente
+      await createNotification(
+        payment.clientId,
+        NotificationType.PAYMENT_RECEIVED,
+        "✅ Pagamento aprovado",
+        `Seu pagamento de R$${payment.amount.toFixed(2)} para "${payment.serviceOrder.title}" foi aprovado!`,
+        orderId,
+        { amount: payment.amount },
+      );
+
     } else if (mpPayment.status === "rejected" || mpPayment.status === "cancelled") {
       await prisma.payment.update({
         where: { id: payment.id },
@@ -660,6 +674,16 @@ export const mercadoPagoWebhook = async (
           },
         },
       });
+
+      // Notificar cliente sobre falha
+      await createNotification(
+        payment.clientId,
+        NotificationType.SYSTEM_ALERT,
+        "❌ Pagamento recusado",
+        `Seu pagamento para "${payment.serviceOrder.title}" foi recusado. Tente novamente com outro método de pagamento.`,
+        orderId,
+        { reason: mpPayment.statusDetail },
+      );
     }
     // For "pending" or "in_process", we keep the payment as PENDING
 
