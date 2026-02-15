@@ -260,6 +260,13 @@ router.post(
 );
 
 // ============================================
+// ROTAS DE CHATS (CONVERSAS)
+// ============================================
+
+// Listar conversas ativas do usuário
+router.get("/chats", verifyToken, serviceController.getUserChats);
+
+// ============================================
 // ROTAS DE MENSAGENS
 // ============================================
 

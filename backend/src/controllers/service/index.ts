@@ -8,3 +8,4 @@ export * from './briefController';
 export * from './proposalController';
 export * from './scheduleController';
 export * from './disputeController';
+export * from './chatController';
