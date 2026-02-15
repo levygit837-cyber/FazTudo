@@ -25,6 +25,7 @@ enum ServiceOrderStatus {
   ACCEPTED // Aceito pelo profissional
   IN_PROGRESS // Em andamento
   AWAITING_CLIENT_CONFIRMATION // Serviço entregue pelo profissional, aguardando cliente confirmar conclusão
+  AWAITING_PROFESSIONAL_CONFIRMATION // Cliente confirmou, aguardando profissional confirmar conclusão
   COMPLETED // Concluído
   CANCELLED // Cancelado
   EXPIRED // Prazo expirado

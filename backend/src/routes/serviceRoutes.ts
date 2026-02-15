@@ -118,6 +118,15 @@ router.post(
   serviceController.confirmServiceOrderCompletion,
 );
 
+// Profissional confirma conclusão (após cliente já ter confirmado)
+router.post(
+  "/orders/:id/confirm-professional",
+  verifyToken,
+  requireRole("PROFESSIONAL", "ADMIN"),
+  requireVerified,
+  serviceController.confirmProfessionalCompletion,
+);
+
 // Cancelar pedido (cliente, profissional envolvido ou admin)
 router.post(
   "/orders/:id/cancel",

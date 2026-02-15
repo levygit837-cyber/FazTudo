@@ -331,6 +331,17 @@ export const confirmOrderCompletion = async (id: number): Promise<ServiceOrder> 
 };
 
 /**
+ * Profissional confirma conclusão do serviço
+ */
+export const confirmProfessionalCompletion = async (id: number): Promise<ServiceOrder> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${id}/confirm-professional`,
+  );
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
+};
+
+/**
  * Cancela um pedido
  */
 export const cancelOrder = async (
@@ -643,6 +654,7 @@ export default {
   submitOrderCompletion,
   completeOrder,
   confirmOrderCompletion,
+  confirmProfessionalCompletion,
   cancelOrder,
   // Payments
   getMPConfig,

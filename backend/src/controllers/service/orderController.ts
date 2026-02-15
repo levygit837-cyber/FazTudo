@@ -254,6 +254,7 @@ export const getUserServiceOrders = async (
         "ACCEPTED",
         "IN_PROGRESS",
         "AWAITING_CLIENT_CONFIRMATION",
+        "AWAITING_PROFESSIONAL_CONFIRMATION",
         "COMPLETED",
         "CANCELLED",
         "EXPIRED",
@@ -903,83 +904,39 @@ export const confirmServiceOrderCompletion = async (
 
     const now = new Date();
 
-    // Calculate professional amount (deduct platform fee)
-    const platformFeePercentage = env.PLATFORM_FEE_PERCENTAGE;
-    const platformFee = (activePayment.amount * platformFeePercentage) / 100;
-    const professionalAmount = activePayment.amount - platformFee;
+    const updatedOrder = await prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: {
+        status: "AWAITING_PROFESSIONAL_CONFIRMATION",
+        clientConfirmedAt: now,
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        professional: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
-    const [updatedOrder] = await prisma.$transaction([
-      prisma.serviceOrder.update({
-        where: { id: orderId },
-        data: {
-          status: "COMPLETED",
-          completedAt: now,
-          clientConfirmedAt: now,
-        },
-        include: {
-          client: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          professional: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-      }),
-      // Release payment immediately
-      prisma.payment.update({
-        where: { id: activePayment.id },
-        data: {
-          status: "RELEASED",
-          releasedAt: now,
-        },
-      }),
-      // Credit professional balance
-      prisma.user.update({
-        where: { id: serviceOrder.professionalId! },
-        data: {
-          balance: {
-            increment: professionalAmount,
-          },
-        },
-      }),
-      // Create credit transaction for the professional
-      prisma.transaction.create({
-        data: {
-          type: "PAYMENT",
-          amount: professionalAmount,
-          description: `Pagamento liberado para pedido #${orderId}`,
-          balanceBefore: 0,
-          balanceAfter: 0,
-          userId: serviceOrder.professionalId!,
-          paymentId: activePayment.id,
-        },
-      }),
-    ]);
-
-    // Notificar profissional sobre conclusão e liberação de pagamento
+    // Notificar profissional para confirmar
     if (serviceOrder.professionalId) {
       await createNotification(
         serviceOrder.professionalId,
-        NotificationType.PAYMENT_RELEASED,
-        "🎉 Pagamento liberado!",
-        `O cliente confirmou a conclusão do serviço "${serviceOrder.title}". R$${professionalAmount.toFixed(2)} foram liberados para sua carteira!`,
+        NotificationType.ORDER_COMPLETED,
+        "Cliente confirmou conclusão",
+        `O cliente confirmou a conclusão do serviço "${serviceOrder.title}". Confirme também para finalizar o pedido.`,
         orderId,
-        {
-          clientId: req.user.id,
-          clientName: req.user.name,
-          totalAmount: activePayment.amount,
-          platformFee,
-          professionalAmount,
-          releasedAt: now.toISOString(),
-        },
+        { clientId: req.user.id, clientName: req.user.name },
       );
     }
 
@@ -994,11 +951,147 @@ export const confirmServiceOrderCompletion = async (
             clientConfirmedAt: now.toISOString(),
           },
         },
-        "Service completion confirmed successfully",
+        "Client confirmed. Waiting for professional confirmation.",
       ),
     );
   } catch (error) {
     console.error("Confirm service completion error:", error);
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// Profissional confirma conclusão após cliente já ter confirmado
+export const confirmProfessionalCompletion = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    if (req.user.role !== "PROFESSIONAL" && req.user.role !== "ADMIN") {
+      res.status(403).json(errorResponse("Only professionals can confirm completion"));
+      return;
+    }
+
+    const orderId = parseInt(String(req.params.id), 10);
+
+    if (isNaN(orderId)) {
+      res.status(400).json(errorResponse("Invalid order ID"));
+      return;
+    }
+
+    const serviceOrder = await prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        payments: {
+          where: { status: "HELD" },
+        },
+      },
+    });
+
+    if (!serviceOrder) {
+      res.status(404).json(errorResponse("Service order not found"));
+      return;
+    }
+
+    if (serviceOrder.professionalId !== req.user.id && req.user.role !== "ADMIN") {
+      res.status(403).json(errorResponse("You don't have permission"));
+      return;
+    }
+
+    if (serviceOrder.status !== "AWAITING_PROFESSIONAL_CONFIRMATION") {
+      res.status(400).json(
+        errorResponse(`Order cannot be confirmed. Current status: ${serviceOrder.status}`),
+      );
+      return;
+    }
+
+    const now = new Date();
+    const activePayment = serviceOrder.payments.find((p) => p.status === "HELD");
+
+    // Calculate professional amount (deduct platform fee)
+    const platformFeePercentage = env.PLATFORM_FEE_PERCENTAGE;
+    const platformFee = activePayment
+      ? (activePayment.amount * platformFeePercentage) / 100
+      : 0;
+    const professionalAmount = activePayment
+      ? activePayment.amount - platformFee
+      : 0;
+
+    const transactionOps: any[] = [
+      prisma.serviceOrder.update({
+        where: { id: orderId },
+        data: {
+          status: "COMPLETED",
+          completedAt: now,
+          professionalConfirmedAt: now,
+        },
+        include: {
+          client: { select: { id: true, name: true, email: true } },
+          professional: { select: { id: true, name: true, email: true } },
+        },
+      }),
+    ];
+
+    if (activePayment) {
+      transactionOps.push(
+        prisma.payment.update({
+          where: { id: activePayment.id },
+          data: {
+            status: "RELEASED",
+            releasedAt: now,
+          },
+        }),
+      );
+      // Credit professional balance
+      transactionOps.push(
+        prisma.user.update({
+          where: { id: serviceOrder.professionalId! },
+          data: {
+            balance: {
+              increment: professionalAmount,
+            },
+          },
+        }),
+      );
+      // Create credit transaction
+      transactionOps.push(
+        prisma.transaction.create({
+          data: {
+            type: "PAYMENT",
+            amount: professionalAmount,
+            description: `Pagamento liberado para pedido #${orderId}`,
+            balanceBefore: 0,
+            balanceAfter: 0,
+            userId: serviceOrder.professionalId!,
+            paymentId: activePayment.id,
+          },
+        }),
+      );
+    }
+
+    const [updatedOrder] = await prisma.$transaction(transactionOps);
+
+    await createNotification(
+      serviceOrder.clientId,
+      NotificationType.ORDER_COMPLETED,
+      "Serviço concluído",
+      `O profissional confirmou a conclusão do serviço "${serviceOrder.title}". Pedido finalizado!`,
+      orderId,
+      { professionalId: req.user.id, professionalName: req.user.name },
+    );
+
+    res.status(200).json(
+      successResponse(
+        { serviceOrder: updatedOrder },
+        "Professional confirmed completion. Order is now COMPLETED.",
+      ),
+    );
+  } catch (error) {
+    console.error("Confirm professional completion error:", error);
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
