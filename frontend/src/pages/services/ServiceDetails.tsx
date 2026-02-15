@@ -25,6 +25,7 @@ import {
   ServiceListingWithProfessional,
 } from "../../services/serviceService";
 import AvailabilityCalendar from "../../components/orders/AvailabilityCalendar";
+import AvailabilityPicker from "../../components/orders/AvailabilityPicker";
 import { formatCurrency, formatRating, formatReviewCount } from "../../utils/formatters";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
@@ -44,6 +45,7 @@ const ServiceDetails: React.FC = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [hiring, setHiring] = useState(false);
   const [hireError, setHireError] = useState<string | null>(null);
+  const [showAvailability, setShowAvailability] = useState(false);
   const toast = useToast();
 
   // Share handler
@@ -145,7 +147,7 @@ const ServiceDetails: React.FC = () => {
     loadService();
   }, [id]);
 
-  const handleHireService = async () => {
+  const handleHireService = () => {
     if (!isAuthenticated) {
       navigate("/login", { state: { from: `/services/${id}` } });
       return;
@@ -157,17 +159,26 @@ const ServiceDetails: React.FC = () => {
     }
 
     if (!service) return;
+    setShowAvailability(true);
+  };
+
+  const handleScheduleConfirm = async (date: string, time: string) => {
+    if (!service) return;
 
     try {
       setHiring(true);
       setHireError(null);
 
+      const scheduledDate = `${date}T${time}:00`;
+
       const order = await createOrder({
         serviceListingId: service.id,
         title: service.title,
         description: `Pedido criado a partir da pagina do servico "${service.title}"`,
+        scheduledDate,
       });
 
+      setShowAvailability(false);
       navigate(`/client/orders/${order.id}`);
     } catch (error: any) {
       setHireError(
@@ -863,6 +874,17 @@ const ServiceDetails: React.FC = () => {
             )}
           </div>
         </ModalPortal>
+      )}
+
+      {/* Availability Picker */}
+      {showAvailability && service && (
+        <AvailabilityPicker
+          isOpen={showAvailability}
+          onClose={() => setShowAvailability(false)}
+          onSelect={handleScheduleConfirm}
+          professionalName={service.professional.name}
+          loading={hiring}
+        />
       )}
 
       {/* Sticky Mobile CTA Bar */}
