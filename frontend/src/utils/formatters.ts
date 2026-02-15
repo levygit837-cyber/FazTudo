@@ -147,6 +147,7 @@ export const formatOrderStatus = (status: string): string => {
     ACCEPTED: "Aceito",
     IN_PROGRESS: "Em andamento",
     AWAITING_CLIENT_CONFIRMATION: "Aguardando sua confirmação",
+    AWAITING_PROFESSIONAL_CONFIRMATION: "Aguardando confirmação do profissional",
     COMPLETED: "Concluido",
     CANCELLED: "Cancelado",
     EXPIRED: "Expirado",
