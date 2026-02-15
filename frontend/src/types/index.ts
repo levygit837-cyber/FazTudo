@@ -296,14 +296,28 @@ export interface Address {
   updatedAt: string;
 }
 
+export type MessageType = "TEXT" | "SYSTEM" | "ATTACHMENT" | "LOCATION";
+
 export interface Message {
   id: number;
   content: string;
   isRead: boolean;
+  type: MessageType;
 
   senderId: number;
   recipientId: number;
   serviceOrderId: number;
+
+  // Attachment fields
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
+
+  // Location fields
+  locationLat?: number;
+  locationLng?: number;
+  locationLabel?: string;
 
   sender?: User;
   recipient?: User;
@@ -311,6 +325,26 @@ export interface Message {
 
   createdAt: string;
   readAt?: string;
+}
+
+export interface ChatConversation {
+  orderId: number;
+  orderTitle: string;
+  orderStatus: ServiceOrderStatus;
+  otherUser: {
+    id: number;
+    name: string;
+    profileImage?: string;
+  } | null;
+  lastMessage: {
+    id: number;
+    content: string;
+    type: MessageType;
+    senderId: number;
+    createdAt: string;
+    isRead: boolean;
+  } | null;
+  unreadCount: number;
 }
 
 export interface File {
@@ -659,7 +693,6 @@ export type {
   Payment as PaymentType,
   Review as ReviewType,
   Notification as NotificationModel,
-  Message as MessageType,
   Address as AddressType,
   Certification as CertificationType,
 };
