@@ -847,6 +847,31 @@
   animation: fadeIn 250ms ease-out forwards;
 }
 
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slideInFromRight {
+  animation: slideInFromRight 350ms ease-out forwards;
+}
+
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slideInFromLeft {
+  animation: slideInFromLeft 350ms ease-out forwards;
+}
+
+@keyframes stepComplete {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+.animate-stepComplete {
+  animation: stepComplete 400ms ease-out;
+}
+
 .landing-exit {
   opacity: 0;
   transform: scale(0.98);
@@ -856,6 +881,9 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-soft-pop,
   .animate-fadeIn,
+  .animate-slideInFromRight,
+  .animate-slideInFromLeft,
+  .animate-stepComplete,
   .landing-exit,
   .card-route-exit,
   .stagger-grid > * {

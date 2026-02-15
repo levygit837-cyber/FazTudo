@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import axios from "axios";
 import { Filter, Grid, List, ChevronDown, ChevronLeft, X, Pause, Play, Edit3, Trash2, Sparkles } from "lucide-react";
 import { ServiceCard } from "../../components/services/ServiceCard";
 import { CategoryGrid } from "../../components/services/CategoryGrid";
@@ -153,7 +154,19 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
         setHasMore(pageNum < result.totalPages);
         setPage(pageNum);
       } catch (err: any) {
-        setError(err.message || "Erro ao carregar servicos");
+        if (axios.isAxiosError(err)) {
+          if (!err.response) {
+            setError("Erro de conexão. Verifique se o servidor está acessível.");
+          } else if (err.response.status === 401) {
+            setError("Sessão expirada. Faça login novamente.");
+          } else if (err.response.status === 403) {
+            setError("Sem permissão para acessar estes serviços.");
+          } else {
+            setError(err.response.data?.message || "Erro ao carregar serviços");
+          }
+        } else {
+          setError(err.message || "Erro ao carregar serviços");
+        }
       } finally {
         setLoading(false);
         setLoadingMore(false);

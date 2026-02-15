@@ -30,14 +30,22 @@ api.interceptors.request.use(
 );
 
 // Response interceptor - trata erros globalmente
+let isRedirecting = false;
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    // Se receber 401, limpar token e redirecionar para login
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Se receber 401, tentar refresh e depois redirecionar para login
+    if (error.response?.status === 401 && !originalRequest._retry && !isRedirecting) {
       originalRequest._retry = true;
+
+      // Não forçar logout/redirect se não havia token na request
+      const hadToken = originalRequest.headers?.Authorization;
+      if (!hadToken) {
+        return Promise.reject(error);
+      }
 
       // Tentar refresh token se disponível
       const refreshToken = localStorage.getItem("refreshToken");
@@ -56,17 +64,15 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch {
           // Refresh falhou, fazer logout
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
-          localStorage.removeItem("user");
-          window.location.href = "/login";
         }
-      } else {
-        // Sem refresh token, fazer logout
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        window.location.href = "/login";
       }
+
+      // Limpar e redirecionar (uma única vez)
+      isRedirecting = true;
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
     }
 
     return Promise.reject(error);

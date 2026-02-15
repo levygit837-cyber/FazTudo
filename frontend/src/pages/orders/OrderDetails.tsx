@@ -11,7 +11,6 @@ import {
   CreditCard,
   Calendar,
   AlertCircle,
-  Loader2,
   User,
   CalendarClock,
   AlertTriangle,
@@ -74,7 +73,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ currentStep }) => {
                   isCompleted
                     ? "bg-green-100 dark:bg-green-900/30 text-green-600"
                     : isCurrent
-                    ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600"
+                    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600"
                     : "bg-slate-100 dark:bg-slate-800 text-slate-400"
                 }`}
               >
@@ -239,9 +238,6 @@ const OrderDetails: React.FC = () => {
 
   // Dispute state
   const [showDispute, setShowDispute] = useState(false);
-
-  // Payment method state (for checkout)
-  const [paymentMethod, setPaymentMethod] = useState("pix");
 
   const isOrderClient = order?.clientId === user?.id;
   const isOrderProfessional = order?.professionalId === user?.id;
@@ -410,43 +406,16 @@ const OrderDetails: React.FC = () => {
                 <CreditCard className="w-5 h-5 inline mr-2" />
                 Pagamento
               </h2>
-              <div className="space-y-4">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Selecione o metodo de pagamento para confirmar seu pedido:
-                </p>
-                <div className="flex gap-3">
-                  {["pix", "cartao", "boleto"].map((method) => (
-                    <button
-                      key={method}
-                      onClick={() => setPaymentMethod(method)}
-                      className={`px-4 py-3 rounded-lg text-sm font-medium border transition-colors flex-1 ${
-                        paymentMethod === method
-                          ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400"
-                          : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                      }`}
-                    >
-                      {method === "pix" ? "PIX" : method === "cartao" ? "Cartao" : "Boleto"}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={handlePayment}
-                  disabled={actionLoading}
-                  className="btn btn-primary w-full py-3 flex items-center justify-center gap-2"
-                >
-                  {actionLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="w-4 h-4" />
-                      Pagar {formatCurrency(order.price)}
-                    </>
-                  )}
-                </button>
-              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                Complete o checkout para confirmar seu pedido.
+              </p>
+              <button
+                onClick={handlePayment}
+                className="btn btn-primary w-full py-3 flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-4 h-4" />
+                Ir para checkout
+              </button>
             </div>
           )}
 

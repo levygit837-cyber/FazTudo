@@ -302,11 +302,10 @@ export const authLogger = (
   const isPublicRoute = publicPaths.some(
     (p) => req.path === p || req.path.endsWith(p),
   );
-  const isPublicGet = req.method === "GET" && !req.headers.authorization;
 
   const userInfo = req.user
     ? `[User: ${req.user.id}, Role: ${req.user.role}]`
-    : isPublicRoute || isPublicGet
+    : (isPublicRoute || req.method === "GET")
       ? "[Public]"
       : "[Unauthenticated]";
 

@@ -30,6 +30,7 @@ const MONTH_NAMES = [
 const ProfessionalCalendar: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<CalendarOverview | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayDetail, setDayDetail] = useState<CalendarDayDetail | null>(null);
   const [dayLoading, setDayLoading] = useState(false);
@@ -43,12 +44,17 @@ const ProfessionalCalendar: React.FC = () => {
   const loadOverview = useCallback(async (month: string) => {
     try {
       setLoading(true);
+      setError(null);
       const data = await getCalendarOverview(month);
       setOverview(data);
       setSelectedDay(null);
       setDayDetail(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao carregar calendario:", error);
+      const message = error?.response?.data?.message
+        || error?.message
+        || "Não foi possível carregar a agenda";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -104,6 +110,30 @@ const ProfessionalCalendar: React.FC = () => {
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
 
   if (loading && !overview) return <SkeletonDashboard />;
+
+  if (error && !overview) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            Agenda Operacional
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            Visualize e gerencie seus agendamentos do mes.
+          </p>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button
+            onClick={() => loadOverview(currentMonth)}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

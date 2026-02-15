@@ -83,6 +83,8 @@ export default {
         "ring-fill": "ring-fill 1s ease-out forwards",
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
         "slide-in-right": "slide-in-right 0.3s ease-out",
+        "slide-in-left": "slide-in-left 0.35s ease-out",
+        "step-complete": "step-complete 0.4s ease-out",
       },
       keyframes: {
         "glow-pulse": {
@@ -124,6 +126,15 @@ export default {
         "slide-in-right": {
           from: { opacity: "0", transform: "translateX(12px)" },
           to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "slide-in-left": {
+          from: { opacity: "0", transform: "translateX(-30px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "step-complete": {
+          "0%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.2)" },
+          "100%": { transform: "scale(1)" },
         },
       },
     },

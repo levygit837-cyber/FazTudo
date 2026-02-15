@@ -235,7 +235,7 @@ const Layout: React.FC = () => {
           {
             label: "Agenda",
             icon: <Calendar size={18} />,
-            path: "/professional/schedule",
+            path: "/professional/agenda",
           },
         ]
       : []),
