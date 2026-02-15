@@ -63,6 +63,7 @@ const OrderDetails: React.FC = () => {
     variant: "danger" | "warning" | "info";
     confirmLabel: string;
     action: () => Promise<any>;
+    successMessage?: string;
   } | null>(null);
 
   // Review state
@@ -128,15 +129,15 @@ const OrderDetails: React.FC = () => {
     }
   }, []);
 
-  const handleAction = async (action: () => Promise<any>) => {
+  const handleAction = async (action: () => Promise<any>, successMessage?: string) => {
     try {
       setActionLoading(true);
       setError(null);
       await action();
       await loadOrder();
-      toast.success("Acao realizada com sucesso");
+      toast.success(successMessage || "Ação realizada com sucesso!");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao executar acao";
+      const msg = err?.response?.data?.message || "Erro ao executar ação";
       setError(msg);
       toast.error("Erro", msg);
     } finally {
@@ -146,7 +147,7 @@ const OrderDetails: React.FC = () => {
 
   const handleConfirmedAction = async () => {
     if (!confirmAction) return;
-    await handleAction(confirmAction.action);
+    await handleAction(confirmAction.action, confirmAction.successMessage);
     setConfirmAction(null);
   };
 
@@ -324,7 +325,7 @@ const OrderDetails: React.FC = () => {
               {isOrderProfessional && order.status === "PENDING" && (
                 <>
                   <button
-                    onClick={() => handleAction(() => acceptOrder(order.id))}
+                    onClick={() => handleAction(() => acceptOrder(order.id), "✅ Pedido aceito! O cliente será notificado.")}
                     disabled={actionLoading}
                     className="btn btn-primary"
                   >
@@ -339,6 +340,7 @@ const OrderDetails: React.FC = () => {
                         variant: "danger",
                         confirmLabel: "Recusar",
                         action: () => cancelOrder(order.id, "Recusado pelo profissional"),
+                        successMessage: "❌ Pedido recusado. O cliente será notificado.",
                       })
                     }
                     disabled={actionLoading}
@@ -383,7 +385,7 @@ const OrderDetails: React.FC = () => {
               {/* Profissional: iniciar serviço */}
               {isOrderProfessional && order.status === "ACCEPTED" && (
                 <button
-                  onClick={() => handleAction(() => startOrder(order.id))}
+                  onClick={() => handleAction(() => startOrder(order.id), "🚀 Serviço iniciado! O cliente foi notificado.")}
                   disabled={actionLoading}
                   className="btn btn-primary"
                 >
@@ -396,7 +398,7 @@ const OrderDetails: React.FC = () => {
               {isOrderProfessional && order.status === "IN_PROGRESS" && (
                 <button
                   onClick={() =>
-                    handleAction(() => submitOrderCompletion(order.id))
+                    handleAction(() => submitOrderCompletion(order.id), "🔔 Serviço marcado como concluído! Aguardando confirmação do cliente.")
                   }
                   disabled={actionLoading}
                   className="btn btn-primary"
@@ -416,6 +418,7 @@ const OrderDetails: React.FC = () => {
                         variant: "warning",
                         confirmLabel: "Confirmar",
                         action: () => confirmOrderCompletion(order.id),
+                        successMessage: "✅ Serviço confirmado! O pagamento será liberado ao profissional.",
                       })
                     }
                     disabled={actionLoading}
@@ -436,6 +439,7 @@ const OrderDetails: React.FC = () => {
                       variant: "warning",
                       confirmLabel: "Liberar",
                       action: () => releasePayment(order.id),
+                      successMessage: "💰 Pagamento liberado com sucesso! O profissional será notificado.",
                     })
                   }
                   disabled={actionLoading}
@@ -457,6 +461,7 @@ const OrderDetails: React.FC = () => {
                       variant: "danger",
                       confirmLabel: "Cancelar pedido",
                       action: () => cancelOrder(order.id, "Cancelado pelo usuario"),
+                      successMessage: "🚫 Pedido cancelado. Pagamentos pendentes serão reembolsados.",
                     })
                   }
                   disabled={actionLoading}
