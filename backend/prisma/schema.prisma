@@ -376,11 +376,23 @@ model Message {
   id      Int     @id @default(autoincrement())
   content String
   isRead  Boolean @default(false)
+  type    String  @default("TEXT") // TEXT, SYSTEM, ATTACHMENT, LOCATION
 
   // Relations
   senderId       Int
   recipientId    Int
   serviceOrderId Int
+
+  // Attachment fields (optional)
+  attachmentUrl  String?
+  attachmentName String?
+  attachmentType String? // MIME type
+  attachmentSize Int?    // bytes
+
+  // Location fields (optional)
+  locationLat    Float?
+  locationLng    Float?
+  locationLabel  String?
 
   sender       User         @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
   recipient    User         @relation("Recipient", fields: [recipientId], references: [id], onDelete: Cascade)
