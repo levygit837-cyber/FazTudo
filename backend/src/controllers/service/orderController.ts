@@ -773,6 +773,7 @@ export const completeServiceOrder = async (
       where: { id: orderId },
       data: {
         status: "AWAITING_CLIENT_CONFIRMATION",
+        professionalConfirmedAt: new Date(),
       },
       include: {
         client: {
@@ -789,17 +790,25 @@ export const completeServiceOrder = async (
     await createNotification(
       serviceOrder.clientId,
       NotificationType.ORDER_COMPLETED,
-      "Serviço entregue",
-      `O serviço "${serviceOrder.title}" foi marcado como entregue por ${req.user.name}. Confirme a conclusão para continuar a liberação do pagamento.`,
+      "🔔 Serviço concluído pelo profissional",
+      `O profissional ${req.user.name} marcou o serviço "${serviceOrder.title}" como concluído. Confirme a conclusão para liberar o pagamento.`,
       orderId,
-      { professionalId: req.user.id, professionalName: req.user.name },
+      { professionalId: req.user.id, professionalName: req.user.name, professionalConfirmedAt: new Date().toISOString() },
     );
 
     res
       .status(200)
       .json(
         successResponse(
-          { serviceOrder: updatedOrder },
+          {
+            serviceOrder: updatedOrder,
+            confirmations: {
+              professionalConfirmed: true,
+              clientConfirmed: false,
+              professionalConfirmedAt: updatedOrder.professionalConfirmedAt?.toISOString() || null,
+              clientConfirmedAt: null,
+            },
+          },
           "Service marked as delivered. Waiting for client confirmation.",
         ),
       );
@@ -895,6 +904,7 @@ export const confirmServiceOrderCompletion = async (
         data: {
           status: "COMPLETED",
           completedAt: now,
+          clientConfirmedAt: now,
         },
         include: {
           client: {
@@ -944,12 +954,13 @@ export const confirmServiceOrderCompletion = async (
       }),
     ]);
 
+    // Notificar profissional sobre conclusão e liberação de pagamento
     if (serviceOrder.professionalId) {
       await createNotification(
         serviceOrder.professionalId,
         NotificationType.PAYMENT_RELEASED,
-        "Pagamento liberado",
-        `O pagamento de R$${professionalAmount.toFixed(2)} foi liberado para sua conta.`,
+        "🎉 Pagamento liberado!",
+        `O cliente confirmou a conclusão do serviço "${serviceOrder.title}". R$${professionalAmount.toFixed(2)} foram liberados para sua carteira!`,
         orderId,
         {
           clientId: req.user.id,
@@ -964,7 +975,15 @@ export const confirmServiceOrderCompletion = async (
 
     res.status(200).json(
       successResponse(
-        { serviceOrder: updatedOrder },
+        {
+          serviceOrder: updatedOrder,
+          confirmations: {
+            professionalConfirmed: true,
+            clientConfirmed: true,
+            professionalConfirmedAt: serviceOrder.professionalConfirmedAt?.toISOString() || null,
+            clientConfirmedAt: now.toISOString(),
+          },
+        },
         "Service completion confirmed successfully",
       ),
     );
