@@ -125,4 +125,56 @@ describe("Email Verification Flow", () => {
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
   });
+
+  it("should register professional with document field", async () => {
+    const proEmail = `emailverify_pro_${Date.now()}@test.com`;
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send({
+        email: proEmail,
+        password: "TestPassword123!",
+        name: "Professional User",
+        role: "PROFESSIONAL",
+        document: "12345678901",
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.document).toBe("12345678901");
+
+    // Cleanup
+    await prisma.user.deleteMany({ where: { email: proEmail } });
+  });
+
+  it("should register client without optional fields", async () => {
+    const clientEmail = `emailverify_client_${Date.now()}@test.com`;
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send({
+        email: clientEmail,
+        password: "TestPassword123!",
+        name: "Client User",
+        role: "CLIENT",
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.role).toBe("CLIENT");
+
+    // Cleanup
+    await prisma.user.deleteMany({ where: { email: clientEmail } });
+  });
+
+  it("should reject registration with weak password", async () => {
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send({
+        email: "weakpw@test.com",
+        password: "Abc12",  // Too short (5 chars, min is 8)
+        name: "Weak Password User",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
 });
