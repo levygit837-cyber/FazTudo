@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Navigate, useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { UserRole } from "../types";
+import api from "../services/api";
 
 interface ProtectedRouteProps {
   allowedRoles?: UserRole[];
@@ -9,6 +10,123 @@ interface ProtectedRouteProps {
   redirectTo?: string;
   children?: React.ReactNode;
 }
+
+const AccountStatusScreen: React.FC<{
+  user: { status: string; emailVerified?: boolean; name?: string };
+  navigate: (path: string) => void;
+}> = ({ user, navigate }) => {
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const { logout } = useAuth();
+
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    setResendMessage(null);
+    try {
+      const res = await api.post("/auth/resend-verification");
+      if (res.data.success) {
+        setResendMessage("Email de verificação reenviado! Verifique sua caixa de entrada.");
+      }
+    } catch (err: any) {
+      setResendMessage(
+        err.response?.data?.message || "Erro ao reenviar email. Tente novamente."
+      );
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const statusMessages: Record<string, { title: string; message: string }> = {
+    PENDING: {
+      title: "Verifique seu Email",
+      message:
+        "Enviamos um email de verificação para você. Clique no link do email para ativar sua conta.",
+    },
+    SUSPENDED: {
+      title: "Conta Suspensa",
+      message:
+        "Sua conta foi suspensa. Entre em contato com o suporte para mais informações.",
+    },
+    INACTIVE: {
+      title: "Conta Inativa",
+      message:
+        "Sua conta está inativa. Entre em contato com o suporte para reativá-la.",
+    },
+  };
+
+  const statusInfo = statusMessages[user.status];
+
+  if (!statusInfo) return null;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8 text-center">
+        <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg
+            className="w-8 h-8 text-yellow-600 dark:text-yellow-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {user.status === "PENDING" ? (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            ) : (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.346 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            )}
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+          {statusInfo.title}
+        </h2>
+        <p className="text-slate-600 dark:text-slate-400 mb-6">
+          {statusInfo.message}
+        </p>
+        {resendMessage && (
+          <div className={`mb-4 p-3 rounded-lg text-sm ${
+            resendMessage.includes("reenviado")
+              ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
+              : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
+          }`}>
+            {resendMessage}
+          </div>
+        )}
+        <div className="space-y-3">
+          {user.status === "PENDING" && (
+            <button
+              onClick={handleResendVerification}
+              disabled={resendLoading}
+              className="btn btn-primary w-full"
+            >
+              {resendLoading ? "Enviando..." : "Reenviar email de verificação"}
+            </button>
+          )}
+          <button
+            onClick={() => navigate("/contact")}
+            className="btn btn-outline w-full"
+          >
+            Entrar em Contato
+          </button>
+          <button
+            onClick={logout}
+            className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 underline"
+          >
+            Sair e usar outra conta
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles = [],
@@ -92,70 +210,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Verificar se conta está ativa
   if (user && user.status !== "ACTIVE") {
-    const statusMessages: Record<string, { title: string; message: string }> = {
-      PENDING: {
-        title: "Conta Pendente",
-        message:
-          "Sua conta está aguardando aprovação. Em breve você terá acesso completo à plataforma.",
-      },
-      SUSPENDED: {
-        title: "Conta Suspensa",
-        message:
-          "Sua conta foi suspensa. Entre em contato com o suporte para mais informações.",
-      },
-      INACTIVE: {
-        title: "Conta Inativa",
-        message:
-          "Sua conta está inativa. Entre em contato com o suporte para reativá-la.",
-      },
-    };
-
-    const statusInfo = statusMessages[user.status];
-
-    if (statusInfo) {
-      return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-yellow-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.346 16.5c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
-              {statusInfo.title}
-            </h2>
-            <p className="text-slate-600 mb-6">
-              {statusInfo.message}
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={() => navigate("/contact")}
-                className="btn btn-primary w-full"
-              >
-                Entrar em Contato
-              </button>
-              <button
-                onClick={() => navigate("/")}
-                className="btn btn-outline w-full"
-              >
-                Voltar para Home
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    return <AccountStatusScreen user={user} navigate={navigate} />;
   }
 
   // Se passar em todas as verificações, renderizar rotas filhas ou children
