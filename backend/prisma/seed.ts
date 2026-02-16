@@ -542,7 +542,7 @@ async function seedSystemConfig() {
 async function seedTestUsers() {
   console.log("\nCriando usuarios de teste...");
 
-  const hashedPassword = await bcrypt.hash("teste123", 10);
+  const hashedPassword = await bcrypt.hash("Teste@123", 10);
 
   // Cliente de teste
   const client = await prisma.user.upsert({
@@ -894,6 +894,315 @@ async function seedTestUsers() {
   }
 
   console.log("  - Endereco do cliente criado!");
+
+  // ============================================
+  // SEED DE PEDIDOS (ServiceOrders)
+  // ============================================
+  console.log("\n  Criando pedidos de teste...");
+
+  const prof1Listings = await prisma.serviceListing.findMany({
+    where: { professionalId: professional.id },
+    take: 5,
+  });
+
+  const orders: any[] = [];
+
+  // 4 pedidos PENDING para profissional1
+  for (let i = 0; i < Math.min(4, prof1Listings.length); i++) {
+    const listing = prof1Listings[i];
+    const existingOrder = await prisma.serviceOrder.findFirst({
+      where: {
+        serviceListingId: listing.id,
+        clientId: client.id,
+        status: "PENDING",
+      },
+    });
+
+    if (!existingOrder) {
+      const order = await prisma.serviceOrder.create({
+        data: {
+          title: `Pedido: ${listing.title}`,
+          serviceListingId: listing.id,
+          clientId: client.id,
+          professionalId: professional.id,
+          status: "PENDING",
+          price: listing.price,
+          description: `Pedido de teste para: ${listing.title}`,
+          scheduledDate: new Date(Date.now() + (i + 1) * 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+      orders.push(order);
+    }
+  }
+
+  // 1 pedido COMPLETED (para reviews e transacoes)
+  const completedListing = prof1Listings[0];
+  let completedOrder: any = null;
+  if (completedListing) {
+    const existingCompleted = await prisma.serviceOrder.findFirst({
+      where: {
+        serviceListingId: completedListing.id,
+        clientId: client.id,
+        status: "COMPLETED",
+      },
+    });
+
+    if (!existingCompleted) {
+      completedOrder = await prisma.serviceOrder.create({
+        data: {
+          title: `Pedido concluido: ${completedListing.title}`,
+          serviceListingId: completedListing.id,
+          clientId: client.id,
+          professionalId: professional.id,
+          status: "COMPLETED",
+          price: completedListing.price,
+          description: "Pedido concluido de teste",
+          scheduledDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+          completedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          clientConfirmedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+          professionalConfirmedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+      orders.push(completedOrder);
+    } else {
+      completedOrder = existingCompleted;
+    }
+  }
+
+  // 1 pedido IN_PROGRESS
+  if (prof1Listings[1]) {
+    const existingInProgress = await prisma.serviceOrder.findFirst({
+      where: {
+        serviceListingId: prof1Listings[1].id,
+        clientId: client.id,
+        status: "IN_PROGRESS",
+      },
+    });
+
+    if (!existingInProgress) {
+      const inProgressOrder = await prisma.serviceOrder.create({
+        data: {
+          title: `Pedido em andamento: ${prof1Listings[1].title}`,
+          serviceListingId: prof1Listings[1].id,
+          clientId: client.id,
+          professionalId: professional.id,
+          status: "IN_PROGRESS",
+          price: prof1Listings[1].price,
+          description: "Pedido em andamento de teste",
+          scheduledDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+          startedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        },
+      });
+      orders.push(inProgressOrder);
+    }
+  }
+
+  console.log(`  - ${orders.length} pedidos de teste criados!`);
+
+  // ============================================
+  // SEED DE PAGAMENTOS E TRANSACOES
+  // ============================================
+  console.log("  Criando pagamentos e transacoes de teste...");
+
+  const completedOrders = await prisma.serviceOrder.findMany({
+    where: { status: "COMPLETED", professionalId: professional.id },
+    include: { serviceListing: true },
+  });
+
+  for (const order of completedOrders) {
+    const existingPayment = await prisma.payment.findFirst({
+      where: { serviceOrderId: order.id },
+    });
+
+    if (!existingPayment) {
+      const payment = await prisma.payment.create({
+        data: {
+          amount: order.price,
+          status: "RELEASED",
+          paymentMethod: "pix",
+          transactionId: `test_txn_${order.id}_${Date.now()}`,
+          serviceOrderId: order.id,
+          clientId: order.clientId,
+          professionalId: order.professionalId,
+          paidAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+          releasedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // Transacao de pagamento para o profissional (90%)
+      const professionalAmount = order.price * 0.9;
+      const platformFee = order.price * 0.1;
+
+      await prisma.transaction.create({
+        data: {
+          type: "PAYMENT",
+          amount: professionalAmount,
+          description: `Pagamento por: ${order.description || order.title}`,
+          balanceBefore: 0,
+          balanceAfter: professionalAmount,
+          userId: professional.id,
+          paymentId: payment.id,
+        },
+      });
+
+      // Transacao de taxa da plataforma
+      await prisma.transaction.create({
+        data: {
+          type: "FEE",
+          amount: platformFee,
+          description: `Taxa plataforma (10%) - Pedido #${order.id}`,
+          balanceBefore: professionalAmount,
+          balanceAfter: professionalAmount - platformFee,
+          userId: professional.id,
+          paymentId: payment.id,
+        },
+      });
+
+      // Transacao de gasto do cliente
+      await prisma.transaction.create({
+        data: {
+          type: "PAYMENT",
+          amount: order.price,
+          description: `Pagamento por: ${order.description || order.title}`,
+          balanceBefore: 0,
+          balanceAfter: -order.price,
+          userId: client.id,
+          paymentId: payment.id,
+        },
+      });
+    }
+  }
+
+  // Atualizar saldo do profissional
+  const profPaymentTxns = await prisma.transaction.findMany({
+    where: { userId: professional.id, type: "PAYMENT" },
+  });
+  const profFeeTxns = await prisma.transaction.findMany({
+    where: { userId: professional.id, type: "FEE" },
+  });
+  const totalPayments = profPaymentTxns.reduce((sum: number, t: any) => sum + t.amount, 0);
+  const totalFees = profFeeTxns.reduce((sum: number, t: any) => sum + t.amount, 0);
+  const newBalance = totalPayments - totalFees;
+
+  await prisma.user.update({
+    where: { id: professional.id },
+    data: { balance: newBalance },
+  });
+
+  console.log("  - Pagamentos e transacoes criados!");
+
+  // ============================================
+  // SEED DE REVIEWS
+  // ============================================
+  console.log("  Criando reviews de teste...");
+
+  for (const order of completedOrders) {
+    const existingReview = await prisma.review.findFirst({
+      where: { serviceOrderId: order.id },
+    });
+
+    if (!existingReview) {
+      await prisma.review.create({
+        data: {
+          rating: 5,
+          comment: "Excelente servico! Profissional muito competente e pontual. Recomendo!",
+          isProfessional: true,
+          serviceOrderId: order.id,
+          authorId: client.id,
+          targetId: professional.id,
+        },
+      });
+    }
+  }
+
+  console.log("  - Reviews de teste criados!");
+
+  // ============================================
+  // SEED DE AGENDA PROFISSIONAL
+  // ============================================
+  console.log("  Criando agenda profissional de teste...");
+
+  const existingSchedule = await prisma.professionalSchedule.findFirst({
+    where: { professionalId: professional.id },
+  });
+
+  if (!existingSchedule) {
+    const scheduleData = [
+      { dayOfWeek: 1, startTime: "08:00", endTime: "18:00" }, // Segunda
+      { dayOfWeek: 2, startTime: "08:00", endTime: "18:00" }, // Terca
+      { dayOfWeek: 3, startTime: "08:00", endTime: "18:00" }, // Quarta
+      { dayOfWeek: 4, startTime: "08:00", endTime: "18:00" }, // Quinta
+      { dayOfWeek: 5, startTime: "08:00", endTime: "17:00" }, // Sexta
+      { dayOfWeek: 6, startTime: "09:00", endTime: "13:00" }, // Sabado
+    ];
+
+    for (const schedule of scheduleData) {
+      await prisma.professionalSchedule.create({
+        data: {
+          professionalId: professional.id,
+          ...schedule,
+          isAvailable: true,
+        },
+      });
+    }
+  }
+
+  console.log("  - Agenda profissional criada!");
+
+  // ============================================
+  // SEED DE NOTIFICACOES
+  // ============================================
+  console.log("  Criando notificacoes de teste...");
+
+  const existingNotification = await prisma.notification.findFirst({
+    where: { userId: professional.id },
+  });
+
+  if (!existingNotification) {
+    await prisma.notification.create({
+      data: {
+        type: "ORDER_CREATED",
+        title: "Novo pedido recebido",
+        message: "Voce recebeu um novo pedido de servico eletrico.",
+        userId: professional.id,
+        status: "UNREAD",
+      },
+    });
+
+    await prisma.notification.create({
+      data: {
+        type: "ORDER_CREATED",
+        title: "Novo pedido recebido",
+        message: "Voce recebeu um novo pedido de conserto.",
+        userId: professional.id,
+        status: "UNREAD",
+      },
+    });
+
+    await prisma.notification.create({
+      data: {
+        type: "PAYMENT_RECEIVED",
+        title: "Pagamento recebido",
+        message: "Pagamento de R$ 150,00 foi liberado para sua carteira.",
+        userId: professional.id,
+        status: "READ",
+      },
+    });
+
+    // Notificacao para o cliente
+    await prisma.notification.create({
+      data: {
+        type: "ORDER_ACCEPTED",
+        title: "Pedido aceito",
+        message: "Seu pedido foi aceito pelo profissional Joao Santos.",
+        userId: client.id,
+        status: "UNREAD",
+      },
+    });
+  }
+
+  console.log("  - Notificacoes de teste criadas!");
+
   console.log("Usuarios de teste criados com sucesso!");
   console.log("  (Consulte o seed.ts para credenciais de teste)");
 }
