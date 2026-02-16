@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 import Settings from "./pages/Settings";
 import VerifyAccount from "./pages/VerifyAccount";
 import ClientDashboard from "./pages/client/Dashboard";
@@ -77,6 +78,7 @@ const App: React.FC = () => {
               <Route path="forgot-password" element={<ForgotPassword />} />
               <Route path="reset-password/:token" element={<ResetPassword />} />
               <Route path="verify-email" element={<VerifyAccount />} />
+              <Route path="verify-email/:token" element={<VerifyEmail />} />
               <Route path="services" element={<ServiceSearch />} />
               <Route path="services/:id" element={<ServiceDetails />} />
               <Route path="seguranca" element={<Security />} />
