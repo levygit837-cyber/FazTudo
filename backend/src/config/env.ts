@@ -65,6 +65,14 @@ export interface EnvConfig {
   // Notifications
   ENABLE_EMAIL_NOTIFICATIONS: boolean;
 
+  // Email (SMTP)
+  SMTP_HOST: string;
+  SMTP_PORT: number;
+  SMTP_USER: string;
+  SMTP_PASS: string;
+  SMTP_FROM_NAME: string;
+  SMTP_FROM_EMAIL: string;
+
   // File Upload
   MAX_FILE_SIZE_MB: number;
   ALLOWED_FILE_TYPES: string[];
@@ -74,6 +82,9 @@ export interface EnvConfig {
 
   // Development
   ENABLE_SWAGGER: boolean;
+
+  // Frontend
+  FRONTEND_URL: string;
 }
 
 /**
@@ -152,6 +163,14 @@ function getEnvConfig(): EnvConfig {
     // Notifications
     ENABLE_EMAIL_NOTIFICATIONS: process.env.ENABLE_EMAIL_NOTIFICATIONS === 'true',
 
+    // Email (SMTP)
+    SMTP_HOST: process.env.SMTP_HOST || '',
+    SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
+    SMTP_USER: process.env.SMTP_USER || '',
+    SMTP_PASS: process.env.SMTP_PASS || '',
+    SMTP_FROM_NAME: process.env.SMTP_FROM_NAME || 'FazTudo',
+    SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL || 'noreply@faztudo.com.br',
+
     // File Upload
     MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '10', 10),
     ALLOWED_FILE_TYPES: (process.env.ALLOWED_FILE_TYPES || 'image/jpeg,image/png,image/webp,application/pdf').split(','),
@@ -161,6 +180,9 @@ function getEnvConfig(): EnvConfig {
 
     // Development
     ENABLE_SWAGGER: process.env.ENABLE_SWAGGER === 'true',
+
+    // Frontend
+    FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
   };
 
   return config;
