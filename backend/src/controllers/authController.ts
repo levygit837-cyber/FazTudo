@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
 import prisma from "../lib/prisma";
 import {
   generateToken,
@@ -451,14 +452,42 @@ export const forgotPassword = async (
       select: { id: true, email: true },
     });
 
-    // For security, always return success even if user doesn't exist
     if (user) {
-      // TODO: Implement password reset flow:
-      // 1. Generate a cryptographically secure reset token
-      // 2. Save it to the database with expiration (e.g., 1 hour)
-      // 3. Send email with reset link containing the token
+      // Generate cryptographically secure reset token
+      const resetToken = crypto.randomBytes(32).toString("hex");
+
+      // Hash the token before storing (so a DB leak doesn't expose tokens)
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+      // Save hashed token + expiration (1 hour) to database
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetPasswordToken: hashedToken,
+          resetPasswordExpires: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+        },
+      });
+
+      // Build reset URL
+      const { env } = await import("../config/env");
+      const resetUrl = `${env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+      // Log the reset link in development (replace with email in production)
+      if (env.NODE_ENV === "development" || env.NODE_ENV === "test") {
+        log.info({ resetUrl, email: user.email }, "Password reset link generated (dev mode)");
+      }
+
+      // TODO: Send email with resetUrl when email service is configured
+      // Example: await sendResetEmail(user.email, resetUrl);
+    } else {
+      // Timing-safe: perform a dummy hash to prevent timing attacks
+      await hashPassword("dummy-password-for-timing-safety");
     }
 
+    // Always return success (don't reveal if email exists)
     res
       .status(200)
       .json(
@@ -488,25 +517,51 @@ export const resetPassword = async (
       return;
     }
 
-    if (newPassword.length < 6) {
+    // Hash the incoming token to compare against stored hash
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    // Find user with matching token that hasn't expired
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!user) {
       res
         .status(400)
-        .json(errorResponse("New password must be at least 6 characters long"));
+        .json(errorResponse("Invalid or expired reset token"));
       return;
     }
 
-    // In a real application, you would:
-    // 1. Verify the reset token (check database and expiration)
-    // 2. Find the user associated with the token
-    // 3. Update the password
-    // 4. Invalidate the used token
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password, clear reset token, increment tokenVersion (invalidates existing JWTs)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        tokenVersion: { increment: 1 },
+      },
+    });
+
+    log.info({ userId: user.id }, "Password reset successful");
 
     res
-      .status(501)
+      .status(200)
       .json(
-        errorResponse(
-          "Funcionalidade de reset de senha ainda nao implementada",
-          501,
+        successResponse(
+          null,
+          "Password has been reset successfully. Please login with your new password.",
         ),
       );
   } catch (error) {
