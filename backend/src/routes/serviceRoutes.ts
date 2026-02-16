@@ -12,6 +12,16 @@ const router = Router();
 // Middleware de log para todas as rotas de servicos
 router.use(authLogger);
 
+// Param middleware: rejeita :id não-numérico com next("route"),
+// permitindo que outros routers montados em /api/services processem a request.
+// Sem isso, /:id captura paths como /orders, /chat, etc.
+router.param("id", (req, res, next, value) => {
+  if (!/^\d+$/.test(value)) {
+    return next("route");
+  }
+  next();
+});
+
 // ============================================
 // ROTAS DE SERVICE LISTINGS (CATALOGO)
 // ============================================
