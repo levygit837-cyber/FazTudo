@@ -69,6 +69,9 @@ export interface EnvConfig {
   MAX_FILE_SIZE_MB: number;
   ALLOWED_FILE_TYPES: string[];
 
+  // Frontend
+  FRONTEND_URL: string;
+
   // Development
   ENABLE_SWAGGER: boolean;
 }
@@ -152,6 +155,9 @@ function getEnvConfig(): EnvConfig {
     // File Upload
     MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '10', 10),
     ALLOWED_FILE_TYPES: (process.env.ALLOWED_FILE_TYPES || 'image/jpeg,image/png,image/webp,application/pdf').split(','),
+
+    // Frontend
+    FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
 
     // Development
     ENABLE_SWAGGER: process.env.ENABLE_SWAGGER === 'true',
