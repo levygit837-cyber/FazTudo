@@ -60,15 +60,15 @@ const Register: React.FC = () => {
     const pw = formData.password;
     if (!pw) return { score: 0, label: "", color: "" };
     let score = 0;
-    if (pw.length >= 6) score++;
-    if (pw.length >= 10) score++;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
     if (/[A-Z]/.test(pw)) score++;
     if (/[a-z]/.test(pw)) score++;
     if (/\d/.test(pw)) score++;
     if (/[^A-Za-z0-9]/.test(pw)) score++;
 
     if (score <= 2) return { score, label: "Fraca", color: "bg-red-500" };
-    if (score <= 3) return { score, label: "Razoavel", color: "bg-yellow-500" };
+    if (score <= 3) return { score, label: "Razoável", color: "bg-yellow-500" };
     if (score <= 4) return { score, label: "Boa", color: "bg-blue-500" };
     return { score, label: "Forte", color: "bg-green-500" };
   }, [formData.password]);
@@ -107,8 +107,10 @@ const Register: React.FC = () => {
     // Senha
     if (!formData.password) {
       newErrors.password = "Senha é obrigatória";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Senha deve ter pelo menos 6 caracteres";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Senha deve ter pelo menos 8 caracteres";
+    } else if (!/(?=.*[a-z])/.test(formData.password)) {
+      newErrors.password = "Senha deve conter pelo menos uma letra minúscula";
     } else if (!/(?=.*[A-Z])/.test(formData.password)) {
       newErrors.password = "Senha deve conter pelo menos uma letra maiúscula";
     } else if (!/(?=.*\d)/.test(formData.password)) {
@@ -493,16 +495,20 @@ const Register: React.FC = () => {
                   <div className="space-y-1">
                     {[
                       {
-                        check: formData.password.length >= 6,
-                        text: "Pelo menos 6 caracteres",
+                        check: formData.password.length >= 8,
+                        text: "Pelo menos 8 caracteres",
+                      },
+                      {
+                        check: /[a-z]/.test(formData.password),
+                        text: "Uma letra minúscula",
                       },
                       {
                         check: /[A-Z]/.test(formData.password),
-                        text: "Uma letra maiuscula",
+                        text: "Uma letra maiúscula",
                       },
                       {
                         check: /\d/.test(formData.password),
-                        text: "Um numero",
+                        text: "Um número",
                       },
                       {
                         check: /[^A-Za-z0-9]/.test(formData.password),
