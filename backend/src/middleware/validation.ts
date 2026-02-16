@@ -48,6 +48,7 @@ export const registerSchema = z.object({
   role: z.enum(['CLIENT', 'PROFESSIONAL'], {
     error: 'Role deve ser CLIENT ou PROFESSIONAL',
   }).optional().default('CLIENT'),
+  document: z.string().trim().optional(),
 });
 
 export const loginSchema = z.object({

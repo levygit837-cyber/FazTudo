@@ -75,6 +75,46 @@ describe('Security: Input Validation', () => {
       });
       expect(result.success).toBe(false);
     });
+
+    it('accepts registration with document field', () => {
+      const result = registerSchema.safeParse({
+        name: 'Professional User',
+        email: 'pro@test.com',
+        password: 'Abcdefg1',
+        role: 'PROFESSIONAL',
+        document: '12345678901',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.document).toBe('12345678901');
+      }
+    });
+
+    it('accepts registration without document field', () => {
+      const result = registerSchema.safeParse({
+        name: 'Client User',
+        email: 'client@test.com',
+        password: 'Abcdefg1',
+        role: 'CLIENT',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.document).toBeUndefined();
+      }
+    });
+
+    it('strips confirmPassword field (unknown field)', () => {
+      const result = registerSchema.safeParse({
+        name: 'Test User',
+        email: 'test@test.com',
+        password: 'Abcdefg1',
+        confirmPassword: 'Abcdefg1',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect((result.data as any).confirmPassword).toBeUndefined();
+      }
+    });
   });
 
   describe('changePasswordSchema', () => {
