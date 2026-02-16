@@ -474,7 +474,7 @@ export const forgotPassword = async (
     // Check if user exists
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true },
+      select: { id: true, email: true, name: true },
     });
 
     if (user) {
@@ -500,13 +500,14 @@ export const forgotPassword = async (
       const { env } = await import("../config/env");
       const resetUrl = `${env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-      // Log the reset link in development (replace with email in production)
+      // Send password reset email
+      sendPasswordResetEmail(user.email, user.name || "Usuário", resetUrl).catch((err) => {
+        log.error({ err, email: user.email }, "Failed to send password reset email");
+      });
+
       if (env.NODE_ENV === "development" || env.NODE_ENV === "test") {
         log.info({ resetUrl, email: user.email }, "Password reset link generated (dev mode)");
       }
-
-      // TODO: Send email with resetUrl when email service is configured
-      // Example: await sendResetEmail(user.email, resetUrl);
     } else {
       // Timing-safe: perform a dummy hash to prevent timing attacks
       await hashPassword("dummy-password-for-timing-safety");
