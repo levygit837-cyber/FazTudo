@@ -166,7 +166,7 @@ function getEnvConfig(): EnvConfig {
     SMTP_USER: process.env.SMTP_USER || '',
     SMTP_PASS: process.env.SMTP_PASS || '',
     SMTP_FROM_NAME: process.env.SMTP_FROM_NAME || 'FazTudo',
-    SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL || 'noreply@faztudo.com.br',
+    SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL || 'amplimusicstudo@gmail.com',
 
     // File Upload
     MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '10', 10),
