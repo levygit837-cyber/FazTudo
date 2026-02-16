@@ -124,7 +124,12 @@ describe('Security: Input Validation', () => {
     });
 
     it('accepts valid payment method', () => {
-      const result = createPaymentSchema.safeParse({ paymentMethod: 'pix' });
+      const result = createPaymentSchema.safeParse({
+        paymentMethod: 'pix',
+        payerEmail: 'teste@teste.com',
+        payerName: 'Test User',
+        payerCPF: '12345678900',
+      });
       expect(result.success).toBe(true);
     });
   });

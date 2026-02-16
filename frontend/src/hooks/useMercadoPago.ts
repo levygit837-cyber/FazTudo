@@ -79,7 +79,7 @@ export function useMercadoPago() {
       cardExpirationYear: cardData.expirationYear,
       securityCode: cardData.securityCode,
       identificationType: "CPF",
-      identificationNumber: cardData.identificationNumber.replace(/[.\-]/g, ""),
+      identificationNumber: cardData.identificationNumber.replace(/[.-]/g, ""),
     });
 
     return token;

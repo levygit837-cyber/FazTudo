@@ -67,6 +67,29 @@ const ProposalComparator: React.FC<ProposalComparatorProps> = ({
     loadProposals();
   }, [orderId]);
 
+  // Sort proposals (must be before early returns to satisfy rules-of-hooks)
+  const sortedProposals = useMemo(() => {
+    if (!sortBy) return proposals;
+    const sorted = [...proposals];
+    sorted.sort((a, b) => {
+      // Always put pending first
+      if (a.status === "PENDING" && b.status !== "PENDING") return -1;
+      if (a.status !== "PENDING" && b.status === "PENDING") return 1;
+
+      switch (sortBy) {
+        case "price":
+          return a.price - b.price;
+        case "rating":
+          return b.professional.ratingAverage - a.professional.ratingAverage;
+        case "deadline":
+          return (a.estimatedDays || 999) - (b.estimatedDays || 999);
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  }, [proposals, sortBy]);
+
   const handleAccept = async (proposalId: number) => {
     try {
       setActionLoading(proposalId);
@@ -106,29 +129,6 @@ const ProposalComparator: React.FC<ProposalComparatorProps> = ({
   if (pendingProposals.length === 0 && proposals.length === 0) {
     return null; // Don't show if no proposals
   }
-
-  // Sort proposals
-  const sortedProposals = useMemo(() => {
-    if (!sortBy) return proposals;
-    const sorted = [...proposals];
-    sorted.sort((a, b) => {
-      // Always put pending first
-      if (a.status === "PENDING" && b.status !== "PENDING") return -1;
-      if (a.status !== "PENDING" && b.status === "PENDING") return 1;
-
-      switch (sortBy) {
-        case "price":
-          return a.price - b.price;
-        case "rating":
-          return b.professional.ratingAverage - a.professional.ratingAverage;
-        case "deadline":
-          return (a.estimatedDays || 999) - (b.estimatedDays || 999);
-        default:
-          return 0;
-      }
-    });
-    return sorted;
-  }, [proposals, sortBy]);
 
   // Calculate badges
   const lowestPrice = pendingProposals.length > 0 ? Math.min(...pendingProposals.map((p) => p.price)) : 0;

@@ -101,7 +101,6 @@ const ServiceChat: React.FC = () => {
     }, POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {

@@ -191,7 +191,7 @@ VITE_API_URL=http://localhost:3001
 - **Unit**: emailService, envSmtp, scheduler
 - **Middleware**: chatFilter, sanitize
 - **Security**: xss, validation
-- **Bug conhecido**: `validation.test.ts` > `createPaymentSchema` > `accepts valid payment method` falha (teste usa 'PIX' maiusculo, schema espera 'pix' minusculo)
+- **Bug conhecido**: ~~`validation.test.ts` > `createPaymentSchema` > `accepts valid payment method` falha~~ → **RESOLVIDO**: Teste corrigido para incluir todos os campos obrigatórios.
 - **Frontend**: SEM TESTES (apenas playwright-test.js na raiz)
 
 ---
@@ -343,7 +343,7 @@ git push origin feat/nome-da-feature
 
 5. **Sem logging estruturado**: ~~Backend usa `console.log/error`~~ → **RESOLVIDO**: Migrado para Pino em todos os 27 arquivos.
 
-6. **Bug no teste de validacao**: `validation.test.ts` > `createPaymentSchema` usa 'PIX' (maiusculo) mas schema espera 'pix' (minusculo).
+6. **Bug no teste de validacao**: ~~`validation.test.ts` > `createPaymentSchema` usa 'PIX' (maiusculo) mas schema espera 'pix' (minusculo)~~ → **RESOLVIDO**: Teste corrigido para incluir todos os campos obrigatórios do schema.
 
 ### Prioridade BAIXA (Melhorias Futuras)
 
