@@ -16,6 +16,8 @@ import LandingPageUser from "./pages/LandingPageUser";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Settings from "./pages/Settings";
 import VerifyAccount from "./pages/VerifyAccount";
 import ClientDashboard from "./pages/client/Dashboard";
@@ -72,6 +74,8 @@ const App: React.FC = () => {
             <Route element={<Layout />}>
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
+              <Route path="forgot-password" element={<ForgotPassword />} />
+              <Route path="reset-password/:token" element={<ResetPassword />} />
               <Route path="verify-email" element={<VerifyAccount />} />
               <Route path="services" element={<ServiceSearch />} />
               <Route path="services/:id" element={<ServiceDetails />} />
