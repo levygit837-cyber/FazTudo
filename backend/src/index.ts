@@ -24,6 +24,7 @@ import categoryRoutes from "./routes/categoryRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import walletRoutes from "./routes/walletRoutes";
+import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
 
 const app = express();
 const log = createLogger("server");
@@ -164,6 +165,7 @@ const gracefulShutdown = async (signal: string) => {
 
   log.info({ signal }, "Shutting down gracefully...");
   try {
+    stopScheduledTasks();
     server.close(() => {
       log.info("HTTP server closed");
     });
@@ -197,6 +199,7 @@ const PORT = env.PORT;
 
 const server = app.listen(PORT, () => {
   log.info({ port: PORT, env: env.NODE_ENV }, "Server started");
+  startScheduledTasks();
 });
 
 export default app;
