@@ -82,9 +82,6 @@ export interface EnvConfig {
 
   // Development
   ENABLE_SWAGGER: boolean;
-
-  // Frontend
-  FRONTEND_URL: string;
 }
 
 /**
@@ -180,9 +177,6 @@ function getEnvConfig(): EnvConfig {
 
     // Development
     ENABLE_SWAGGER: process.env.ENABLE_SWAGGER === 'true',
-
-    // Frontend
-    FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
   };
 
   return config;
