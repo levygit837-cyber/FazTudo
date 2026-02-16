@@ -3,6 +3,11 @@ import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { NotificationType } from "@prisma/client";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("reviewController");
+
+
 // Tipos para request bodies
 interface CreateReviewBody {
   rating: number;
@@ -44,7 +49,7 @@ const createNotification = async (
       },
     });
   } catch (error) {
-    console.error("Failed to create notification:", error);
+    log.error({ err: error }, "Failed to create notification");
   }
 };
 
@@ -228,7 +233,7 @@ export const createReview = async (
       .status(201)
       .json(successResponse({ review }, "Review created successfully"));
   } catch (error) {
-    console.error("Create review error:", error);
+    log.error({ err: error }, "Create review error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

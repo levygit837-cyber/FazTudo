@@ -3,6 +3,11 @@ import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { NotificationType } from "@prisma/client";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("proposalController");
+
+
 const successResponse = (data: any, message: string = "Success") => ({
   success: true, message, data,
 });
@@ -106,7 +111,7 @@ export const createProposal = async (
 
     res.status(201).json(successResponse({ proposal }, "Proposal submitted successfully"));
   } catch (error) {
-    console.error("Create proposal error:", error);
+    log.error({ err: error }, "Create proposal error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -170,7 +175,7 @@ export const getOrderProposals = async (
 
     res.status(200).json(successResponse({ proposals, total: proposals.length }));
   } catch (error) {
-    console.error("Get order proposals error:", error);
+    log.error({ err: error }, "Get order proposals error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -261,7 +266,7 @@ export const acceptProposal = async (
 
     res.status(200).json(successResponse({ proposal: updatedProposal, serviceOrder: updatedOrder }, "Proposal accepted"));
   } catch (error) {
-    console.error("Accept proposal error:", error);
+    log.error({ err: error }, "Accept proposal error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -307,7 +312,7 @@ export const rejectProposal = async (
 
     res.status(200).json(successResponse({ proposal: updated }, "Proposal rejected"));
   } catch (error) {
-    console.error("Reject proposal error:", error);
+    log.error({ err: error }, "Reject proposal error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -347,7 +352,7 @@ export const withdrawProposal = async (
 
     res.status(200).json(successResponse({ proposal: updated }, "Proposal withdrawn"));
   } catch (error) {
-    console.error("Withdraw proposal error:", error);
+    log.error({ err: error }, "Withdraw proposal error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

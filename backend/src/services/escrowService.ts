@@ -3,6 +3,11 @@ import { PaymentStatus, ServiceOrderStatus } from "@prisma/client";
 import { env } from "../config/env";
 import { createNotification, NotificationType } from "./notificationService";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("escrow");
+
+
 // ==================== TIPOS ====================
 
 interface EscrowConfig {
@@ -339,7 +344,7 @@ export const checkAutoReleasablePayments = async (): Promise<number> => {
         const result = await releasePaymentFromEscrow(payment.id, true);
         if (result.success) {
           releasedCount++;
-          console.log(`Auto-released payment #${payment.id} for order #${payment.serviceOrderId}`);
+          log.info("Auto-released payment #%s for order #%s");
         }
       }
     }

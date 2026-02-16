@@ -596,6 +596,22 @@ const Layout: React.FC = () => {
                       Seguranca
                     </Link>
                   </li>
+                  <li>
+                    <Link
+                      to="/termos"
+                      className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
+                    >
+                      Termos de Uso
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/privacidade"
+                      className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
+                    >
+                      Politica de Privacidade
+                    </Link>
+                  </li>
                 </ul>
               </div>
 

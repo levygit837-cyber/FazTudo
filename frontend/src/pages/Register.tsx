@@ -588,17 +588,17 @@ const Register: React.FC = () => {
               >
                 Concordo com os{" "}
                 <Link
-                  to="/terms"
+                  to="/termos"
                   className="text-primary-600 hover:text-primary-800"
                 >
-                  Termos de Serviço
+                  Termos de Servico
                 </Link>{" "}
                 e{" "}
                 <Link
-                  to="/privacy"
+                  to="/privacidade"
                   className="text-primary-600 hover:text-primary-800"
                 >
-                  Política de Privacidade
+                  Politica de Privacidade
                 </Link>
               </label>
             </div>

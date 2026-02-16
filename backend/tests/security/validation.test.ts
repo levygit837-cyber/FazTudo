@@ -124,7 +124,7 @@ describe('Security: Input Validation', () => {
     });
 
     it('accepts valid payment method', () => {
-      const result = createPaymentSchema.safeParse({ paymentMethod: 'PIX' });
+      const result = createPaymentSchema.safeParse({ paymentMethod: 'pix' });
       expect(result.success).toBe(true);
     });
   });

@@ -2,6 +2,11 @@ import type { Response } from "express";
 import prisma from "../lib/prisma";
 import type { AuthRequest } from "../middleware/auth";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("calendarController");
+
+
 const successResponse = (data: any, message: string = "Success") => ({
   success: true, message, data,
 });
@@ -118,7 +123,7 @@ export const getCalendarOverview = async (
       }, "Calendar overview retrieved"),
     );
   } catch (error) {
-    console.error("Calendar overview error:", error);
+    log.error({ err: error }, "Calendar overview error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -242,7 +247,7 @@ export const getCalendarDayDetail = async (
       }, "Calendar day detail retrieved"),
     );
   } catch (error) {
-    console.error("Calendar day detail error:", error);
+    log.error({ err: error }, "Calendar day detail error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

@@ -2,6 +2,11 @@ import type { Response } from "express";
 import prisma from "../lib/prisma";
 import type { AuthRequest } from "../middleware/auth";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("walletController");
+
+
 const successResponse = (data: any, message: string = "Success") => ({
   success: true,
   message,
@@ -42,7 +47,7 @@ export const getBalance = async (
 
     res.status(200).json(successResponse({ balance: user.balance }, "Saldo recuperado"));
   } catch (error) {
-    console.error("Wallet balance error:", error);
+    log.error({ err: error }, "Wallet balance error");
     res.status(500).json(errorResponse("Erro interno do servidor", 500));
   }
 };
@@ -129,7 +134,7 @@ export const getTransactions = async (
       ),
     );
   } catch (error) {
-    console.error("Wallet transactions error:", error);
+    log.error({ err: error }, "Wallet transactions error");
     res.status(500).json(errorResponse("Erro interno do servidor", 500));
   }
 };
@@ -232,7 +237,7 @@ export const getSummary = async (
       res.status(403).json(errorResponse("Role nao suportada para resumo financeiro"));
     }
   } catch (error) {
-    console.error("Wallet summary error:", error);
+    log.error({ err: error }, "Wallet summary error");
     res.status(500).json(errorResponse("Erro interno do servidor", 500));
   }
 };
@@ -320,7 +325,7 @@ export const requestWithdrawal = async (
       res.status(400).json(errorResponse("Saldo insuficiente para este saque"));
       return;
     }
-    console.error("Wallet withdrawal error:", error);
+    log.error({ err: error }, "Wallet withdrawal error");
     res.status(500).json(errorResponse("Erro interno do servidor", 500));
   }
 };
@@ -406,7 +411,7 @@ export const getProfessionalFinancialOverview = async (
       }, "Professional financial overview retrieved"),
     );
   } catch (error) {
-    console.error("Professional financial overview error:", error);
+    log.error({ err: error }, "Professional financial overview error");
     res.status(500).json(errorResponse("Erro interno do servidor", 500));
   }
 };

@@ -2,6 +2,11 @@ import type { Response } from "express";
 import prisma from "../lib/prisma";
 import type { AuthRequest } from "../middleware/auth";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("adminController");
+
+
 const successResponse = (data: any, message: string = "Success") => ({
   success: true,
   message,
@@ -122,7 +127,7 @@ export const getAdminStats = async (
       ),
     );
   } catch (error) {
-    console.error("Admin stats error:", error);
+    log.error({ err: error }, "Admin stats error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -213,7 +218,7 @@ export const listUsers = async (
       ),
     );
   } catch (error) {
-    console.error("List users error:", error);
+    log.error({ err: error }, "List users error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -286,7 +291,7 @@ export const getUserDetails = async (
 
     res.status(200).json(successResponse({ user }, "User details retrieved"));
   } catch (error) {
-    console.error("Get user details error:", error);
+    log.error({ err: error }, "Get user details error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -365,7 +370,7 @@ export const updateUserStatus = async (
       .status(200)
       .json(successResponse({ user: updatedUser }, "User status updated"));
   } catch (error) {
-    console.error("Update user status error:", error);
+    log.error({ err: error }, "Update user status error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -433,7 +438,7 @@ export const listVerifications = async (
       ),
     );
   } catch (error) {
-    console.error("List verifications error:", error);
+    log.error({ err: error }, "List verifications error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -556,7 +561,7 @@ export const reviewVerification = async (
         },
       });
     } catch (notifError) {
-      console.error("Failed to create notification:", notifError);
+      log.error({ err: notifError }, "Failed to create notification");
       // Don't fail the request if notification fails
     }
 
@@ -569,7 +574,7 @@ export const reviewVerification = async (
         ),
       );
   } catch (error) {
-    console.error("Review verification error:", error);
+    log.error({ err: error }, "Review verification error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

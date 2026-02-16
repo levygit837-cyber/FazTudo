@@ -11,6 +11,11 @@ import {
   createBoletoPayment,
 } from "../../services/mercadopagoService";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("paymentController");
+
+
 // Tipos para checkout transparente
 interface CheckoutTransparenteBody {
   paymentMethod: "credit_card" | "pix" | "boleto";
@@ -58,7 +63,7 @@ const createNotification = async (
       },
     });
   } catch (error) {
-    console.error("Failed to create notification:", error);
+    log.error({ err: error }, "Failed to create notification");
   }
 };
 
@@ -84,7 +89,7 @@ export const getMercadoPagoPublicKey = async (
       sandbox: env.MP_SANDBOX,
     }, "MercadoPago config retrieved"));
   } catch (error) {
-    console.error("Get MP config error:", error);
+    log.error({ err: error }, "Get MP config error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -239,11 +244,11 @@ export const createPayment = async (
         };
       }
     } catch (mpError: any) {
-      console.error("MercadoPago payment creation failed:", mpError);
+      log.error({ err: mpError }, "MercadoPago payment creation failed");
 
       // Em dev, criar pagamento local como fallback
       if (env.NODE_ENV !== "production") {
-        console.warn("⚠️ MercadoPago unavailable — creating local payment record");
+        log.warn("⚠️ MercadoPago unavailable — creating local payment record");
         mpResult = { status: "approved", id: `local-${Date.now()}` };
         paymentData = { paymentType: body.paymentMethod, localFallback: true };
       } else {
@@ -360,7 +365,7 @@ export const createPayment = async (
       ),
     );
   } catch (error) {
-    console.error("Create payment error:", error);
+    log.error({ err: error }, "Create payment error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -517,7 +522,7 @@ export const releasePayment = async (
       ),
     );
   } catch (error) {
-    console.error("Release payment error:", error);
+    log.error({ err: error }, "Release payment error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -552,7 +557,7 @@ export const mercadoPagoWebhook = async (
     try {
       mpPayment = await getMPPaymentStatus(String(mpPaymentId));
     } catch (err) {
-      console.error("Failed to fetch MP payment status:", err);
+      log.error({ err: err }, "Failed to fetch MP payment status");
       res.status(200).json({ received: true });
       return;
     }
@@ -689,7 +694,7 @@ export const mercadoPagoWebhook = async (
 
     res.status(200).json({ received: true });
   } catch (error) {
-    console.error("MercadoPago webhook error:", error);
+    log.error({ err: error }, "MercadoPago webhook error");
     // Always return 200 to MP to avoid retries on our errors
     res.status(200).json({ received: true });
   }

@@ -309,11 +309,11 @@ export const submitOrderCompletion = async (id: number): Promise<ServiceOrder> =
 };
 
 /**
- * Compatibilidade: endpoint antigo /complete
+ * Compatibilidade: redireciona para submitOrderCompletion
  */
 export const completeOrder = async (id: number): Promise<ServiceOrder> => {
   const response = await api.post<ApiResponse<any>>(
-    `/services/orders/${id}/complete`,
+    `/services/orders/${id}/submit-completion`,
   );
   const payload = extractData(response);
   return payload.serviceOrder || payload;

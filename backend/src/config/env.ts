@@ -23,6 +23,11 @@ if (fs.existsSync(mpEnvPath)) {
 import 'dotenv/config';
 import crypto from 'crypto';
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("env");
+
+
 export interface EnvConfig {
   NODE_ENV: 'development' | 'production' | 'test';
   PORT: number;
@@ -90,12 +95,12 @@ function getEnvConfig(): EnvConfig {
       );
     }
     jwtSecret = generateDevSecret();
-    console.warn('⚠️  JWT_SECRET not set — generated random dev secret (tokens will invalidate on restart).');
+    log.warn("⚠️  JWT_SECRET not set — generated random dev secret (tokens will invalidate on restart).");
   } else if (jwtSecret.length < 32) {
     if (nodeEnv === 'production') {
       throw new Error('FATAL: JWT_SECRET must be at least 32 characters in production.');
     }
-    console.warn('⚠️  JWT_SECRET is too short. Use at least 32 characters for security.');
+    log.warn("⚠️  JWT_SECRET is too short. Use at least 32 characters for security.");
   }
 
   // CORS: REQUIRED specific origin in production

@@ -4,6 +4,11 @@ import type { AuthRequest } from "../../middleware/auth";
 import { NotificationType } from "@prisma/client";
 import { filterChatContent, getBlockedContentMessage } from "../../middleware/chatFilter";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("messageController");
+
+
 // Tipos para request bodies
 interface SendMessageBody {
   content: string;
@@ -59,7 +64,7 @@ const createNotification = async (
       },
     });
   } catch (error) {
-    console.error("Failed to create notification:", error);
+    log.error({ err: error }, "Failed to create notification");
   }
 };
 
@@ -232,7 +237,7 @@ export const sendMessage = async (
         filterWarning ? "Message sent with content filtered" : "Message sent successfully",
       ));
   } catch (error) {
-    console.error("Send message error:", error);
+    log.error({ err: error }, "Send message error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -347,7 +352,7 @@ export const getOrderMessages = async (
       ),
     );
   } catch (error) {
-    console.error("Get order messages error:", error);
+    log.error({ err: error }, "Get order messages error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import prisma from "../../lib/prisma";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("disputeController");
+
+
 const DISPUTE_REASONS = [
   "Serviço não entregue",
   "Qualidade insatisfatória",
@@ -104,7 +109,7 @@ export const createDispute = async (req: Request, res: Response): Promise<void> 
       data: { dispute, availableReasons: DISPUTE_REASONS },
     });
   } catch (error) {
-    console.error("Error creating dispute:", error);
+    log.error({ err: error }, "Error creating dispute");
     res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 };
@@ -148,7 +153,7 @@ export const getOrderDisputes = async (req: Request, res: Response): Promise<voi
       data: { disputes, availableReasons: DISPUTE_REASONS },
     });
   } catch (error) {
-    console.error("Error fetching disputes:", error);
+    log.error({ err: error }, "Error fetching disputes");
     res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 };

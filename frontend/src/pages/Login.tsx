@@ -319,17 +319,17 @@ const Login: React.FC = () => {
           <p>
             Ao entrar, você concorda com nossos{" "}
             <Link
-              to="/terms"
+              to="/termos"
               className="underline hover:text-slate-700 dark:hover:text-slate-300"
             >
-              Termos de Serviço
+              Termos de Servico
             </Link>{" "}
             e{" "}
             <Link
-              to="/privacy"
+              to="/privacidade"
               className="underline hover:text-slate-700 dark:hover:text-slate-300"
             >
-              Política de Privacidade
+              Politica de Privacidade
             </Link>
           </p>
           <p className="flex items-center justify-center">

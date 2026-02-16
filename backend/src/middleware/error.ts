@@ -2,6 +2,11 @@ import { Request, Response, NextFunction } from "express";
 import { isDevelopment } from "../config/env";
 import { Prisma } from "@prisma/client";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("errorHandler");
+
+
 // Custom error classes
 export class AppError extends Error {
   public readonly statusCode: number;
@@ -201,15 +206,7 @@ export const asyncHandler = <T extends Function>(fn: T) => {
 
 // Error logging utility
 export const logError = (error: Error, context?: any): void => {
-  const logEntry = {
-    timestamp: new Date().toISOString(),
-    level: "ERROR",
-    message: error.message,
-    stack: error.stack,
-    context,
-  };
-
-  console.error(JSON.stringify(logEntry, null, isDevelopment ? 2 : 0));
+  log.error({ err: error, context }, error.message);
 
   // In production, you could send to external monitoring service
   // if (isProduction) {

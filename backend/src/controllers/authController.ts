@@ -8,6 +8,11 @@ import {
 } from "../middleware/auth";
 import { VerificationType } from "@prisma/client";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("authController");
+
+
 // Types for request bodies
 interface RegisterBody {
   email: string;
@@ -164,7 +169,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       ),
     );
   } catch (error) {
-    console.error("Registration error:", error);
+    log.error({ err: error }, "Registration error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -246,7 +251,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       ),
     );
   } catch (error) {
-    console.error("Login error:", error);
+    log.error({ err: error }, "Login error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -305,7 +310,7 @@ export const getProfile = async (
       .status(200)
       .json(successResponse({ user }, "Profile retrieved successfully"));
   } catch (error) {
-    console.error("Get profile error:", error);
+    log.error({ err: error }, "Get profile error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -363,7 +368,7 @@ export const updateProfile = async (
         successResponse({ user: updatedUser }, "Profile updated successfully"),
       );
   } catch (error) {
-    console.error("Update profile error:", error);
+    log.error({ err: error }, "Update profile error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -422,7 +427,7 @@ export const changePassword = async (
       .status(200)
       .json(successResponse(null, "Password changed successfully"));
   } catch (error) {
-    console.error("Change password error:", error);
+    log.error({ err: error }, "Change password error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -463,7 +468,7 @@ export const forgotPassword = async (
         ),
       );
   } catch (error) {
-    console.error("Forgot password error:", error);
+    log.error({ err: error }, "Forgot password error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -505,7 +510,7 @@ export const resetPassword = async (
         ),
       );
   } catch (error) {
-    console.error("Reset password error:", error);
+    log.error({ err: error }, "Reset password error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -537,7 +542,7 @@ export const verifyEmail = async (
         ),
       );
   } catch (error) {
-    console.error("Verify email error:", error);
+    log.error({ err: error }, "Verify email error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -601,7 +606,7 @@ export const submitDocumentVerification = async (
       ),
     );
   } catch (error) {
-    console.error("Submit document verification error:", error);
+    log.error({ err: error }, "Submit document verification error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -647,7 +652,7 @@ export const submitFacialVerification = async (
       ),
     );
   } catch (error) {
-    console.error("Submit facial verification error:", error);
+    log.error({ err: error }, "Submit facial verification error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -708,7 +713,7 @@ export const getVerificationStatus = async (
       ),
     );
   } catch (error) {
-    console.error("Get verification status error:", error);
+    log.error({ err: error }, "Get verification status error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -767,7 +772,7 @@ export const upgradeToProfessional = async (
         ),
       );
   } catch (error) {
-    console.error("Upgrade to professional error:", error);
+    log.error({ err: error }, "Upgrade to professional error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

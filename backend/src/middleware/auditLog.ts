@@ -1,6 +1,11 @@
 import { Response, NextFunction } from "express";
 import { AuthRequest } from "./auth";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("auditLog");
+
+
 interface AuditEntry {
   timestamp: string;
   userId: number | null;
@@ -38,9 +43,9 @@ export const auditLog = (action: string) => {
       const logLine = `[AUDIT] ${action} | user=${entry.userId} role=${entry.userRole} | ${entry.method} ${entry.path} | status=${entry.statusCode} | ip=${entry.ip} | ${entry.duration}ms`;
 
       if (res.statusCode >= 400) {
-        console.warn(logLine);
+        log.warn({ audit: entry }, "Audit log (error)");
       } else {
-        console.log(logLine);
+        log.info({ audit: entry }, "Audit log");
       }
 
       // TODO: Em produção, enviar para serviço externo (Sentry, CloudWatch, etc.)

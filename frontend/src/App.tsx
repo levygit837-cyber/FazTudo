@@ -36,6 +36,8 @@ import ServiceDetails from "./pages/services/ServiceDetails";
 import ServiceSearch from "./pages/services/ServiceSearch";
 import Messages from "./pages/Messages";
 import Security from "./pages/Security";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Notifications from "./pages/Notifications";
 import Wallet from "./pages/Wallet";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -74,6 +76,8 @@ const App: React.FC = () => {
               <Route path="services" element={<ServiceSearch />} />
               <Route path="services/:id" element={<ServiceDetails />} />
               <Route path="seguranca" element={<Security />} />
+              <Route path="termos" element={<TermsOfService />} />
+              <Route path="privacidade" element={<PrivacyPolicy />} />
 
               <Route
                 path="client"

@@ -4,17 +4,35 @@ import helmet from "helmet";
 import path from "path";
 import { env } from "./config/env";
 import prisma from "./lib/prisma";
+import logger, { createLogger } from "./lib/logger";
+import { requestLogger } from "./middleware/requestLog";
 import { errorHandler, notFoundHandler } from "./middleware/error";
 import { generalLimiter } from "./middleware/rateLimiter";
 import { xssSanitizer } from "./middleware/sanitize";
 import authRoutes from "./routes/authRoutes";
 import serviceRoutes from "./routes/serviceRoutes";
+import orderRoutes from "./routes/orderRoutes";
+import paymentRoutes from "./routes/paymentRoutes";
+import chatRoutes from "./routes/chatRoutes";
+import reviewRoutes from "./routes/reviewRoutes";
+import proposalRoutes from "./routes/proposalRoutes";
+import disputeRoutes from "./routes/disputeRoutes";
+import scheduleRoutes from "./routes/scheduleRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
+import recommendationRoutes from "./routes/recommendationRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import walletRoutes from "./routes/walletRoutes";
 
 const app = express();
+const log = createLogger("server");
+
+// ============================================
+// REQUEST LOGGING
+// ============================================
+
+app.use(requestLogger);
 
 // ============================================
 // SECURITY MIDDLEWARE
@@ -112,7 +130,16 @@ app.get("/health", async (_req, res) => {
 // ============================================
 
 app.use("/api/auth", authRoutes);
-app.use("/api/services", serviceRoutes);
+app.use("/api/services", serviceRoutes);           // Listings + briefs
+app.use("/api/services", orderRoutes);             // Orders (pedidos)
+app.use("/api/services", paymentRoutes);           // Payments (webhook, config, order payments)
+app.use("/api/services", chatRoutes);              // Chats + messages
+app.use("/api/services", reviewRoutes);            // Reviews
+app.use("/api/services", proposalRoutes);          // Proposals
+app.use("/api/services", disputeRoutes);           // Disputes
+app.use("/api/services", scheduleRoutes);          // Schedule / calendar
+app.use("/api/services", notificationRoutes);      // Notifications
+app.use("/api/services", recommendationRoutes);    // Recommendations
 app.use("/api/categories", categoryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin", adminRoutes);
@@ -135,16 +162,16 @@ const gracefulShutdown = async (signal: string) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
-  console.log(`${signal} received: shutting down gracefully...`);
+  log.info({ signal }, "Shutting down gracefully...");
   try {
     server.close(() => {
-      console.log("HTTP server closed");
+      log.info("HTTP server closed");
     });
     await prisma.$disconnect();
-    console.log("Database connection closed");
+    log.info("Database connection closed");
     process.exit(0);
   } catch (error) {
-    console.error("Error during shutdown:", error);
+    log.error({ err: error }, "Error during shutdown");
     process.exit(1);
   }
 };
@@ -153,12 +180,12 @@ process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+  log.fatal({ err: error }, "Uncaught Exception");
   gracefulShutdown("UNCAUGHT_EXCEPTION");
 });
 
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  log.fatal({ err: reason, promise }, "Unhandled Rejection");
   gracefulShutdown("UNHANDLED_REJECTION");
 });
 
@@ -169,8 +196,7 @@ process.on("unhandledRejection", (reason, promise) => {
 const PORT = env.PORT;
 
 const server = app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Environment: ${env.NODE_ENV}`);
+  log.info({ port: PORT, env: env.NODE_ENV }, "Server started");
 });
 
 export default app;

@@ -2,6 +2,11 @@ import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("chatController");
+
+
 const successResponse = (data: any, message: string = "Success") => ({
   success: true,
   message,
@@ -132,7 +137,7 @@ export const getUserChats = async (
       ),
     );
   } catch (error) {
-    console.error("Get user chats error:", error);
+    log.error({ err: error }, "Get user chats error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

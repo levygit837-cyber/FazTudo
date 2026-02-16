@@ -9,6 +9,11 @@ import {
 } from "@prisma/client";
 import type { ServiceListing } from "../lib/prisma";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("serviceController");
+
+
 // Tipos para request bodies
 interface CreateServiceListingBody {
   title: string;
@@ -117,7 +122,7 @@ const createNotification = async (
       },
     });
   } catch (error) {
-    console.error("Failed to create notification:", error);
+    log.error({ err: error }, "Failed to create notification");
   }
 };
 
@@ -266,7 +271,7 @@ export const listServices = async (
       ),
     );
   } catch (error) {
-    console.error("List services error:", error);
+    log.error({ err: error }, "List services error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -366,7 +371,7 @@ export const getService = async (
         ),
       );
   } catch (error) {
-    console.error("Get service error:", error);
+    log.error({ err: error }, "Get service error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -461,7 +466,7 @@ export const createServiceListing = async (
         successResponse({ service }, "Service listing created successfully"),
       );
   } catch (error) {
-    console.error("Create service listing error:", error);
+    log.error({ err: error }, "Create service listing error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -582,7 +587,7 @@ export const updateServiceListing = async (
         ),
       );
   } catch (error) {
-    console.error("Update service listing error:", error);
+    log.error({ err: error }, "Update service listing error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -663,7 +668,7 @@ export const deleteServiceListing = async (
       .status(200)
       .json(successResponse(null, "Service listing deleted successfully"));
   } catch (error) {
-    console.error("Delete service listing error:", error);
+    log.error({ err: error }, "Delete service listing error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -820,7 +825,7 @@ export const createServiceOrder = async (
         successResponse({ serviceOrder }, "Service order created successfully"),
       );
   } catch (error) {
-    console.error("Create service order error:", error);
+    log.error({ err: error }, "Create service order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -953,7 +958,7 @@ export const getUserServiceOrders = async (
       ),
     );
   } catch (error) {
-    console.error("Get user service orders error:", error);
+    log.error({ err: error }, "Get user service orders error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -1088,7 +1093,7 @@ export const getServiceOrder = async (
         ),
       );
   } catch (error) {
-    console.error("Get service order error:", error);
+    log.error({ err: error }, "Get service order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -1199,7 +1204,7 @@ export const acceptServiceOrder = async (
         ),
       );
   } catch (error) {
-    console.error("Accept service order error:", error);
+    log.error({ err: error }, "Accept service order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -1298,7 +1303,7 @@ export const startServiceOrder = async (
         ),
       );
   } catch (error) {
-    console.error("Start service order error:", error);
+    log.error({ err: error }, "Start service order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -1417,7 +1422,7 @@ export const completeServiceOrder = async (
         ),
       );
   } catch (error) {
-    console.error("Complete service order error:", error);
+    log.error({ err: error }, "Complete service order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -1549,7 +1554,7 @@ export const confirmServiceOrderCompletion = async (
       ),
     );
   } catch (error) {
-    console.error("Confirm service completion error:", error);
+    log.error({ err: error }, "Confirm service completion error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -1686,7 +1691,7 @@ export const cancelServiceOrder = async (
       .status(200)
       .json(successResponse(null, "Service order cancelled successfully"));
   } catch (error) {
-    console.error("Cancel service order error:", error);
+    log.error({ err: error }, "Cancel service order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -1868,7 +1873,7 @@ export const createPayment = async (
       ),
     );
   } catch (error) {
-    console.error("Create payment error:", error);
+    log.error({ err: error }, "Create payment error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -2034,7 +2039,7 @@ export const releasePayment = async (
       ),
     );
   } catch (error) {
-    console.error("Release payment error:", error);
+    log.error({ err: error }, "Release payment error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -2223,7 +2228,7 @@ export const createReview = async (
       .status(201)
       .json(successResponse({ review }, "Review created successfully"));
   } catch (error) {
-    console.error("Create review error:", error);
+    log.error({ err: error }, "Create review error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -2350,7 +2355,7 @@ export const sendMessage = async (
       .status(201)
       .json(successResponse({ message }, "Message sent successfully"));
   } catch (error) {
-    console.error("Send message error:", error);
+    log.error({ err: error }, "Send message error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -2465,7 +2470,7 @@ export const getOrderMessages = async (
       ),
     );
   } catch (error) {
-    console.error("Get order messages error:", error);
+    log.error({ err: error }, "Get order messages error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -2542,7 +2547,7 @@ export const getNotifications = async (
       ),
     );
   } catch (error) {
-    console.error("Get notifications error:", error);
+    log.error({ err: error }, "Get notifications error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -2609,7 +2614,7 @@ export const updateNotification = async (
         ),
       );
   } catch (error) {
-    console.error("Update notification error:", error);
+    log.error({ err: error }, "Update notification error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -2642,7 +2647,7 @@ export const markAllNotificationsAsRead = async (
       .status(200)
       .json(successResponse(null, "All notifications marked as read"));
   } catch (error) {
-    console.error("Mark all notifications as read error:", error);
+    log.error({ err: error }, "Mark all notifications as read error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

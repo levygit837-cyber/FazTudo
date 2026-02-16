@@ -4,6 +4,11 @@ import bcrypt from "bcrypt";
 import { env } from "../config/env";
 import prisma from "../lib/prisma";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("auth");
+
+
 // Tipos estendidos para Request
 export interface AuthRequest extends Request {
   user?: {
@@ -123,7 +128,7 @@ export const verifyToken = async (
       return;
     }
 
-    console.error("Erro na verificação de token:", error);
+    log.error({ err: error }, "Erro na verificação de token");
     res.status(500).json({
       success: false,
       message: "Erro interno na autenticação",
@@ -275,7 +280,7 @@ export const requireVerified = async (
 
     next();
   } catch (error) {
-    console.error("Erro ao verificar status do usuário:", error);
+    log.error({ err: error }, "Erro ao verificar status do usuário");
     res.status(500).json({
       success: false,
       message: "Erro interno ao verificar conta",
@@ -309,12 +314,13 @@ export const authLogger = (
       ? "[Public]"
       : "[Unauthenticated]";
 
-  console.log(`🔐 ${userInfo} ${req.method} ${req.path}`);
+  log.debug({ userInfo, method: req.method, path: req.path }, "Request started");
 
   res.on("finish", () => {
     const duration = Date.now() - startTime;
-    console.log(
-      `✅ ${userInfo} ${req.method} ${req.path} ${res.statusCode} (${duration}ms)`,
+    log.info(
+      { userInfo, method: req.method, path: req.path, statusCode: res.statusCode, duration },
+      "Request completed",
     );
   });
 
@@ -339,7 +345,7 @@ export const handleAuthError = (
     return;
   }
 
-  console.error("Erro não tratado em autenticação:", error);
+  log.error({ err: error }, "Erro não tratado em autenticação");
   res.status(500).json({
     success: false,
     message: "Erro interno no servidor de autenticação",

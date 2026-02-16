@@ -3,6 +3,11 @@ import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { NotificationType } from "@prisma/client";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("notificationController");
+
+
 // Tipos para request bodies
 interface UpdateNotificationBody {
   status: "READ" | "ARCHIVED";
@@ -89,7 +94,7 @@ export const getNotifications = async (
       ),
     );
   } catch (error) {
-    console.error("Get notifications error:", error);
+    log.error({ err: error }, "Get notifications error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -156,7 +161,7 @@ export const updateNotification = async (
         ),
       );
   } catch (error) {
-    console.error("Update notification error:", error);
+    log.error({ err: error }, "Update notification error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -189,7 +194,7 @@ export const markAllNotificationsAsRead = async (
       .status(200)
       .json(successResponse(null, "All notifications marked as read"));
   } catch (error) {
-    console.error("Mark all notifications as read error:", error);
+    log.error({ err: error }, "Mark all notifications as read error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

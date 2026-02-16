@@ -3,6 +3,11 @@ import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { NotificationType } from "@prisma/client";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("briefController");
+
+
 const successResponse = (data: any, message: string = "Success") => ({
   success: true, message, data,
 });
@@ -71,7 +76,7 @@ export const getBriefTemplate = async (
     const template = BRIEF_TEMPLATES[categorySlug.toLowerCase()] || BRIEF_TEMPLATES.default;
     res.status(200).json(successResponse({ template, categorySlug }));
   } catch (error) {
-    console.error("Get brief template error:", error);
+    log.error({ err: error }, "Get brief template error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -206,7 +211,7 @@ export const createOrderWithBrief = async (
 
     res.status(201).json(successResponse(result, "Order with brief created successfully"));
   } catch (error) {
-    console.error("Create order with brief error:", error);
+    log.error({ err: error }, "Create order with brief error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

@@ -6,6 +6,11 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("fileUploadController");
+
+
 const UPLOAD_DIR = path.join(process.cwd(), "uploads", "chat");
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = [
@@ -151,7 +156,7 @@ export const uploadChatFile = async (
       ),
     );
   } catch (error: any) {
-    console.error("Upload chat file error:", error);
+    log.error({ err: error }, "Upload chat file error");
     if (error.code === "LIMIT_FILE_SIZE") {
       res.status(400).json(errorResponse("Arquivo muito grande (máximo 10MB)"));
       return;

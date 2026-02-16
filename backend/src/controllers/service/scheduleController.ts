@@ -2,6 +2,11 @@ import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("scheduleController");
+
+
 const successResponse = (data: any, message: string = "Success") => ({
   success: true, message, data,
 });
@@ -51,7 +56,7 @@ export const getProfessionalSchedule = async (
 
     res.status(200).json(successResponse({ schedule, isDefault: false }));
   } catch (error) {
-    console.error("Get professional schedule error:", error);
+    log.error({ err: error }, "Get professional schedule error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -118,7 +123,7 @@ export const updateProfessionalSchedule = async (
 
     res.status(200).json(successResponse({ schedule: results }, "Schedule updated"));
   } catch (error) {
-    console.error("Update schedule error:", error);
+    log.error({ err: error }, "Update schedule error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -207,7 +212,7 @@ export const getAvailableSlots = async (
 
     res.status(200).json(successResponse({ slots, date: dateStr, isAvailable: true }));
   } catch (error) {
-    console.error("Get available slots error:", error);
+    log.error({ err: error }, "Get available slots error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -282,7 +287,7 @@ export const rescheduleOrder = async (
 
     res.status(200).json(successResponse({ serviceOrder: updatedOrder }, "Order rescheduled"));
   } catch (error) {
-    console.error("Reschedule order error:", error);
+    log.error({ err: error }, "Reschedule order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

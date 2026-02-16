@@ -2,6 +2,11 @@ import type { Response } from "express";
 import prisma from "../lib/prisma";
 import type { AuthRequest } from "../middleware/auth";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("dashboardController");
+
+
 const successResponse = (data: any, message: string = "Success") => ({
   success: true,
   message,
@@ -115,7 +120,7 @@ export const getDashboardStats = async (
       res.status(403).json(errorResponse("Unsupported role for dashboard"));
     }
   } catch (error) {
-    console.error("Dashboard stats error:", error);
+    log.error({ err: error }, "Dashboard stats error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -159,7 +164,7 @@ export const getRecentOrders = async (
       successResponse({ orders }, "Recent orders retrieved"),
     );
   } catch (error) {
-    console.error("Recent orders error:", error);
+    log.error({ err: error }, "Recent orders error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -232,7 +237,7 @@ export const getProfessionalCrmStats = async (
       }, "Professional CRM stats retrieved"),
     );
   } catch (error) {
-    console.error("Professional CRM stats error:", error);
+    log.error({ err: error }, "Professional CRM stats error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

@@ -2,6 +2,11 @@ import type { Request, Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger("listingController");
+
+
 // Tipos para request bodies
 interface CreateServiceListingBody {
   title: string;
@@ -179,7 +184,7 @@ export const listServices = async (
       ),
     );
   } catch (error) {
-    console.error("List services error:", error);
+    log.error({ err: error }, "List services error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -279,7 +284,7 @@ export const getService = async (
         ),
       );
   } catch (error) {
-    console.error("Get service error:", error);
+    log.error({ err: error }, "Get service error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -374,7 +379,7 @@ export const createServiceListing = async (
         successResponse({ service }, "Service listing created successfully"),
       );
   } catch (error) {
-    console.error("Create service listing error:", error);
+    log.error({ err: error }, "Create service listing error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -495,7 +500,7 @@ export const updateServiceListing = async (
         ),
       );
   } catch (error) {
-    console.error("Update service listing error:", error);
+    log.error({ err: error }, "Update service listing error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -576,7 +581,7 @@ export const deleteServiceListing = async (
       .status(200)
       .json(successResponse(null, "Service listing deleted successfully"));
   } catch (error) {
-    console.error("Delete service listing error:", error);
+    log.error({ err: error }, "Delete service listing error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

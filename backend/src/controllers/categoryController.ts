@@ -2,6 +2,11 @@ import { Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { ServiceCategoryType } from "@prisma/client";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("categoryController");
+
+
 // ==================== HELPERS ====================
 
 const successResponse = (data: any, message: string = "Success") => ({
@@ -87,7 +92,7 @@ export const listCategories = async (
       ),
     );
   } catch (error) {
-    console.error("List categories error:", error);
+    log.error({ err: error }, "List categories error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -155,7 +160,7 @@ export const getCategoryById = async (
       .status(200)
       .json(successResponse(category, "Category retrieved successfully"));
   } catch (error) {
-    console.error("Get category error:", error);
+    log.error({ err: error }, "Get category error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -203,7 +208,7 @@ export const getCategoryByName = async (
       .status(200)
       .json(successResponse(category, "Category retrieved successfully"));
   } catch (error) {
-    console.error("Get category by name error:", error);
+    log.error({ err: error }, "Get category by name error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -271,7 +276,7 @@ export const getMainCategories = async (
       ),
     );
   } catch (error) {
-    console.error("Get main categories error:", error);
+    log.error({ err: error }, "Get main categories error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -361,7 +366,7 @@ export const searchCategories = async (
       ),
     );
   } catch (error) {
-    console.error("Search categories error:", error);
+    log.error({ err: error }, "Search categories error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -442,7 +447,7 @@ export const getCategoryTree = async (
       ),
     );
   } catch (error) {
-    console.error("Get category tree error:", error);
+    log.error({ err: error }, "Get category tree error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -521,7 +526,7 @@ export const createCategory = async (
       .status(201)
       .json(successResponse(category, "Category created successfully"));
   } catch (error) {
-    console.error("Create category error:", error);
+    log.error({ err: error }, "Create category error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -597,7 +602,7 @@ export const updateCategory = async (
       .status(200)
       .json(successResponse(category, "Category updated successfully"));
   } catch (error) {
-    console.error("Update category error:", error);
+    log.error({ err: error }, "Update category error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -668,7 +673,7 @@ export const deleteCategory = async (
       .status(200)
       .json(successResponse(null, "Category deleted successfully"));
   } catch (error) {
-    console.error("Delete category error:", error);
+    log.error({ err: error }, "Delete category error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
@@ -739,7 +744,7 @@ export const getPopularCategories = async (
       ),
     );
   } catch (error) {
-    console.error("Get popular categories error:", error);
+    log.error({ err: error }, "Get popular categories error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

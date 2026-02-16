@@ -2,6 +2,11 @@ import type { Response } from "express";
 import prisma from "../lib/prisma";
 import type { AuthRequest } from "../middleware/auth";
 
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("reputationController");
+
+
 const successResponse = (data: any, message: string = "Success") => ({
   success: true, message, data,
 });
@@ -173,7 +178,7 @@ export const getReputationAnalytics = async (
       }, "Reputation analytics retrieved"),
     );
   } catch (error) {
-    console.error("Reputation analytics error:", error);
+    log.error({ err: error }, "Reputation analytics error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
