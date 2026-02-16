@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('validate');
 
 /**
  * Extract structured errors from a Zod v4 error.
@@ -24,6 +27,7 @@ export function validateBody(schema: z.ZodType<any>) {
       next();
     } else {
       const errors = extractErrors(result.error);
+      log.warn({ body: req.body, errors, path: req.path }, 'Body validation failed');
       res.status(400).json({
         success: false,
         message: 'Erro de validacao',

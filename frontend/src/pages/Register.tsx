@@ -220,13 +220,16 @@ const Register: React.FC = () => {
 
     try {
       // Preparar dados para envio (remover formatacao e campos desnecessarios)
+      const phoneDigits = formData.phone ? formData.phone.replace(/\D/g, "") : "";
+      const documentDigits = formData.document ? formData.document.replace(/\D/g, "") : "";
+
       const submitData = {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
         role: formData.role,
-        ...(formData.phone ? { phone: formData.phone.replace(/\D/g, "") } : {}),
-        ...(formData.document ? { document: formData.document.replace(/\D/g, "") } : {}),
+        ...(phoneDigits.length >= 10 ? { phone: phoneDigits } : {}),
+        ...(documentDigits.length >= 11 ? { document: documentDigits } : {}),
       };
 
       await register(submitData);
@@ -234,10 +237,23 @@ const Register: React.FC = () => {
       // O redirecionamento é tratado no contexto de autenticação
     } catch (error: any) {
       console.error("Registration failed:", error);
-      setSubmitError(
-        error.response?.data?.message ||
-          "Erro ao criar conta. Tente novamente.",
-      );
+      // Mostrar erros de validação específicos do backend se disponíveis
+      const backendErrors = error.response?.data?.errors;
+      if (backendErrors && Array.isArray(backendErrors)) {
+        const fieldErrors: Record<string, string> = {};
+        backendErrors.forEach((e: { field: string; message: string }) => {
+          fieldErrors[e.field] = e.message;
+        });
+        setErrors(fieldErrors);
+        setSubmitError(
+          backendErrors.map((e: { field: string; message: string }) => `${e.field}: ${e.message}`).join(", ")
+        );
+      } else {
+        setSubmitError(
+          error.response?.data?.message ||
+            "Erro ao criar conta. Tente novamente.",
+        );
+      }
     }
   };
 

@@ -231,8 +231,14 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
       nextErrors.serviceRadiusKm = "Informe um raio de atendimento valido.";
     }
 
-    if (formData.password.length < 6) {
-      nextErrors.password = "Senha precisa ter pelo menos 6 caracteres.";
+    if (formData.password.length < 8) {
+      nextErrors.password = "Senha precisa ter pelo menos 8 caracteres.";
+    } else if (!/[a-z]/.test(formData.password)) {
+      nextErrors.password = "Senha precisa ter pelo menos uma letra minuscula.";
+    } else if (!/[A-Z]/.test(formData.password)) {
+      nextErrors.password = "Senha precisa ter pelo menos uma letra maiuscula.";
+    } else if (!/\d/.test(formData.password)) {
+      nextErrors.password = "Senha precisa ter pelo menos um numero.";
     }
 
     if (formData.confirmPassword !== formData.password) {
@@ -342,13 +348,14 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
     setSubmitError("");
 
     try {
+      const phoneDigits = formData.phone.replace(ONLY_DIGITS_REGEX, "");
       await register(
         {
           name: formData.name.trim(),
           email: formData.email.trim().toLowerCase(),
-          phone: formData.phone.replace(ONLY_DIGITS_REGEX, ""),
           password: formData.password,
           role: "PROFESSIONAL",
+          ...(phoneDigits.length >= 10 ? { phone: phoneDigits } : {}),
         },
         { redirectOnSuccess: false },
       );
@@ -370,10 +377,18 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
 
       setIsCompleted(true);
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        "Nao foi possivel concluir o cadastro profissional agora.";
-      setSubmitError(message);
+      const backendErrors = error?.response?.data?.errors;
+      if (backendErrors && Array.isArray(backendErrors)) {
+        const message = backendErrors
+          .map((e: { field: string; message: string }) => e.message)
+          .join(". ");
+        setSubmitError(message);
+      } else {
+        const message =
+          error?.response?.data?.message ||
+          "Nao foi possivel concluir o cadastro profissional agora.";
+        setSubmitError(message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -572,7 +587,7 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
                               value={formData.password}
                               onChange={(event) => handleFieldChange("password", event.target.value)}
                               className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-                              placeholder="Minimo 6 caracteres"
+                              placeholder="Minimo 8 caracteres"
                               autoComplete="new-password"
                             />
                           </div>
