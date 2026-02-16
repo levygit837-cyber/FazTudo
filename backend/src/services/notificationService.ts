@@ -1,5 +1,10 @@
 import prisma from "../lib/prisma";
 import { NotificationStatus, NotificationType as PrismaNotificationType } from "@prisma/client";
+import { env } from "../config/env";
+import { sendEmail } from "./emailService";
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("notificationService");
 
 // Re-exportar enum para uso em outros arquivos
 export const NotificationType = {
@@ -44,7 +49,30 @@ export const createNotification = async (
   });
 
   // TODO: Integrar com sistema de push notifications (Firebase, OneSignal, etc.)
-  // TODO: Integrar com sistema de email se configurado
+
+  // Enviar email se habilitado
+  if (env.ENABLE_EMAIL_NOTIFICATIONS) {
+    // Buscar email do usuário
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true },
+    });
+
+    if (user?.email) {
+      sendEmail({
+        to: user.email,
+        subject: `FazTudo - ${title}`,
+        html: `<div style="font-family:sans-serif;padding:16px;">
+          <h2 style="color:#1e293b;">${title}</h2>
+          <p style="color:#475569;">${message}</p>
+          <hr style="border-color:#e2e8f0;" />
+          <p style="color:#94a3b8;font-size:12px;">FazTudo - Marketplace de Serviços</p>
+        </div>`,
+      }).catch((err) => {
+        log.error({ err, userId, type }, "Failed to send notification email");
+      });
+    }
+  }
 
   return notification;
 };
