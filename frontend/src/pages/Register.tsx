@@ -219,14 +219,14 @@ const Register: React.FC = () => {
     }
 
     try {
-      // Preparar dados para envio (remover formatação de telefone e documento)
+      // Preparar dados para envio (remover formatacao e campos desnecessarios)
       const submitData = {
-        ...formData,
-        phone: formData.phone ? formData.phone.replace(/\D/g, "") : undefined,
-        document: formData.document
-          ? formData.document.replace(/\D/g, "")
-          : undefined,
-        confirmPassword: undefined,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        role: formData.role,
+        ...(formData.phone ? { phone: formData.phone.replace(/\D/g, "") } : {}),
+        ...(formData.document ? { document: formData.document.replace(/\D/g, "") } : {}),
       };
 
       await register(submitData);
