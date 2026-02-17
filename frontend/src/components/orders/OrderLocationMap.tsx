@@ -72,6 +72,27 @@ const MapContent: React.FC<{
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Apply custom FazTudo map styles (force 2D roadmap)
+  useEffect(() => {
+    if (!map) return;
+    map.setOptions({
+      styles: [
+        { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+        { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+        { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#e8eaed" }] },
+        { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadce0" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9d7e8" }] },
+        { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+        { featureType: "poi.business", stylers: [{ visibility: "off" }] },
+        { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5f5e0" }] },
+        { featureType: "transit", stylers: [{ visibility: "off" }] },
+      ],
+      mapTypeId: "roadmap",
+    });
+  }, [map]);
+
   // Geocode address if no lat/lng
   useEffect(() => {
     if (destination || !geocodingLibrary) return;

@@ -19,6 +19,30 @@ import type {
 } from "../../types";
 import { getMapConfig } from "../../services/serviceService";
 
+// Custom FazTudo map styles — clean, minimal, brand-aligned
+const FAZTUDO_MAP_STYLES: google.maps.MapTypeStyle[] = [
+  // Base geometry — light neutral
+  { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+  // Roads
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#e8eaed" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadce0" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#c5c8cc" }] },
+  // Water — subtle blue
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9d7e8" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9eb7d4" }] },
+  // POI — hide business clutter
+  { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "poi.business", stylers: [{ visibility: "off" }] },
+  // Parks — soft green
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5f5e0" }] },
+  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#6b9a76" }] },
+  // Transit — hide
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+];
+
 // ==========================================
 // Inner map content (must be inside APIProvider)
 // ==========================================
@@ -127,6 +151,15 @@ const MapContent: React.FC<
     map.fitBounds(bounds, { top: 60, bottom: 80, left: 40, right: 40 });
   }, [map, professionalMarker, destinationMarker, landmarkMarkers]);
 
+  // Apply custom FazTudo map styles (force 2D roadmap)
+  useEffect(() => {
+    if (!map) return;
+    map.setOptions({
+      styles: FAZTUDO_MAP_STYLES,
+      mapTypeId: "roadmap",
+    });
+  }, [map]);
+
   // Calculate center between the two main markers
   const center: LatLng = {
     lat:
@@ -144,7 +177,7 @@ const MapContent: React.FC<
         gestureHandling="greedy"
         disableDefaultUI={false}
         zoomControl={true}
-        streetViewControl={true}
+        streetViewControl={false}
         mapTypeControl={false}
         fullscreenControl={true}
         style={{ width: "100%", height: "100%" }}
