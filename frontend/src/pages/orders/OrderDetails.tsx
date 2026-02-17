@@ -15,12 +15,14 @@ import {
   CalendarClock,
   AlertTriangle,
   RotateCcw,
+  Navigation,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import RescheduleModal from "../../components/orders/RescheduleModal";
 import DisputeModal from "../../components/orders/DisputeModal";
+import OrderLocationMap from "../../components/orders/OrderLocationMap";
 import ProposalComparator from "../../components/orders/ProposalComparator";
 import ReviewCTA from "../../components/orders/ReviewCTA";
 import { SkeletonOrderCard, Skeleton, SkeletonText } from "../../components/common/Skeleton";
@@ -436,19 +438,76 @@ const OrderDetails: React.FC = () => {
             </div>
           )}
 
-          {/* Acoes do profissional (somente visivel para o profissional) */}
+          {/* Professional Actions */}
           {isOrderProfessional && (
-            <div className="card">
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Acoes</h2>
-              <div className="flex flex-wrap gap-3">
-                {order.status === "PENDING" && (
-                  <>
+            <div className="card animate-fade-in">
+              {order.status === "PENDING" && (
+                <div className="space-y-4">
+                  {/* Compact header */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                        Novo pedido recebido
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Aceite ou recuse para continuar
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Quick info grid - compact */}
+                  <div className="grid grid-cols-3 gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-primary-600">
+                        {formatCurrency(order.price)}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Valor</p>
+                    </div>
+                    <div className="text-center border-x border-slate-200 dark:border-slate-700">
+                      <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                        {order.deadlineDays || 7}d
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Prazo</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                        {order.scheduledDate ? formatDate(order.scheduledDate) : "Flexivel"}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Data</p>
+                    </div>
+                  </div>
+
+                  {/* Client info inline */}
+                  {order.client && (
+                    <div className="flex items-center gap-2 px-1">
+                      <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                        {order.client.profileImage ? (
+                          <img src={order.client.profileImage} alt={order.client.name} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-500">{order.client.name.charAt(0)}</span>
+                        )}
+                      </div>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        Cliente: <strong className="text-slate-900 dark:text-slate-100">{order.client.name}</strong>
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Action buttons - prominent */}
+                  <div className="flex gap-3 pt-1">
                     <button
                       onClick={() => handleAction(() => acceptOrder(order.id), "Pedido aceito!")}
                       disabled={actionLoading}
-                      className="btn btn-primary"
+                      className="btn btn-primary flex-1 py-2.5 flex items-center justify-center gap-2"
                     >
-                      <CheckCircle className="w-4 h-4 mr-2" />
+                      {actionLoading ? (
+                        <span className="loader h-4 w-4" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4" />
+                      )}
                       Aceitar Pedido
                     </button>
                     <button
@@ -462,34 +521,104 @@ const OrderDetails: React.FC = () => {
                         })
                       }
                       disabled={actionLoading}
-                      className="btn btn-outline text-red-600 border-red-300 hover:bg-red-50"
+                      className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 py-2.5"
                     >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Recusar
+                      <XCircle className="w-4 h-4" />
                     </button>
-                  </>
-                )}
-                {order.status === "ACCEPTED" && (
-                  <button
-                    onClick={() => handleAction(() => startOrder(order.id), "Servico iniciado!")}
-                    disabled={actionLoading}
-                    className="btn btn-primary"
-                  >
-                    <Clock className="w-4 h-4 mr-2" />
-                    Iniciar Servico
-                  </button>
-                )}
-                {order.status === "IN_PROGRESS" && (
+                  </div>
+                </div>
+              )}
+
+              {/* ACCEPTED: Show location map + start service */}
+              {order.status === "ACCEPTED" && (
+                <div className="space-y-4 animate-slide-up">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-emerald-700 dark:text-emerald-400 text-sm">
+                        Pedido aceito!
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {paymentApproved
+                          ? "Dirija-se ao cliente para iniciar o servico"
+                          : "Aguardando pagamento do cliente"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Location map (only after payment) */}
+                  {paymentApproved && order.address && (
+                    <OrderLocationMap
+                      orderId={order.id}
+                      isProfessional={true}
+                      destinationAddress={order.address}
+                      orderStatus={order.status}
+                    />
+                  )}
+
+                  {/* Start service button */}
+                  {paymentApproved && (
+                    <button
+                      onClick={() => handleAction(() => startOrder(order.id), "Servico iniciado!")}
+                      disabled={actionLoading}
+                      className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
+                    >
+                      <Clock className="w-4 h-4" />
+                      Iniciar Servico
+                    </button>
+                  )}
+
+                  {/* Reagendar */}
+                  {order.professionalId && (
+                    <button
+                      onClick={() => setShowReschedule(true)}
+                      disabled={actionLoading}
+                      className="btn btn-outline w-full"
+                    >
+                      <CalendarClock className="w-4 h-4 mr-2" />
+                      Reagendar
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* IN_PROGRESS */}
+              {order.status === "IN_PROGRESS" && (
+                <div className="space-y-3 animate-fade-in">
                   <button
                     onClick={() => handleAction(() => submitOrderCompletion(order.id), "Servico marcado como entregue!")}
                     disabled={actionLoading}
-                    className="btn btn-primary"
+                    className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
                   >
-                    <CheckCircle className="w-4 h-4 mr-2" />
+                    <CheckCircle className="w-4 h-4" />
                     Marcar como Entregue
                   </button>
-                )}
-                {order.status === "AWAITING_PROFESSIONAL_CONFIRMATION" && (
+                  {order.professionalId && (
+                    <button
+                      onClick={() => setShowReschedule(true)}
+                      disabled={actionLoading}
+                      className="btn btn-outline w-full"
+                    >
+                      <CalendarClock className="w-4 h-4 mr-2" />
+                      Reagendar
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowDispute(true)}
+                    disabled={actionLoading}
+                    className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 w-full"
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Abrir Disputa
+                  </button>
+                </div>
+              )}
+
+              {/* AWAITING_PROFESSIONAL_CONFIRMATION */}
+              {order.status === "AWAITING_PROFESSIONAL_CONFIRMATION" && (
+                <div className="animate-fade-in">
                   <button
                     onClick={() =>
                       setConfirmAction({
@@ -501,42 +630,40 @@ const OrderDetails: React.FC = () => {
                       })
                     }
                     disabled={actionLoading}
-                    className="btn btn-primary"
+                    className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
                   >
-                    <CheckCircle className="w-4 h-4 mr-2" />
+                    <CheckCircle className="w-4 h-4" />
                     Confirmar Conclusao
                   </button>
-                )}
-                {order.status === "AWAITING_CLIENT_CONFIRMATION" && (
-                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                </div>
+              )}
+
+              {/* AWAITING_CLIENT_CONFIRMATION */}
+              {order.status === "AWAITING_CLIENT_CONFIRMATION" && (
+                <div className="animate-fade-in flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
+                  <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
                     Aguardando o cliente confirmar para finalizar o pedido.
                   </p>
-                )}
+                </div>
+              )}
+            </div>
+          )}
 
-                {/* Reagendar (aceito ou em andamento) */}
-                {["ACCEPTED", "IN_PROGRESS"].includes(order.status) && order.professionalId && (
-                  <button
-                    onClick={() => setShowReschedule(true)}
-                    disabled={actionLoading}
-                    className="btn btn-outline"
-                  >
-                    <CalendarClock className="w-4 h-4 mr-2" />
-                    Reagendar
-                  </button>
-                )}
-
-                {/* Abrir Disputa (em andamento ou aguardando confirmacao) */}
-                {["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION"].includes(order.status) && (
-                  <button
-                    onClick={() => setShowDispute(true)}
-                    disabled={actionLoading}
-                    className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <AlertTriangle className="w-4 h-4 mr-2" />
-                    Abrir Disputa
-                  </button>
-                )}
-              </div>
+          {/* Client: Location tracking map (after payment, when professional is en route) */}
+          {isOrderClient && paymentApproved && order.address &&
+            ["ACCEPTED", "IN_PROGRESS"].includes(order.status) && (
+            <div className="card animate-fade-in">
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                <Navigation className="w-5 h-5 text-blue-500" />
+                Localizacao do Profissional
+              </h2>
+              <OrderLocationMap
+                orderId={order.id}
+                isProfessional={false}
+                destinationAddress={order.address}
+                orderStatus={order.status}
+              />
             </div>
           )}
 
