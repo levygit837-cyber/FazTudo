@@ -38,7 +38,7 @@ router.get("/orders/:id", verifyToken, serviceController.getServiceOrder);
 router.post(
   "/orders/:id/accept",
   verifyToken,
-  requireRole("PROFESSIONAL", "ADMIN"),
+  requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
   requireVerified,
   serviceController.acceptServiceOrder,
 );
@@ -47,7 +47,7 @@ router.post(
 router.post(
   "/orders/:id/start",
   verifyToken,
-  requireRole("PROFESSIONAL", "ADMIN"),
+  requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
   requireVerified,
   serviceController.startServiceOrder,
 );
@@ -68,7 +68,7 @@ router.post(
 router.post(
   "/orders/:id/confirm-professional",
   verifyToken,
-  requireRole("PROFESSIONAL", "ADMIN"),
+  requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
   requireVerified,
   serviceController.confirmProfessionalCompletion,
 );

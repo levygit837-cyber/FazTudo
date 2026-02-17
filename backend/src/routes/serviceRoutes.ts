@@ -33,7 +33,7 @@ router.get("/", serviceController.listServices);
 router.post(
   "/",
   verifyToken,
-  requireRole("PROFESSIONAL", "ADMIN"),
+  requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
   requireVerified,
   serviceController.createServiceListing,
 );
