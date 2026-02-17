@@ -97,10 +97,8 @@ const MapContent: React.FC<
     showRoute,
     routesLibrary,
     map,
-    professionalMarker.position.lat,
-    professionalMarker.position.lng,
-    destinationMarker.position.lat,
-    destinationMarker.position.lng,
+    professionalMarker.position,
+    destinationMarker.position,
     onRouteInfo,
   ]);
 
