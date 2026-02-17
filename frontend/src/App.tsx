@@ -56,6 +56,9 @@ import CompanyOrders from "./pages/company/Orders";
 import CompanyChannels from "./pages/company/Channels";
 import ChannelDetail from "./pages/company/ChannelDetail";
 import CompanyStorefront from "./pages/CompanyStorefront";
+import CompanyAnalytics from "./pages/company/Analytics";
+import ProfessionalStorefrontPage from "./pages/ProfessionalStorefront";
+import CompanyVerifications from "./pages/admin/CompanyVerifications";
 import { UserRole } from "./types";
 
 const NotFound = () => (
@@ -158,6 +161,7 @@ const App: React.FC = () => {
                 <Route path="orders" element={<CompanyOrders />} />
                 <Route path="channels" element={<CompanyChannels />} />
                 <Route path="channels/:channelId" element={<ChannelDetail />} />
+                <Route path="analytics" element={<CompanyAnalytics />} />
                 <Route path="orders/:id/chat" element={<ServiceChat />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="carteira" element={<Wallet />} />
@@ -173,6 +177,7 @@ const App: React.FC = () => {
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="verifications" element={<AdminVerifications />} />
+                <Route path="companies" element={<CompanyVerifications />} />
                 <Route path="notifications" element={<Notifications />} />
               </Route>
 
@@ -189,6 +194,7 @@ const App: React.FC = () => {
               </Route>
 
               <Route path="empresa/:companyId" element={<CompanyStorefront />} />
+              <Route path="profissional/:userId" element={<ProfessionalStorefrontPage />} />
 
               <Route path="*" element={<NotFound />} />
             </Route>

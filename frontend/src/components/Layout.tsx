@@ -19,6 +19,8 @@ import {
   Calendar,
   Star,
   LayoutGrid,
+  BarChart3,
+  Building2,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -220,6 +222,11 @@ const Layout: React.FC = () => {
             label: "Financeiro",
             icon: <Wallet size={20} />,
           },
+          {
+            path: "/company/analytics",
+            label: "Analytics",
+            icon: <BarChart3 size={20} />,
+          },
         ]
       : []),
     ...(isAuthenticated && isAdmin
@@ -228,6 +235,11 @@ const Layout: React.FC = () => {
             path: "/admin/dashboard",
             label: "Admin",
             icon: <Shield size={20} />,
+          },
+          {
+            path: "/admin/companies",
+            label: "Empresas",
+            icon: <Building2 size={20} />,
           },
         ]
       : []),
