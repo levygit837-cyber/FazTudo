@@ -16,6 +16,7 @@ import {
 import { useToast } from "../../context/ToastContext";
 import { getMainCategories, CategoryWithCounts } from "../../services/categoryService";
 import { getBriefTemplate, createOrderWithBrief } from "../../services/serviceService";
+import { LocationPicker } from "../../components/map";
 
 const STEPS = [
   { label: "Categoria", icon: <FileText className="w-4 h-4" /> },
@@ -63,6 +64,27 @@ const NewOrder: React.FC = () => {
   const [priceRangeMax, setPriceRangeMax] = useState<number | undefined>();
   const [scheduledDate, setScheduledDate] = useState("");
   const [addressNotes, setAddressNotes] = useState("");
+  const [addressData, setAddressData] = useState<{
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    latitude?: number;
+    longitude?: number;
+  }>({
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    latitude: undefined,
+    longitude: undefined,
+  });
 
   // Load categories
   useEffect(() => {
@@ -115,6 +137,12 @@ const NewOrder: React.FC = () => {
     if (!selectedCategory || !title.trim()) return;
     try {
       setSubmitting(true);
+
+      // Format structured address into addressNotes
+      const formattedAddress = addressData.street
+        ? `${addressData.street}, ${addressData.number}${addressData.complement ? ` - ${addressData.complement}` : ""} - ${addressData.neighborhood}, ${addressData.city}/${addressData.state} ${addressData.zipCode}`.trim()
+        : addressNotes;
+
       const result = await createOrderWithBrief({
         title: title.trim(),
         description: notes || undefined,
@@ -122,9 +150,12 @@ const NewOrder: React.FC = () => {
         urgencyLevel,
         priceRangeMin,
         priceRangeMax,
-        briefData,
+        briefData: {
+          ...briefData,
+          ...(addressData.latitude ? { addressLatitude: addressData.latitude, addressLongitude: addressData.longitude } : {}),
+        },
         notes: notes || undefined,
-        addressNotes: addressNotes || undefined,
+        addressNotes: formattedAddress || undefined,
         scheduledDate: scheduledDate || undefined,
       });
       toast.success("Pedido criado com sucesso!");
@@ -385,15 +416,15 @@ const NewOrder: React.FC = () => {
             />
           </div>
 
-          {/* Address notes */}
+          {/* Address picker */}
+          <LocationPicker value={addressData} onChange={setAddressData} />
+
+          {/* Additional address notes */}
           <div>
-            <label className="label">
-              <MapPin className="w-4 h-4 inline mr-1" />
-              Endereço / referência
-            </label>
+            <label className="label">Observacoes do local (opcional)</label>
             <textarea
-              className="input min-h-20"
-              placeholder="Ex: Rua das Flores, 123 - Apt 45 - Centro"
+              className="input min-h-16"
+              placeholder="Ex: Portao azul, tocar interfone 45"
               value={addressNotes}
               onChange={(e) => setAddressNotes(e.target.value)}
             />
@@ -470,10 +501,22 @@ const NewOrder: React.FC = () => {
                     <p className="font-medium text-slate-700 dark:text-slate-300">{new Date(scheduledDate + "T12:00:00").toLocaleDateString("pt-BR")}</p>
                   </div>
                 )}
-                {addressNotes && (
+                {(addressData.street || addressNotes) && (
                   <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl col-span-2">
                     <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Endereço</p>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{addressNotes}</p>
+                    {addressData.street ? (
+                      <div>
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                          {addressData.street}, {addressData.number}
+                          {addressData.complement ? ` - ${addressData.complement}` : ""}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {addressData.neighborhood} - {addressData.city}/{addressData.state} {addressData.zipCode}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{addressNotes}</p>
+                    )}
                   </div>
                 )}
               </div>
