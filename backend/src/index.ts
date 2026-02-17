@@ -28,6 +28,7 @@ import companyRoutes from "./routes/companyRoutes";
 import companyMemberRoutes from "./routes/companyMemberRoutes";
 import companySalaryRoutes from "./routes/companySalaryRoutes";
 import companyTeamRoutes from "./routes/companyTeamRoutes";
+import companyChannelRoutes from "./routes/companyChannelRoutes";
 import locationRoutes from "./routes/locationRoutes";
 import geocodingRoutes from "./routes/geocodingRoutes";
 import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
@@ -157,6 +158,7 @@ app.use("/api/company", companyRoutes);
 app.use("/api/company/members", companyMemberRoutes);
 app.use("/api/company/salary", companySalaryRoutes);
 app.use("/api/company/teams", companyTeamRoutes);
+app.use("/api/company/channels", companyChannelRoutes);
 
 // ============================================
 // ERROR HANDLING
