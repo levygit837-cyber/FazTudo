@@ -25,6 +25,7 @@ import dashboardRoutes from "./routes/dashboardRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import walletRoutes from "./routes/walletRoutes";
 import locationRoutes from "./routes/locationRoutes";
+import geocodingRoutes from "./routes/geocodingRoutes";
 import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
 
 const app = express();
@@ -143,6 +144,7 @@ app.use("/api/services", scheduleRoutes);          // Schedule / calendar
 app.use("/api/services", notificationRoutes);      // Notifications
 app.use("/api/services", recommendationRoutes);    // Recommendations
 app.use("/api/services", locationRoutes);          // Location tracking
+app.use("/api/geocoding", geocodingRoutes);         // Geocoding & directions proxy
 app.use("/api/categories", categoryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin", adminRoutes);
