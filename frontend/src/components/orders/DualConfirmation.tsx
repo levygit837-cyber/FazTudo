@@ -53,51 +53,9 @@ export default function DualConfirmation({
         />
       </div>
 
-      {/* Confirmation cards */}
+      {/* Confirmation cards — Client first (new flow) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Professional */}
-        <div
-          className={clsx(
-            "flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all duration-300",
-            professionalDone
-              ? "border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/50 dark:bg-emerald-900/10"
-              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30"
-          )}
-        >
-          <div
-            className={clsx(
-              "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
-              professionalDone
-                ? "bg-emerald-100 dark:bg-emerald-900/30"
-                : "bg-slate-100 dark:bg-slate-800"
-            )}
-          >
-            {professionalDone ? (
-              <CheckCircle className="w-5 h-5 text-emerald-500" />
-            ) : (
-              <Wrench className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p
-              className={clsx(
-                "text-sm font-semibold truncate",
-                professionalDone
-                  ? "text-emerald-700 dark:text-emerald-300"
-                  : "text-slate-600 dark:text-slate-400"
-              )}
-            >
-              {professionalName}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {professionalDone
-                ? `Confirmou em ${formatDate(professionalConfirmedAt!)}`
-                : "Aguardando confirmação"}
-            </p>
-          </div>
-        </div>
-
-        {/* Client */}
+        {/* Client (confirms first) */}
         <div
           className={clsx(
             "flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all duration-300",
@@ -138,6 +96,48 @@ export default function DualConfirmation({
             </p>
           </div>
         </div>
+
+        {/* Professional (confirms second) */}
+        <div
+          className={clsx(
+            "flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all duration-300",
+            professionalDone
+              ? "border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/50 dark:bg-emerald-900/10"
+              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30"
+          )}
+        >
+          <div
+            className={clsx(
+              "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+              professionalDone
+                ? "bg-emerald-100 dark:bg-emerald-900/30"
+                : "bg-slate-100 dark:bg-slate-800"
+            )}
+          >
+            {professionalDone ? (
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+            ) : (
+              <Wrench className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p
+              className={clsx(
+                "text-sm font-semibold truncate",
+                professionalDone
+                  ? "text-emerald-700 dark:text-emerald-300"
+                  : "text-slate-600 dark:text-slate-400"
+              )}
+            >
+              {professionalName}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {professionalDone
+                ? `Confirmou em ${formatDate(professionalConfirmedAt!)}`
+                : "Aguardando confirmação"}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Status message and action */}
@@ -148,12 +148,12 @@ export default function DualConfirmation({
             Ambas as partes confirmaram! O pagamento foi liberado.
           </p>
         </div>
-      ) : professionalDone && !clientDone && isClient ? (
+      ) : clientDone && !professionalDone && !isClient ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
             <Clock className="w-5 h-5 text-amber-500 flex-shrink-0" />
             <p className="text-sm text-amber-700 dark:text-amber-300">
-              O profissional confirmou a conclusão. Verifique se o serviço foi realizado corretamente e confirme.
+              O cliente confirmou a conclusão. Verifique e confirme para liberar o pagamento.
             </p>
           </div>
           {onConfirm && (
@@ -176,11 +176,11 @@ export default function DualConfirmation({
             </button>
           )}
         </div>
-      ) : professionalDone && !clientDone && !isClient ? (
+      ) : clientDone && !professionalDone && isClient ? (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
           <Clock className="w-5 h-5 text-blue-500 flex-shrink-0" />
           <p className="text-sm text-blue-700 dark:text-blue-300">
-            Você confirmou a conclusão. Aguardando o cliente confirmar para liberar o pagamento.
+            Você confirmou a conclusão. Aguardando o profissional confirmar para liberar o pagamento.
           </p>
         </div>
       ) : null}

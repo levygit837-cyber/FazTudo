@@ -90,7 +90,8 @@ const getConfig = (
         return {
           icon: Hammer,
           title: "Serviço em andamento",
-          description: "O profissional está trabalhando no seu serviço. Acompanhe pelo chat.",
+          description: "O profissional está trabalhando no seu serviço. Quando concluído, confirme a realização.",
+          actionLabel: "Confirmar que foi realizado",
           color: "text-blue-700 dark:text-blue-300",
           bg: "bg-blue-50 dark:bg-blue-900/15",
           border: "border-blue-200 dark:border-blue-800/40",
@@ -99,14 +100,14 @@ const getConfig = (
       return {
         icon: Hammer,
         title: "Serviço em andamento",
-        description: "Quando terminar, marque como concluído para solicitar a confirmação do cliente.",
-        actionLabel: "Marcar como concluído",
+        description: "Aguarde o cliente confirmar que o serviço foi realizado.",
         color: "text-blue-700 dark:text-blue-300",
         bg: "bg-blue-50 dark:bg-blue-900/15",
         border: "border-blue-200 dark:border-blue-800/40",
       };
 
     case "AWAITING_CLIENT_CONFIRMATION":
+      // Legacy status — kept for backward compatibility with existing orders
       if (isClient) {
         return {
           icon: ThumbsUp,
@@ -120,8 +121,8 @@ const getConfig = (
       }
       return {
         icon: Clock,
-        title: "Aguardando confirmação",
-        description: "Você marcou o serviço como concluído. Aguardando a confirmação do cliente para liberar o pagamento.",
+        title: "Aguardando confirmação do cliente",
+        description: "Aguardando a confirmação do cliente para liberar o pagamento.",
         color: "text-amber-700 dark:text-amber-300",
         bg: "bg-amber-50 dark:bg-amber-900/15",
         border: "border-amber-200 dark:border-amber-800/40",
