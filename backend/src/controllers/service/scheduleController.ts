@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
+import { canReschedule, validateRescheduleRequest, hasReschedulePermission } from "../../services/rescheduleService";
 
 import { createLogger } from "../../lib/logger";
 
@@ -235,8 +236,9 @@ export const rescheduleOrder = async (
     }
 
     const { newDate, reason } = req.body;
-    if (!newDate) {
-      res.status(400).json(errorResponse("New date is required"));
+    const dateResult = validateRescheduleRequest(newDate);
+    if (!dateResult.valid) {
+      res.status(400).json(errorResponse(dateResult.error));
       return;
     }
 
@@ -250,21 +252,20 @@ export const rescheduleOrder = async (
     }
 
     // Verificar permissão
-    const isClient = serviceOrder.clientId === req.user.id;
-    const isProfessional = serviceOrder.professionalId === req.user.id;
-    if (!isClient && !isProfessional && req.user.role !== "ADMIN") {
+    if (!hasReschedulePermission(req.user.id, req.user.role, serviceOrder.clientId, serviceOrder.professionalId)) {
       res.status(403).json(errorResponse("Access denied"));
       return;
     }
 
     // Apenas pedidos aceitos ou em andamento podem ser reagendados
-    if (!["ACCEPTED", "IN_PROGRESS", "PENDING"].includes(serviceOrder.status)) {
+    if (!canReschedule(serviceOrder.status)) {
       res.status(400).json(errorResponse("Order cannot be rescheduled in current status"));
       return;
     }
 
     // If professional reschedules, propose to client (don't apply immediately)
-    if (isProfessional) {
+    const isProfessionalUser = serviceOrder.professionalId === req.user.id;
+    if (isProfessionalUser) {
       await prisma.serviceOrder.update({
         where: { id: orderId },
         data: {
