@@ -82,12 +82,12 @@ const OrderTimeline: React.FC<OrderTimelineProps> = ({ steps, deadlineDate }) =>
           <div key={index} className="relative flex items-start gap-3 pb-6 last:pb-0">
             {/* Vertical connector line */}
             {index < steps.length - 1 && (
-              <div className={`absolute left-4 top-8 w-0.5 h-[calc(100%-8px)] ${
+              <div className={`absolute left-4 top-8 w-0.5 h-[calc(100%-8px)] z-0 ${
                 step.done ? "bg-green-300 dark:bg-green-700" : "bg-slate-200 dark:bg-slate-700"
               }`} />
             )}
             {/* Step circle */}
-            <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+            <div className={`relative z-10 w-8 h-8 rounded-full ring-2 ring-white dark:ring-slate-900 flex items-center justify-center flex-shrink-0 transition-colors ${
               step.done
                 ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
