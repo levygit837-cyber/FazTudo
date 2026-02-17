@@ -654,6 +654,7 @@ model CompanyProfile {
 
   members  CompanyMember[]
   roles    CompanyRole[]
+  channels CompanyChannel[]
 }
 
 model CompanyRole {
@@ -685,6 +686,7 @@ model CompanyMember {
   salaryHistory   CompanySalaryPayment[]
   teamMemberships ServiceTeamMember[]
   ledTeams        ServiceTeam[]          @relation("TeamLeader")
+  channelMemberships CompanyChannelMember[]
 }
 
 model CompanySalaryRule {
@@ -732,4 +734,27 @@ model ServiceTeamMember {
   team     ServiceTeam   @relation(fields: [teamId], references: [id])
   memberId Int
   member   CompanyMember @relation(fields: [memberId], references: [id])
+}
+
+
+model CompanyChannel {
+  id          Int            @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id])
+  name        String
+  description String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+
+  members     CompanyChannelMember[]
+}
+
+model CompanyChannelMember {
+  id        Int            @id @default(autoincrement())
+  channelId Int
+  channel   CompanyChannel @relation(fields: [channelId], references: [id])
+  memberId  Int
+  member    CompanyMember  @relation(fields: [memberId], references: [id])
+
+  @@unique([channelId, memberId])
 }
