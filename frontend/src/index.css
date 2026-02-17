@@ -959,3 +959,54 @@
     @apply text-black bg-white;
   }
 }
+
+/* =============================================
+   Waze Map — Custom marker resets & animations
+   ============================================= */
+
+/* Reset Leaflet's default icon styles for custom div markers */
+.waze-avatar-marker,
+.waze-destination-marker,
+.waze-alert-icon,
+.waze-progress-dot,
+.location-picker-pin {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Glow pulse for professional avatar */
+@keyframes waze-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.15), 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Subtle pulse for destination marker */
+@keyframes waze-dest-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3), 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.15), 0 4px 14px rgba(0, 0, 0, 0.28);
+  }
+}
+
+/* Slide up animation for info bar */
+.animate-slide-up {
+  animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Reduced motion: disable Waze animations */
+@media (prefers-reduced-motion: reduce) {
+  .waze-avatar-marker *,
+  .waze-destination-marker *,
+  .waze-progress-dot *,
+  .animate-slide-up {
+    animation: none !important;
+    transition: none !important;
+  }
+}
