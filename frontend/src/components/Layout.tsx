@@ -211,11 +211,6 @@ const Layout: React.FC = () => {
       icon: <Settings size={18} />,
       path: "/profile/settings",
     },
-    {
-      label: "Minhas Avaliacoes",
-      icon: <Star size={18} />,
-      path: "/profile/reviews",
-    },
     ...(isClient
       ? [
           {
@@ -227,6 +222,11 @@ const Layout: React.FC = () => {
       : []),
     ...(isProfessional
       ? [
+          {
+            label: "Minha Reputacao",
+            icon: <Star size={18} />,
+            path: "/professional/reputacao",
+          },
           {
             label: "Minha Carteira",
             icon: <Wallet size={18} />,

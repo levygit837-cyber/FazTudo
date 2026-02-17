@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   User as UserIcon,
   Mail,
@@ -20,6 +21,7 @@ import {
   DollarSign,
   Camera,
   Award,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth, User } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -79,6 +81,7 @@ interface FullProfile extends User {
 const Profile: React.FC = () => {
   const { updateProfile: updateAuthProfile } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
 
   const [profile, setProfile] = useState<FullProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -270,6 +273,7 @@ const Profile: React.FC = () => {
     ];
     if (profile?.role === "PROFESSIONAL") {
       tabs.splice(1, 0, { id: "services", label: "Servicos" });
+      tabs.push({ id: "reviews", label: "Avaliações" });
     }
     if (profile?.addresses && profile.addresses.length > 0) {
       tabs.push({ id: "addresses", label: "Enderecos" });
@@ -392,7 +396,11 @@ const Profile: React.FC = () => {
         {/* Stats row */}
         <div className="flex flex-wrap gap-6 mt-3">
           {profile.ratingAverage > 0 && (
-            <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate("/professional/reputacao")}
+              className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer"
+              title="Ver minha reputação"
+            >
               <Star className="w-4 h-4 text-yellow-500 fill-current" />
               <span className="font-medium text-slate-900 dark:text-slate-100">
                 {profile.ratingAverage.toFixed(1)}
@@ -400,7 +408,8 @@ const Profile: React.FC = () => {
               <span className="text-slate-500 dark:text-slate-400 text-sm">
                 ({profile.totalReviews} avaliacoes)
               </span>
-            </div>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 ml-1" />
+            </button>
           )}
           <div className="flex items-center gap-1">
             <DollarSign className="w-4 h-4 text-green-500" />
@@ -849,6 +858,21 @@ const Profile: React.FC = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Reviews Tab (Professional only) */}
+          {activeTab === "reviews" && (
+            <div className="text-center py-8">
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
+                Veja sua reputação completa e análise de avaliações
+              </p>
+              <button
+                onClick={() => navigate("/professional/reputacao")}
+                className="btn btn-primary"
+              >
+                Ver Minha Reputação
+              </button>
             </div>
           )}
         </div>
