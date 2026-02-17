@@ -4,6 +4,7 @@ import type { AuthRequest } from "../../middleware/auth";
 import { createLogger } from "../../lib/logger";
 import { createNotification } from "../../services/notificationService";
 import { NotificationType } from "@prisma/client";
+import { calculateBearing } from "../../utils/geo";
 
 const log = createLogger("locationController");
 
@@ -23,7 +24,7 @@ const errorResponse = (message: string, statusCode: number = 400) => ({
 // In production, use Redis. For dev/SQLite this is sufficient.
 const locationStore = new Map<
   number,
-  { lat: number; lng: number; updatedAt: string }
+  { lat: number; lng: number; bearing: number | null; updatedAt: string }
 >();
 
 /**
@@ -73,10 +74,21 @@ export const updateLocation = async (
       return;
     }
 
-    // Store location in memory
+    // Calculate bearing from previous position
+    const previousLocation = locationStore.get(orderId);
+    let bearing: number | null = null;
+    if (previousLocation) {
+      bearing = calculateBearing(
+        { lat: previousLocation.lat, lng: previousLocation.lng },
+        { lat: latitude, lng: longitude }
+      );
+    }
+
+    // Store location with bearing
     locationStore.set(orderId, {
       lat: latitude,
       lng: longitude,
+      bearing,
       updatedAt: new Date().toISOString(),
     });
 
