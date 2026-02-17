@@ -910,6 +910,7 @@ async function seedTestUsers() {
   // 4 pedidos PENDING para profissional1
   for (let i = 0; i < Math.min(4, prof1Listings.length); i++) {
     const listing = prof1Listings[i];
+    if (!listing) continue;
     const existingOrder = await prisma.serviceOrder.findFirst({
       where: {
         serviceListingId: listing.id,
