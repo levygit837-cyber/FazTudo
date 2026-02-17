@@ -127,7 +127,7 @@ const WazeMap: React.FC<WazeMapProps> = ({
       if (result) {
         setDestination({ lat: result.lat, lng: result.lng });
       } else {
-        setDestination({ lat: -23.5505, lng: -46.6333 });
+        setDestination({ lat: -6.3629, lng: -39.2943 }); // Fallback: Iguatu, CE
       }
       setGeocodingDest(false);
     };

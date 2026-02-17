@@ -9,10 +9,10 @@ import type { MapMarker, RouteInfo } from "../../types";
 // Iguatu-CE test coordinates (~5km apart)
 // ========================================
 
-/** Profissional: Centro de Iguatu, próximo à Praça da Matriz */
+/** Profissional: Cajazeiras, Iguatu-CE (~5km do destino) */
 const PROFESSIONAL_MARKER: MapMarker = {
   id: "pro-1",
-  position: { lat: -6.3599, lng: -39.2984 },
+  position: { lat: -6.3480, lng: -39.2910 },
   type: "professional",
   label: "João Silva",
   subtitle: "Eletricista • 4.8 ★",
@@ -27,34 +27,34 @@ const DESTINATION_MARKER: MapMarker = {
   subtitle: "Vila Centenario, Iguatu-CE",
 };
 
-/** Sinalizadores de rua ao longo da rota */
+/** Sinalizadores de rua ao longo da rota (~5km, Cajazeiras → Vila Centenário) */
 const LANDMARK_MARKERS: MapMarker[] = [
   {
     id: "landmark-1",
-    position: { lat: -6.3640, lng: -39.3050 },
+    position: { lat: -6.3555, lng: -39.2995 },
+    type: "landmark",
+    label: "Praca da Matriz",
+    icon: "reference",
+  },
+  {
+    id: "landmark-2",
+    position: { lat: -6.3640, lng: -39.3080 },
     type: "landmark",
     label: "Av. Perimetral Sul",
     icon: "street",
   },
   {
-    id: "landmark-2",
-    position: { lat: -6.3700, lng: -39.3120 },
+    id: "landmark-3",
+    position: { lat: -6.3720, lng: -39.3180 },
     type: "landmark",
     label: "Rotatoria CE-292",
-    icon: "reference",
-  },
-  {
-    id: "landmark-3",
-    position: { lat: -6.3750, lng: -39.3200 },
-    type: "landmark",
-    label: "Escola Municipal",
     icon: "reference",
   },
 ];
 
 /**
  * MapView — Full-page interactive map demonstration.
- * Shows a professional in Centro de Iguatu navigating to
+ * Shows a professional in Cajazeiras navigating to
  * Vila Centenário (~5km), with street landmarks along the route.
  */
 const MapView: React.FC = () => {
@@ -120,7 +120,7 @@ const MapView: React.FC = () => {
           <div>
             <p className="font-medium">Demonstracao — Iguatu, CE</p>
             <p className="text-xs mt-0.5 opacity-80">
-              Profissional no Centro de Iguatu → Destino na Vila Centenario
+              Profissional em Cajazeiras → Destino na Vila Centenario
               (~5km). Sinalizadores marcam pontos de referencia na rota.
             </p>
           </div>

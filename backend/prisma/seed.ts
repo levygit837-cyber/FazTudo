@@ -897,7 +897,7 @@ async function seedTestUsers() {
 
   console.log("  - Endereco do cliente criado!");
 
-  // Criar endereco para o profissional (Centro, Iguatu-CE)
+  // Criar endereco para o profissional (Cajazeiras, Iguatu-CE — ~5km do cliente)
   const existingProAddress = await prisma.address.findFirst({
     where: { userId: professional.id },
   });
@@ -907,13 +907,13 @@ async function seedTestUsers() {
         street: "Rua Floriano Peixoto",
         number: "320",
         complement: "Casa",
-        neighborhood: "Centro",
+        neighborhood: "Cajazeiras",
         city: "Iguatu",
         state: "CE",
         zipCode: "63500-065",
         country: "Brasil",
-        latitude: -6.3599,
-        longitude: -39.2984,
+        latitude: -6.3480,
+        longitude: -39.2910,
         userId: professional.id,
       },
     });

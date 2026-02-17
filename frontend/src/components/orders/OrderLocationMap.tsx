@@ -87,8 +87,8 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
       if (result) {
         setDestination({ lat: result.lat, lng: result.lng });
       } else {
-        // Fallback to center of Sao Paulo
-        setDestination({ lat: -23.5505, lng: -46.6333 });
+        // Fallback to center of Iguatu, CE
+        setDestination({ lat: -6.3629, lng: -39.2943 });
       }
       setGeocodingDest(false);
     };

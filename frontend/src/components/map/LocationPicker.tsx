@@ -99,7 +99,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ value, onChange }) => {
   const [mapPosition, setMapPosition] = useState<[number, number]>(
     value.latitude && value.longitude
       ? [value.latitude, value.longitude]
-      : [-23.5505, -46.6333] // Default: Sao Paulo
+      : [-6.3629, -39.2943] // Default: Iguatu, CE
   );
 
   const tileUrl = theme === "dark" ? TILES.dark : TILES.light;
