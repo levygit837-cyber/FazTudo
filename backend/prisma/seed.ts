@@ -1065,8 +1065,39 @@ async function seedTestUsers() {
 
   console.log("  - Notificacoes de teste criadas!");
 
+  // Empresa de teste
+  const empresaUser = await prisma.user.upsert({
+    where: { email: "empresa@teste.com" },
+    update: {},
+    create: {
+      email: "empresa@teste.com",
+      name: "Empresa FazTudo Demo",
+      password: await bcrypt.hash("Teste@123", 10),
+      role: "COMPANY",
+      status: "ACTIVE",
+      isVerified: true,
+      emailVerified: true,
+    },
+  });
+
+  await prisma.companyProfile.upsert({
+    where: { userId: empresaUser.id },
+    update: {},
+    create: {
+      userId: empresaUser.id,
+      companyName: "FazTudo Serviços Ltda",
+      cnpj: "12345678000196",
+      description: "Empresa de demonstração para serviços domésticos e empresariais.",
+      isVerified: true,
+      industry: "Serviços",
+    },
+  });
+
+  console.log(`  - Empresa: ${empresaUser.email} (id: ${empresaUser.id})`);
+
   console.log("Usuarios de teste criados com sucesso!");
   console.log("  (Consulte o seed.ts para credenciais de teste)");
+  console.log("  empresa@teste.com / Teste@123 (COMPANY)");
 }
 
 async function main() {
