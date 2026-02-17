@@ -5,7 +5,8 @@ import { SkeletonOrderCard } from "../common/Skeleton";
 import { EmptyState } from "../common/EmptyState";
 import { SearchBar } from "../common/SearchBar";
 import Tabs from "../common/Tabs";
-import { listOrders } from "../../services/serviceService";
+import { listOrders, acceptOrder, cancelOrder } from "../../services/serviceService";
+import { useToast } from "../../context/ToastContext";
 import { ServiceOrder, ServiceOrderStatus } from "../../types";
 
 interface RoleConfig {
@@ -40,9 +41,13 @@ const roleConfigs: Record<"client" | "professional", RoleConfig> = {
     emptyActionLabel: "Gerenciar catalogo",
     emptyActionPath: "/professional/catalog",
     statusLabels: {
-      [ServiceOrderStatus.PENDING]: "Aguardando Resposta",
-      [ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION]: "Aguardando Cliente",
-      [ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION]: "Aguardando Sua Confirmacao",
+      [ServiceOrderStatus.PENDING]: "Novos",
+      [ServiceOrderStatus.ACCEPTED]: "Aceitos",
+      [ServiceOrderStatus.IN_PROGRESS]: "Em Andamento",
+      [ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION]: "Aguard. Cliente",
+      [ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION]: "Aguard. Voce",
+      [ServiceOrderStatus.COMPLETED]: "Concluidos",
+      [ServiceOrderStatus.CANCELLED]: "Cancelados",
     },
   },
 };
@@ -53,6 +58,7 @@ interface ServiceOrdersListProps {
 
 const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
   const navigate = useNavigate();
+  const toast = useToast();
   const config = roleConfigs[role];
 
   const [loading, setLoading] = useState(true);
@@ -67,12 +73,12 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
   const statusTabs = [
     { id: "all", label: "Todos" },
     { id: ServiceOrderStatus.PENDING, label: config.statusLabels[ServiceOrderStatus.PENDING] || "Pendentes" },
-    { id: ServiceOrderStatus.ACCEPTED, label: "Aceitos" },
-    { id: ServiceOrderStatus.IN_PROGRESS, label: "Em Andamento" },
-    { id: ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION, label: config.statusLabels[ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION] || "Aguardando Confirmacao" },
-    { id: ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION, label: config.statusLabels[ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION] || "Aguardando Profissional" },
-    { id: ServiceOrderStatus.COMPLETED, label: "Concluidos" },
-    { id: ServiceOrderStatus.CANCELLED, label: "Cancelados" },
+    { id: ServiceOrderStatus.ACCEPTED, label: config.statusLabels[ServiceOrderStatus.ACCEPTED] || "Aceitos" },
+    { id: ServiceOrderStatus.IN_PROGRESS, label: config.statusLabels[ServiceOrderStatus.IN_PROGRESS] || "Em Andamento" },
+    { id: ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION, label: config.statusLabels[ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION] || "Aguard. Cliente" },
+    { id: ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION, label: config.statusLabels[ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION] || "Aguard. Profissional" },
+    { id: ServiceOrderStatus.COMPLETED, label: config.statusLabels[ServiceOrderStatus.COMPLETED] || "Concluidos" },
+    { id: ServiceOrderStatus.CANCELLED, label: config.statusLabels[ServiceOrderStatus.CANCELLED] || "Cancelados" },
   ];
 
   const loadOrders = async () => {
@@ -111,8 +117,28 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
     setPage(1);
   };
 
+  const handleAcceptOrder = async (orderId: number) => {
+    try {
+      await acceptOrder(orderId);
+      toast.success("Pedido aceito com sucesso!");
+      loadOrders();
+    } catch {
+      toast.error("Erro ao aceitar pedido");
+    }
+  };
+
+  const handleRejectOrder = async (orderId: number) => {
+    try {
+      await cancelOrder(orderId, "Recusado pelo profissional");
+      toast.info("Pedido recusado");
+      loadOrders();
+    } catch {
+      toast.error("Erro ao recusar pedido");
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{config.title}</h1>
         <p className="text-slate-600 dark:text-slate-400 mt-1">
@@ -163,17 +189,22 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
               <div className="h-full bg-primary-500 rounded-full animate-pulse" style={{ width: "60%" }} />
             </div>
           )}
-          <div className={`space-y-4 ${refreshing ? "opacity-60 pointer-events-none" : ""}`}>
+          <div className={`space-y-2.5 ${refreshing ? "opacity-60 pointer-events-none" : ""}`}>
             {filteredOrders.map((order) => (
             <OrderCard
               key={order.id}
               id={order.id}
               title={order.title}
+              description={order.description}
               status={order.status}
               price={order.price}
               scheduledDate={order.scheduledDate || undefined}
               deadlineDate={order.deadlineDate || undefined}
               createdAt={order.createdAt}
+              address={order.address ? {
+                neighborhood: order.address.neighborhood,
+                city: order.address.city,
+              } : undefined}
               {...(role === "professional"
                 ? {
                     client: order.client
@@ -181,9 +212,12 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
                           id: order.client.id,
                           name: order.client.name,
                           profileImage: order.client.profileImage || undefined,
+                          ratingAverage: order.client.ratingAverage,
                         }
                       : undefined,
                     isProfessionalView: true,
+                    onAccept: handleAcceptOrder,
+                    onReject: handleRejectOrder,
                   }
                 : {
                     professional: order.professional
@@ -191,6 +225,7 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
                           id: order.professional.id,
                           name: order.professional.name,
                           profileImage: order.professional.profileImage || undefined,
+                          ratingAverage: order.professional.ratingAverage,
                         }
                       : undefined,
                   })}
