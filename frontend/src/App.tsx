@@ -53,6 +53,8 @@ import CompanyMembers from "./pages/company/Members";
 import CompanyRoles from "./pages/company/Roles";
 import CompanySalary from "./pages/company/Salary";
 import CompanyOrders from "./pages/company/Orders";
+import CompanyChannels from "./pages/company/Channels";
+import ChannelDetail from "./pages/company/ChannelDetail";
 import CompanyStorefront from "./pages/CompanyStorefront";
 import { UserRole } from "./types";
 
@@ -154,6 +156,9 @@ const App: React.FC = () => {
                 <Route path="roles" element={<CompanyRoles />} />
                 <Route path="salary" element={<CompanySalary />} />
                 <Route path="orders" element={<CompanyOrders />} />
+                <Route path="channels" element={<CompanyChannels />} />
+                <Route path="channels/:channelId" element={<ChannelDetail />} />
+                <Route path="orders/:id/chat" element={<ServiceChat />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="carteira" element={<Wallet />} />
               </Route>
