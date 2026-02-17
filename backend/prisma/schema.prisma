@@ -135,6 +135,7 @@ model User {
   schedule               ProfessionalSchedule[] @relation("ProfessionalSchedule")
   scheduleBlocks         ScheduleBlock[]        @relation("ScheduleBlocks")
   disputesInitiated      Dispute[]      @relation("DisputeInitiator")
+  sessions               UserSession[]
   companyProfile         CompanyProfile?
   companyMember          CompanyMember?
 
@@ -757,4 +758,37 @@ model CompanyChannelMember {
   member    CompanyMember  @relation(fields: [memberId], references: [id])
 
   @@unique([channelId, memberId])
+}
+
+// ============================================
+// ANALYTICS / SESSION TRACKING
+// ============================================
+
+model UserSession {
+  id          String     @id @default(uuid())
+  userId      Int
+  user        User       @relation(fields: [userId], references: [id])
+  startedAt   DateTime   @default(now())
+  endedAt     DateTime?
+  duration    Int?
+  pagesViewed Int        @default(0)
+  device      String?
+  pageViews   PageView[]
+  createdAt   DateTime   @default(now())
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+model PageView {
+  id        String      @id @default(uuid())
+  sessionId String
+  session   UserSession @relation(fields: [sessionId], references: [id])
+  path      String
+  enteredAt DateTime    @default(now())
+  duration  Int?
+
+  @@index([sessionId])
+  @@index([path])
+  @@index([enteredAt])
 }
