@@ -48,6 +48,7 @@ export enum NotificationType {
   NEW_MESSAGE = "NEW_MESSAGE",
   REVIEW_RECEIVED = "REVIEW_RECEIVED",
   SYSTEM_ALERT = "SYSTEM_ALERT",
+  PROFESSIONAL_EN_ROUTE = "PROFESSIONAL_EN_ROUTE",
 }
 
 export enum NotificationStatus {

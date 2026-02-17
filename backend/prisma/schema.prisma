@@ -53,6 +53,7 @@ enum NotificationType {
   NEW_MESSAGE
   REVIEW_RECEIVED
   SYSTEM_ALERT
+  PROFESSIONAL_EN_ROUTE
 }
 
 enum NotificationStatus {

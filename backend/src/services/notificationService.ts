@@ -19,6 +19,7 @@ export const NotificationType = {
   NEW_MESSAGE: "NEW_MESSAGE" as PrismaNotificationType,
   REVIEW_RECEIVED: "REVIEW_RECEIVED" as PrismaNotificationType,
   SYSTEM_ALERT: "SYSTEM_ALERT" as PrismaNotificationType,
+  PROFESSIONAL_EN_ROUTE: "PROFESSIONAL_EN_ROUTE" as PrismaNotificationType,
 } as const;
 
 export type NotificationTypeValue = typeof NotificationType[keyof typeof NotificationType];
