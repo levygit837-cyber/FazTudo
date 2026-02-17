@@ -31,7 +31,6 @@ import {
   acceptOrder,
   startOrder,
   submitOrderCompletion,
-  confirmOrderCompletion,
   confirmProfessionalCompletion,
   cancelOrder,
   releasePayment,
@@ -587,14 +586,12 @@ const OrderDetails: React.FC = () => {
               {/* IN_PROGRESS */}
               {order.status === "IN_PROGRESS" && (
                 <div className="space-y-3 animate-fade-in">
-                  <button
-                    onClick={() => handleAction(() => submitOrderCompletion(order.id), "Servico marcado como entregue!")}
-                    disabled={actionLoading}
-                    className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Marcar como Entregue
-                  </button>
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                    <Clock className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <p className="text-sm text-blue-700 dark:text-blue-400">
+                      Serviço em andamento. Aguarde o cliente confirmar que o serviço foi realizado.
+                    </p>
+                  </div>
                   {order.professionalId && (
                     <button
                       onClick={() => setShowReschedule(true)}
@@ -682,23 +679,23 @@ const OrderDetails: React.FC = () => {
                   </button>
                 )}
 
-                {/* Cliente confirma conclusao */}
-                {order.status === "AWAITING_CLIENT_CONFIRMATION" && (
+                {/* Cliente confirma que o serviço foi realizado */}
+                {order.status === "IN_PROGRESS" && (
                   <button
                     onClick={() =>
                       setConfirmAction({
-                        title: "Confirmar conclusao",
-                        message: "Ao confirmar, voce atesta que o servico foi entregue conforme combinado.",
+                        title: "Confirmar conclusão do serviço",
+                        message: "Confirme que o serviço foi realizado conforme combinado. Após sua confirmação, o profissional poderá finalizar o pedido e o pagamento será liberado.",
                         variant: "warning",
-                        confirmLabel: "Confirmar",
-                        action: () => confirmOrderCompletion(order.id),
+                        confirmLabel: "Confirmar que foi realizado",
+                        action: () => submitOrderCompletion(order.id),
                       })
                     }
                     disabled={actionLoading}
-                    className="btn btn-primary"
+                    className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
                   >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Confirmar conclusao do servico
+                    <CheckCircle className="w-4 h-4" />
+                    Confirmar que o serviço foi realizado
                   </button>
                 )}
 
