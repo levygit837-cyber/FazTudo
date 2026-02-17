@@ -3,13 +3,17 @@ import { env } from '../config/env';
 
 /**
  * General API rate limiter.
- * Limits all requests per IP within a time window.
+ * 500 req/15min — generous enough for SPAs with periodic polling
+ * (chat 5s, notifications 60s, location 5s can consume ~375 req/15min).
+ * Per-route limiters handle sensitive endpoints separately.
+ * OPTIONS (CORS preflight) requests are skipped to avoid double-counting.
  */
 export const generalLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
   max: env.RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
   message: {
     success: false,
     message: 'Muitas requisicoes. Tente novamente mais tarde.',

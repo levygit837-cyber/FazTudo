@@ -72,7 +72,10 @@ app.use(helmet({
 // Trust first proxy (needed for rate limiter behind reverse proxy)
 app.set('trust proxy', 1);
 
-// General rate limiter for all routes
+// Serve uploaded files BEFORE rate limiter (static files should not count)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+// General rate limiter for all routes (after static)
 app.use(generalLimiter);
 
 // CORS with specific origins
@@ -91,9 +94,6 @@ app.use(express.urlencoded({ extended: true, limit: env.BODY_SIZE_LIMIT }));
 
 // XSS sanitization for all incoming data
 app.use(xssSanitizer);
-
-// Serve uploaded files (chat attachments, etc.)
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // ============================================
 // HEALTH CHECKS
