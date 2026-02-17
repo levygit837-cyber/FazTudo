@@ -638,6 +638,46 @@ export const createOrderWithBrief = async (data: {
   return extractData(response);
 };
 
+// ==================== LOCATION TRACKING ====================
+
+export const getMapConfig = async (): Promise<{ apiKey: string }> => {
+  const response = await api.get<ApiResponse<{ apiKey: string }>>("/services/map-config");
+  return extractData(response);
+};
+
+export const startRoute = async (orderId: number): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(`/services/orders/${orderId}/start-route`);
+  return extractData(response);
+};
+
+export const updateProfessionalLocation = async (
+  orderId: number,
+  latitude: number,
+  longitude: number
+): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/location`,
+    { latitude, longitude }
+  );
+  return extractData(response);
+};
+
+export const getProfessionalLocation = async (
+  orderId: number
+): Promise<{ lat: number; lng: number; updatedAt: string } | null> => {
+  const response = await api.get<ApiResponse<{ lat: number; lng: number; updatedAt: string } | null>>(
+    `/services/orders/${orderId}/location`
+  );
+  return extractData(response);
+};
+
+export const clearProfessionalLocation = async (
+  orderId: number
+): Promise<any> => {
+  const response = await api.delete<ApiResponse<any>>(`/services/orders/${orderId}/location`);
+  return extractData(response);
+};
+
 export default {
   // Listings
   listServices,
@@ -676,4 +716,10 @@ export default {
   createProposal,
   acceptProposal,
   rejectProposal,
+  // Location Tracking
+  getMapConfig,
+  startRoute,
+  updateProfessionalLocation,
+  getProfessionalLocation,
+  clearProfessionalLocation,
 };
