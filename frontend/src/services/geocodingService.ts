@@ -68,6 +68,14 @@ export async function reverseGeocode(
   }
 }
 
+interface BackendRoadAlert {
+  id: string;
+  type: string;
+  lat: number;
+  lng: number;
+  description: string;
+}
+
 /**
  * Get road alerts along a decoded polyline
  */
@@ -76,12 +84,19 @@ export async function getRouteAlerts(
   radius: number = 200
 ): Promise<RoadAlert[]> {
   try {
-    const response = await api.post<ApiResponse<{ alerts: RoadAlert[] }>>("/geocoding/route-alerts", {
+    const response = await api.post<ApiResponse<{ alerts: BackendRoadAlert[] }>>("/geocoding/route-alerts", {
       polyline,
       radius,
     });
     const data = extractData(response);
-    return data?.alerts || [];
+    const raw = data?.alerts || [];
+    // Transform backend shape { lat, lng } to frontend shape { position: { lat, lng } }
+    return raw.map((a) => ({
+      id: a.id,
+      type: a.type as RoadAlert["type"],
+      position: { lat: a.lat, lng: a.lng },
+      description: a.description,
+    }));
   } catch {
     return [];
   }

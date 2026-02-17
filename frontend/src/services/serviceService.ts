@@ -671,8 +671,8 @@ export const updateProfessionalLocation = async (
 
 export const getProfessionalLocation = async (
   orderId: number
-): Promise<{ lat: number; lng: number; updatedAt: string } | null> => {
-  const response = await api.get<ApiResponse<{ lat: number; lng: number; updatedAt: string } | null>>(
+): Promise<{ lat: number; lng: number; bearing: number | null; updatedAt: string } | null> => {
+  const response = await api.get<ApiResponse<{ lat: number; lng: number; bearing: number | null; updatedAt: string } | null>>(
     `/services/orders/${orderId}/location`
   );
   return extractData(response);
