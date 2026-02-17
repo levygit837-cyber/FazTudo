@@ -45,10 +45,30 @@ export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   phone: phoneSchema.optional(),
-  role: z.enum(['CLIENT', 'PROFESSIONAL'], {
-    error: 'Role deve ser CLIENT ou PROFESSIONAL',
+  role: z.enum(['CLIENT', 'PROFESSIONAL', 'COMPANY'], {
+    error: 'Role deve ser CLIENT, PROFESSIONAL ou COMPANY',
   }).optional().default('CLIENT'),
   document: z.string().trim().optional(),
+  cnpj: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.role === 'COMPANY') {
+    if (!data.cnpj) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'CNPJ é obrigatório para empresas',
+        path: ['cnpj'],
+      });
+      return;
+    }
+    const digits = data.cnpj.replace(/\D/g, '');
+    if (digits.length < 11 || digits.length > 18) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'CNPJ inválido (deve ter entre 11 e 18 dígitos)',
+        path: ['cnpj'],
+      });
+    }
+  }
 });
 
 export const loginSchema = z.object({

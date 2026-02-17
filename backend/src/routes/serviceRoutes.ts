@@ -33,7 +33,7 @@ router.get("/", serviceController.listServices);
 router.post(
   "/",
   verifyToken,
-  requireRole("PROFESSIONAL", "ADMIN"),
+  requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
   requireVerified,
   serviceController.createServiceListing,
 );
@@ -53,6 +53,14 @@ router.post(
   requireVerified,
   serviceController.createOrderWithBrief,
 );
+
+
+// ============================================
+// PROFESSIONAL PUBLIC STOREFRONT
+// ============================================
+
+// Professional public storefront (no auth required)
+router.get("/professional/:userId/storefront", serviceController.getProfessionalStorefront);
 
 // ============================================
 // ROTAS DE SERVICE LISTINGS COM PARAMETRO (DEVEM VIR POR ULTIMO)

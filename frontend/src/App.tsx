@@ -47,6 +47,18 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminVerifications from "./pages/admin/AdminVerifications";
 import MapView from "./pages/services/MapView";
+import CompanyDashboard from "./pages/company/Dashboard";
+import CompanyProfile from "./pages/company/Profile";
+import CompanyMembers from "./pages/company/Members";
+import CompanyRoles from "./pages/company/Roles";
+import CompanySalary from "./pages/company/Salary";
+import CompanyOrders from "./pages/company/Orders";
+import CompanyChannels from "./pages/company/Channels";
+import ChannelDetail from "./pages/company/ChannelDetail";
+import CompanyStorefront from "./pages/CompanyStorefront";
+import CompanyAnalytics from "./pages/company/Analytics";
+import ProfessionalStorefrontPage from "./pages/ProfessionalStorefront";
+import CompanyVerifications from "./pages/admin/CompanyVerifications";
 import { UserRole } from "./types";
 
 const NotFound = () => (
@@ -135,6 +147,27 @@ const App: React.FC = () => {
               </Route>
 
               <Route
+                path="company"
+                element={
+                  <ProtectedRoute allowedRoles={[UserRole.COMPANY]} />
+                }
+              >
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route path="dashboard" element={<CompanyDashboard />} />
+                <Route path="profile" element={<CompanyProfile />} />
+                <Route path="members" element={<CompanyMembers />} />
+                <Route path="roles" element={<CompanyRoles />} />
+                <Route path="salary" element={<CompanySalary />} />
+                <Route path="orders" element={<CompanyOrders />} />
+                <Route path="channels" element={<CompanyChannels />} />
+                <Route path="channels/:channelId" element={<ChannelDetail />} />
+                <Route path="analytics" element={<CompanyAnalytics />} />
+                <Route path="orders/:id/chat" element={<ServiceChat />} />
+                <Route path="notifications" element={<Notifications />} />
+                <Route path="carteira" element={<Wallet />} />
+              </Route>
+
+              <Route
                 path="admin"
                 element={
                   <ProtectedRoute allowedRoles={[UserRole.ADMIN]} />
@@ -144,6 +177,7 @@ const App: React.FC = () => {
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="verifications" element={<AdminVerifications />} />
+                <Route path="companies" element={<CompanyVerifications />} />
                 <Route path="notifications" element={<Notifications />} />
               </Route>
 
@@ -151,13 +185,16 @@ const App: React.FC = () => {
                 path="profile"
                 element={
                   <ProtectedRoute
-                    allowedRoles={[UserRole.CLIENT, UserRole.PROFESSIONAL, UserRole.ADMIN]}
+                    allowedRoles={[UserRole.CLIENT, UserRole.PROFESSIONAL, UserRole.COMPANY, UserRole.ADMIN]}
                   />
                 }
               >
                 <Route index element={<Profile />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
+
+              <Route path="empresa/:companyId" element={<CompanyStorefront />} />
+              <Route path="profissional/:userId" element={<ProfessionalStorefrontPage />} />
 
               <Route path="*" element={<NotFound />} />
             </Route>

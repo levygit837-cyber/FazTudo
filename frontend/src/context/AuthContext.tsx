@@ -16,7 +16,7 @@ export interface User {
   email: string;
   name: string;
   phone?: string;
-  role: "CLIENT" | "PROFESSIONAL" | "ADMIN";
+  role: "CLIENT" | "PROFESSIONAL" | "COMPANY" | "ADMIN";
   status: "PENDING" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
   isVerified: boolean;
   profileImage?: string;
@@ -39,8 +39,10 @@ export interface RegisterData {
   password: string;
   name: string;
   phone?: string;
-  role?: "CLIENT" | "PROFESSIONAL";
+  role?: "CLIENT" | "PROFESSIONAL" | "COMPANY";
   document?: string;
+  companyName?: string;
+  cnpj?: string;
 }
 
 export interface RegisterOptions {
@@ -83,6 +85,7 @@ interface AuthContextType extends AuthState {
   isProfessional: boolean;
   isClient: boolean;
   isAdmin: boolean;
+  isCompany: boolean;
 }
 
 // Create context
@@ -197,6 +200,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         navigate("/professional/dashboard");
       } else if (user.role === "CLIENT") {
         navigate("/client/dashboard");
+      } else if (user.role === "COMPANY") {
+        navigate("/company/dashboard");
       } else if (user.role === "ADMIN") {
         navigate("/admin/dashboard");
       }
@@ -245,6 +250,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Redirect based on role
         if (user.role === "PROFESSIONAL") {
           navigate("/professional/dashboard");
+        } else if (user.role === "COMPANY") {
+          navigate("/company/dashboard");
         } else {
           navigate("/client/dashboard");
         }
@@ -309,6 +316,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const isProfessional = state.user?.role === "PROFESSIONAL";
   const isClient = state.user?.role === "CLIENT";
   const isAdmin = state.user?.role === "ADMIN";
+  const isCompany = state.user?.role === "COMPANY";
 
   const value: AuthContextType = {
     ...state,
@@ -321,6 +329,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isProfessional,
     isClient,
     isAdmin,
+    isCompany,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

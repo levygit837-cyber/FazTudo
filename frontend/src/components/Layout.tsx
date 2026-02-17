@@ -19,6 +19,8 @@ import {
   Calendar,
   Star,
   LayoutGrid,
+  BarChart3,
+  Building2,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -65,7 +67,7 @@ function useFocusTrap(containerRef: React.RefObject<HTMLElement | null>, active:
 
 const Layout: React.FC = () => {
   const location = useLocation();
-  const { user, isAuthenticated, isProfessional, isClient, isAdmin, logout } =
+  const { user, isAuthenticated, isProfessional, isClient, isAdmin, isCompany, logout } =
     useAuth();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -193,12 +195,51 @@ const Layout: React.FC = () => {
           },
         ]
       : []),
+    ...(isAuthenticated && isCompany
+      ? [
+          {
+            path: "/company/dashboard",
+            label: "Dashboard",
+            icon: <LayoutGrid size={20} />,
+          },
+          {
+            path: "/company/orders",
+            label: "Pedidos",
+            icon: <FileText size={20} />,
+          },
+          {
+            path: "/company/channels",
+            label: "Canais",
+            icon: <MessageSquare size={20} />,
+          },
+          {
+            path: "/company/members",
+            label: "Equipe",
+            icon: <Users size={20} />,
+          },
+          {
+            path: "/company/salary",
+            label: "Financeiro",
+            icon: <Wallet size={20} />,
+          },
+          {
+            path: "/company/analytics",
+            label: "Analytics",
+            icon: <BarChart3 size={20} />,
+          },
+        ]
+      : []),
     ...(isAuthenticated && isAdmin
       ? [
           {
             path: "/admin/dashboard",
             label: "Admin",
             icon: <Shield size={20} />,
+          },
+          {
+            path: "/admin/companies",
+            label: "Empresas",
+            icon: <Building2 size={20} />,
           },
         ]
       : []),

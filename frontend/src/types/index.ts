@@ -50,3 +50,9 @@ export type {
   Address as AddressType,
   Certification as CertificationType,
 } from "./entities";
+
+// Company types
+export * from "./company";
+
+// Storefront types
+export * from "./storefront";

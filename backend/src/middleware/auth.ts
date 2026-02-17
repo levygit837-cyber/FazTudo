@@ -18,6 +18,8 @@ export interface AuthRequest extends Request {
     role: string;
     status: string;
   };
+  companyId?: number;       // populated by requireCompanyMember / requireCompanyPermission
+  companyMemberId?: number; // populated by requireCompanyMember / requireCompanyPermission
 }
 
 // Interface para payload do JWT

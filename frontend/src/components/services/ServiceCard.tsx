@@ -138,9 +138,13 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+              <Link
+                to={`/profissional/${professional.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
                 {professional.name}
-              </p>
+              </Link>
               {isVerified && (
                 <BadgeCheck className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
               )}

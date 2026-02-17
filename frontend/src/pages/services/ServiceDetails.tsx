@@ -395,7 +395,7 @@ const ServiceDetails: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <Link
-                    to={`/professionals/${service.professional.id}`}
+                    to={`/profissional/${service.professional.id}`}
                     className="font-semibold text-slate-900 dark:text-slate-100 hover:text-primary-600 transition-colors"
                   >
                     {service.professional.name}
@@ -415,6 +415,12 @@ const ServiceDetails: React.FC = () => {
                     <CheckCircle className="w-4 h-4" />
                     <span>Profissional verificado</span>
                   </div>
+                  <Link
+                    to={`/profissional/${service.professional.id}`}
+                    className="text-blue-600 dark:text-blue-400 hover:underline text-sm mt-2 inline-block"
+                  >
+                    Ver perfil completo →
+                  </Link>
                 </div>
               </div>
 

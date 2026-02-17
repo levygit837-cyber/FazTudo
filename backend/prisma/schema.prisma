@@ -10,6 +10,7 @@ datasource db {
 enum UserRole {
   CLIENT
   PROFESSIONAL
+  COMPANY
   ADMIN
 }
 
@@ -79,6 +80,12 @@ enum VerificationSubmissionStatus {
   REJECTED
 }
 
+enum SalaryStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
 // Models
 model User {
   id            Int        @id @default(autoincrement())
@@ -128,6 +135,8 @@ model User {
   schedule               ProfessionalSchedule[] @relation("ProfessionalSchedule")
   scheduleBlocks         ScheduleBlock[]        @relation("ScheduleBlocks")
   disputesInitiated      Dispute[]      @relation("DisputeInitiator")
+  companyProfile         CompanyProfile?
+  companyMember          CompanyMember?
 
   @@index([email])
   @@index([role])
@@ -239,6 +248,7 @@ model ServiceOrder {
   proposals     Proposal[]
   scheduleBlock ScheduleBlock?
   disputes      Dispute[]
+  team          ServiceTeam?
 
   // Reschedule approval flow
   rescheduleProposedDate DateTime?
@@ -415,6 +425,11 @@ model Message {
   sender       User         @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
   recipient    User         @relation("Recipient", fields: [recipientId], references: [id], onDelete: Cascade)
   serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
+  isGroup    Boolean     @default(false)
+  isArchived Boolean     @default(false)
+  teamId     Int?
+  team       ServiceTeam? @relation(fields: [teamId], references: [id])
 
   createdAt DateTime  @default(now())
   readAt    DateTime?
@@ -614,4 +629,132 @@ model Dispute {
   @@index([serviceOrderId])
   @@index([initiatorId])
   @@index([status])
+}
+
+// ============================================
+// ENTERPRISE / COMPANY MODELS
+// ============================================
+
+model CompanyProfile {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @unique
+  user         User      @relation(fields: [userId], references: [id])
+  companyName  String
+  cnpj         String    @unique
+  description  String?
+  logo         String?
+  coverImage   String?
+  website      String?
+  phone        String?
+  address      Json?
+  isVerified   Boolean   @default(false)
+  industry     String?
+  foundedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  members  CompanyMember[]
+  roles    CompanyRole[]
+  channels CompanyChannel[]
+}
+
+model CompanyRole {
+  id          Int            @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id])
+  name        String
+  level       Int
+  permissions Json
+  color       String?
+  createdAt   DateTime       @default(now())
+
+  members     CompanyMember[]
+  salaryRules CompanySalaryRule[]
+}
+
+model CompanyMember {
+  id                Int            @id @default(autoincrement())
+  companyId         Int
+  company           CompanyProfile @relation(fields: [companyId], references: [id])
+  userId            Int            @unique
+  user              User           @relation(fields: [userId], references: [id])
+  roleId            Int
+  role              CompanyRole    @relation(fields: [roleId], references: [id])
+  customPermissions Json?
+  joinedAt          DateTime       @default(now())
+  isActive          Boolean        @default(true)
+
+  salaryHistory   CompanySalaryPayment[]
+  teamMemberships ServiceTeamMember[]
+  ledTeams        ServiceTeam[]          @relation("TeamLeader")
+  channelMemberships CompanyChannelMember[]
+}
+
+model CompanySalaryRule {
+  id          Int            @id @default(autoincrement())
+  companyId   Int
+  roleId      Int?
+  role        CompanyRole?   @relation(fields: [roleId], references: [id])
+  memberId    Int?
+  amount      Float
+  dayOfMonth  Int
+  description String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+
+  payments CompanySalaryPayment[]
+}
+
+model CompanySalaryPayment {
+  id       Int               @id @default(autoincrement())
+  ruleId   Int
+  rule     CompanySalaryRule @relation(fields: [ruleId], references: [id])
+  memberId Int
+  member   CompanyMember     @relation(fields: [memberId], references: [id])
+  amount   Float
+  paidAt   DateTime
+  status   SalaryStatus
+  note     String?
+}
+
+model ServiceTeam {
+  id        Int           @id @default(autoincrement())
+  orderId   Int           @unique
+  order     ServiceOrder  @relation(fields: [orderId], references: [id])
+  leaderId  Int
+  leader    CompanyMember @relation("TeamLeader", fields: [leaderId], references: [id])
+  createdAt DateTime      @default(now())
+
+  members  ServiceTeamMember[]
+  messages Message[]
+}
+
+model ServiceTeamMember {
+  id       Int           @id @default(autoincrement())
+  teamId   Int
+  team     ServiceTeam   @relation(fields: [teamId], references: [id])
+  memberId Int
+  member   CompanyMember @relation(fields: [memberId], references: [id])
+}
+
+
+model CompanyChannel {
+  id          Int            @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id])
+  name        String
+  description String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+
+  members     CompanyChannelMember[]
+}
+
+model CompanyChannelMember {
+  id        Int            @id @default(autoincrement())
+  channelId Int
+  channel   CompanyChannel @relation(fields: [channelId], references: [id])
+  memberId  Int
+  member    CompanyMember  @relation(fields: [memberId], references: [id])
+
+  @@unique([channelId, memberId])
 }

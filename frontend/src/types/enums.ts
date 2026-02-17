@@ -5,6 +5,7 @@
 export enum UserRole {
   CLIENT = "CLIENT",
   PROFESSIONAL = "PROFESSIONAL",
+  COMPANY = "COMPANY",
   ADMIN = "ADMIN",
 }
 
@@ -72,4 +73,10 @@ export enum VerificationSubmissionStatus {
   PENDING = "PENDING",
   APPROVED = "APPROVED",
   REJECTED = "REJECTED",
+}
+
+export enum SalaryStatus {
+  PENDING = "PENDING",
+  PAID = "PAID",
+  FAILED = "FAILED",
 }

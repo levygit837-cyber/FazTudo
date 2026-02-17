@@ -578,3 +578,95 @@ export const reviewVerification = async (
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
+
+// ==================== COMPANY VERIFICATION ====================
+
+/** GET /api/admin/companies/pending — list companies awaiting verification */
+export const getPendingCompanies = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const companies = await prisma.companyProfile.findMany({
+      where: { isVerified: false },
+      include: {
+        user: {
+          select: {
+            id: true, name: true, email: true, status: true,
+            createdAt: true, profileImage: true,
+          },
+        },
+        _count: { select: { members: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json({ success: true, message: "Empresas pendentes obtidas", data: companies });
+  } catch (err) {
+    log.error({ err }, "getPendingCompanies error");
+    throw err;
+  }
+};
+
+/** POST /api/admin/companies/:companyId/verify — verify or reject a company */
+export const verifyCompany = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { companyId } = req.params;
+    const { approved, reason } = req.body;
+
+    const company = await prisma.companyProfile.findUnique({
+      where: { id: Number(companyId) },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    if (!company) {
+      res.status(404).json({ success: false, message: "Empresa não encontrada" });
+      return;
+    }
+
+    await prisma.companyProfile.update({
+      where: { id: Number(companyId) },
+      data: { isVerified: Boolean(approved) },
+    });
+
+    await prisma.notification.create({
+      data: {
+        userId: company.userId,
+        type: "SYSTEM_ALERT",
+        title: approved ? "Empresa verificada!" : "Verificação recusada",
+        message: approved
+          ? `Parabéns! ${company.companyName} foi verificada e agora tem o selo de Empresa Verificada.`
+          : `A verificação de ${company.companyName} foi recusada. ${reason ? `Motivo: ${reason}` : ""}`,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: approved ? "Empresa verificada com sucesso" : "Verificação recusada",
+      data: { companyId: Number(companyId), isVerified: Boolean(approved) },
+    });
+  } catch (err) {
+    log.error({ err }, "verifyCompany error");
+    throw err;
+  }
+};
+
+/** GET /api/admin/companies — list all companies */
+export const getAllCompanies = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { verified } = req.query;
+    const whereFilter = verified === "true"
+      ? { isVerified: true }
+      : verified === "false"
+        ? { isVerified: false }
+        : {};
+
+    const companies = await prisma.companyProfile.findMany({
+      where: whereFilter,
+      include: {
+        user: { select: { id: true, name: true, email: true, status: true, createdAt: true } },
+        _count: { select: { members: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({ success: true, message: "Empresas obtidas", data: companies });
+  } catch (err) {
+    log.error({ err }, "getAllCompanies error");
+    throw err;
+  }
+};

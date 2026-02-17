@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { MessageSquare, Search, ArrowRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getUserChats } from "../services/serviceService";
@@ -17,14 +17,14 @@ const statusLabels: Record<string, string> = {
 
 const Messages: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuth();
+
+  const { user, isProfessional: authIsProfessional, isCompany } = useAuth();
   const [chats, setChats] = useState<ChatConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const isProfessional = location.pathname.includes("/professional/");
+  const isProfessional = authIsProfessional;
 
   useEffect(() => {
     const loadChats = async () => {
@@ -52,9 +52,14 @@ const Messages: React.FC = () => {
   });
 
   const handleOpenChat = (orderId: number) => {
-    const basePath = isProfessional
-      ? `/professional/services/${orderId}/chat`
-      : `/client/orders/${orderId}/chat`;
+    let basePath: string;
+    if (isCompany) {
+      basePath = `/company/orders/${orderId}/chat`;
+    } else if (isProfessional) {
+      basePath = `/professional/services/${orderId}/chat`;
+    } else {
+      basePath = `/client/orders/${orderId}/chat`;
+    }
     navigate(basePath);
   };
 

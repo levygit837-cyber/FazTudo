@@ -116,6 +116,12 @@ export const getDashboardStats = async (
           totalReviews: user?.totalReviews || 0,
         }, "Professional dashboard stats retrieved"),
       );
+    } else if (role === "COMPANY") {
+      res.status(200).json({
+        success: true,
+        message: "Use /api/company/dashboard para dados da empresa",
+        data: { redirectTo: "/api/company/dashboard" },
+      });
     } else {
       res.status(403).json(errorResponse("Unsupported role for dashboard"));
     }
