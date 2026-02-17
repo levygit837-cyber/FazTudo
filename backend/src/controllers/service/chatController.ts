@@ -43,7 +43,9 @@ export const getUserChats = async (
       ? { clientId: userId }
       : role === "PROFESSIONAL"
         ? { professionalId: userId }
-        : { OR: [{ clientId: userId }, { professionalId: userId }] };
+        : role === "COMPANY"
+          ? { professionalId: userId }
+          : { OR: [{ clientId: userId }, { professionalId: userId }] };
 
     const orders = await prisma.serviceOrder.findMany({
       where: {
@@ -103,7 +105,11 @@ export const getUserChats = async (
     // Formatar resposta para o frontend
     const chats = orders.map((order) => {
       const lastMessage = order.messages[0] || null;
-      const otherUser = role === "CLIENT" ? order.professional : order.client;
+      const otherUser = role === "CLIENT"
+        ? order.professional
+        : (role === "PROFESSIONAL" || role === "COMPANY")
+          ? order.client
+          : order.client;
 
       return {
         orderId: order.id,
