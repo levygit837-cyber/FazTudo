@@ -270,3 +270,35 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 export type WithdrawalInput = z.infer<typeof withdrawalSchema>;
+
+// ============================================
+// ADMIN-SPECIFIC SCHEMAS
+// ============================================
+
+export const adminLoginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, 'Senha obrigatoria'),
+});
+
+export const resolveDisputeSchema = z.object({
+  resolution: z.string().min(10, 'Descricao da resolucao muito curta').max(1000),
+  action: z.enum(['FAVOR_CLIENT', 'FAVOR_PROFESSIONAL', 'MUTUAL_AGREEMENT'], {
+    error: 'Acao invalida',
+  }),
+});
+
+export const updateDisputeStatusSchema = z.object({
+  status: z.enum(['OPEN', 'UNDER_REVIEW', 'RESOLVED', 'CLOSED'], {
+    error: 'Status invalido',
+  }),
+});
+
+export const updatePlatformConfigSchema = z.object({
+  platformFeePercentage: z.number().min(0).max(50).optional(),
+  defaultHoldDays: z.number().int().min(0).max(365).optional(),
+  disputePeriodDays: z.number().int().min(0).max(30).optional(),
+  requireVerificationProfessional: z.boolean().optional(),
+  requireVerificationCompany: z.boolean().optional(),
+  maintenanceMode: z.boolean().optional(),
+  maintenanceMessage: z.string().max(500).optional(),
+});
