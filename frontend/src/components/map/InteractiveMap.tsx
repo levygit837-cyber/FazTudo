@@ -1,223 +1,192 @@
-// frontend/src/components/map/InteractiveMap.tsx
-import React, { useState, useEffect, useRef } from "react";
-import {
-  APIProvider,
-  Map,
-  useMap,
-  useMapsLibrary,
-} from "@vis.gl/react-google-maps";
+import React, { useState, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { Loader2, AlertCircle } from "lucide-react";
 import clsx from "clsx";
-import ProfessionalMarker from "./ProfessionalMarker";
-import DestinationMarker from "./DestinationMarker";
-import LandmarkMarker from "./LandmarkMarker";
 import MapLegend from "./MapLegend";
-import type {
-  InteractiveMapProps,
-  RouteInfo,
-  LatLng,
-} from "../../types";
-import { getMapConfig } from "../../services/serviceService";
+import { professionalIcon, destinationIcon, landmarkIcon } from "./leafletIcons";
+import type { InteractiveMapProps, RouteInfo, LatLng } from "../../types";
+import { getDirections, decodePolyline } from "../../services/geocodingService";
 
-// Custom FazTudo map styles — clean, minimal, brand-aligned
-const FAZTUDO_MAP_STYLES: google.maps.MapTypeStyle[] = [
-  // Base geometry — light neutral
-  { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-  // Roads
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#e8eaed" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadce0" }] },
-  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#c5c8cc" }] },
-  // Water — subtle blue
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9d7e8" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9eb7d4" }] },
-  // POI — hide business clutter
-  { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.business", stylers: [{ visibility: "off" }] },
-  // Parks — soft green
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5f5e0" }] },
-  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#6b9a76" }] },
-  // Transit — hide
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-];
+// Component to fit map bounds
+const FitBounds: React.FC<{ bounds: L.LatLngBoundsExpression }> = ({ bounds }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.fitBounds(bounds, { padding: [40, 40] });
+  }, [map, bounds]);
+  return null;
+};
 
-// ==========================================
-// Inner map content (must be inside APIProvider)
-// ==========================================
-const MapContent: React.FC<
-  Omit<InteractiveMapProps, "mapId" | "className" | "height"> & {
-    mapId?: string;
-  }
-> = ({
+// Main InteractiveMap with Leaflet
+const InteractiveMap: React.FC<InteractiveMapProps> = ({
   professionalMarker,
   destinationMarker,
   landmarkMarkers = [],
   showRoute = true,
   onRouteInfo,
-  mapId,
+  height = 450,
+  className,
 }) => {
-  const map = useMap();
-  const routesLibrary = useMapsLibrary("routes");
-
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(
-    null
-  );
+  const [routePolyline, setRoutePolyline] = useState<Array<[number, number]>>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Render directions route between professional and destination
+  // Fetch route from backend proxy
   useEffect(() => {
-    if (!showRoute || !routesLibrary || !map) return;
+    if (!showRoute) return;
 
-    const origin = professionalMarker.position;
-    const dest = destinationMarker.position;
+    const fetchRoute = async () => {
+      setLoading(true);
+      try {
+        const result = await getDirections(
+          professionalMarker.position,
+          destinationMarker.position,
+        );
 
-    // Create renderer if not exists
-    if (!directionsRendererRef.current) {
-      directionsRendererRef.current = new routesLibrary.DirectionsRenderer({
-        map,
-        suppressMarkers: true, // We render our own custom markers
-        polylineOptions: {
-          strokeColor: "#2563eb", // primary-600
-          strokeWeight: 5,
-          strokeOpacity: 0.85,
-        },
-      });
-    }
-
-    const directionsService = new routesLibrary.DirectionsService();
-
-    directionsService.route(
-      {
-        origin: new google.maps.LatLng(origin.lat, origin.lng),
-        destination: new google.maps.LatLng(dest.lat, dest.lng),
-        travelMode: google.maps.TravelMode.DRIVING,
-      },
-      (response, status) => {
-        if (status === "OK" && response) {
-          directionsRendererRef.current?.setDirections(response);
-          const leg = response.routes[0]?.legs[0];
-          if (leg) {
-            const info: RouteInfo = {
-              distance: leg.distance?.text || "",
-              duration: leg.duration?.text || "",
-            };
-            setRouteInfo(info);
-            onRouteInfo?.(info);
-          }
+        if (result) {
+          const info: RouteInfo = {
+            distance: result.distance,
+            duration: result.duration,
+          };
+          setRouteInfo(info);
+          onRouteInfo?.(info);
+          setRoutePolyline(decodePolyline(result.polyline));
         }
-      }
-    );
-
-    // Cleanup renderer on unmount
-    return () => {
-      if (directionsRendererRef.current) {
-        directionsRendererRef.current.setMap(null);
-        directionsRendererRef.current = null;
+      } catch {
+        setError("Erro ao calcular rota");
+      } finally {
+        setLoading(false);
       }
     };
+
+    fetchRoute();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     showRoute,
-    routesLibrary,
-    map,
-    professionalMarker.position,
-    destinationMarker.position,
-    onRouteInfo,
+    professionalMarker.position.lat,
+    professionalMarker.position.lng,
+    destinationMarker.position.lat,
+    destinationMarker.position.lng,
   ]);
 
-  // Fit map bounds to show all markers
-  useEffect(() => {
-    if (!map) return;
+  // Calculate bounds
+  const allPoints: LatLng[] = [
+    professionalMarker.position,
+    destinationMarker.position,
+    ...landmarkMarkers.map((m) => m.position),
+  ];
 
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend(
-      new google.maps.LatLng(
-        professionalMarker.position.lat,
-        professionalMarker.position.lng
-      )
+  const bounds = L.latLngBounds(
+    allPoints.map((p) => [p.lat, p.lng] as [number, number]),
+  );
+
+  const center: [number, number] = [
+    (professionalMarker.position.lat + destinationMarker.position.lat) / 2,
+    (professionalMarker.position.lng + destinationMarker.position.lng) / 2,
+  ];
+
+  if (error) {
+    return (
+      <div
+        className={clsx(
+          "flex items-center justify-center bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/30",
+          className,
+        )}
+        style={{ height: Math.min(height, 200) }}
+      >
+        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          {error}
+        </div>
+      </div>
     );
-    bounds.extend(
-      new google.maps.LatLng(
-        destinationMarker.position.lat,
-        destinationMarker.position.lng
-      )
-    );
-
-    landmarkMarkers.forEach((m) => {
-      bounds.extend(new google.maps.LatLng(m.position.lat, m.position.lng));
-    });
-
-    map.fitBounds(bounds, { top: 60, bottom: 80, left: 40, right: 40 });
-  }, [map, professionalMarker, destinationMarker, landmarkMarkers]);
-
-  // Apply custom FazTudo map styles (force 2D roadmap)
-  useEffect(() => {
-    if (!map) return;
-    map.setOptions({
-      styles: FAZTUDO_MAP_STYLES,
-      mapTypeId: "roadmap",
-    });
-  }, [map]);
-
-  // Calculate center between the two main markers
-  const center: LatLng = {
-    lat:
-      (professionalMarker.position.lat + destinationMarker.position.lat) / 2,
-    lng:
-      (professionalMarker.position.lng + destinationMarker.position.lng) / 2,
-  };
+  }
 
   return (
-    <div className="relative w-full h-full">
-      <Map
-        defaultCenter={center}
-        defaultZoom={13}
-        mapId={mapId || "faztudo-interactive-map"}
-        gestureHandling="greedy"
-        disableDefaultUI={false}
-        zoomControl={true}
-        streetViewControl={false}
-        mapTypeControl={false}
-        fullscreenControl={true}
+    <div
+      className={clsx(
+        "rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md relative",
+        className,
+      )}
+      style={{ height }}
+    >
+      <MapContainer
+        center={center}
+        zoom={13}
+        scrollWheelZoom={true}
         style={{ width: "100%", height: "100%" }}
+        zoomControl={true}
+        attributionControl={false}
       >
-        {/* Professional marker */}
-        <ProfessionalMarker
-          position={professionalMarker.position}
-          label={professionalMarker.label}
-          subtitle={professionalMarker.subtitle}
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
+
+        <FitBounds bounds={bounds} />
+
+        {/* Route polyline */}
+        {routePolyline.length > 0 && (
+          <Polyline
+            positions={routePolyline}
+            pathOptions={{
+              color: "#2563eb",
+              weight: 5,
+              opacity: 0.85,
+            }}
+          />
+        )}
+
+        {/* Professional marker */}
+        <Marker
+          position={[professionalMarker.position.lat, professionalMarker.position.lng]}
+          icon={professionalIcon}
+        >
+          <Popup>
+            <div className="text-sm font-semibold">{professionalMarker.label}</div>
+            {professionalMarker.subtitle && (
+              <div className="text-xs text-slate-500">{professionalMarker.subtitle}</div>
+            )}
+          </Popup>
+        </Marker>
 
         {/* Destination marker */}
-        <DestinationMarker
-          position={destinationMarker.position}
-          label={destinationMarker.label}
-          subtitle={destinationMarker.subtitle}
-        />
+        <Marker
+          position={[destinationMarker.position.lat, destinationMarker.position.lng]}
+          icon={destinationIcon}
+        >
+          <Popup>
+            <div className="text-sm font-semibold">{destinationMarker.label}</div>
+            {destinationMarker.subtitle && (
+              <div className="text-xs text-slate-500">{destinationMarker.subtitle}</div>
+            )}
+          </Popup>
+        </Marker>
 
-        {/* Landmark markers (street signs, reference points) */}
+        {/* Landmark markers */}
         {landmarkMarkers.map((marker) => (
-          <LandmarkMarker
+          <Marker
             key={marker.id}
-            position={marker.position}
-            label={marker.label}
-            type={
-              (marker.icon as "street" | "reference" | "warning" | "construction") ||
-              "street"
-            }
-          />
+            position={[marker.position.lat, marker.position.lng]}
+            icon={landmarkIcon}
+          >
+            <Popup>
+              <div className="text-xs font-medium">{marker.label}</div>
+            </Popup>
+          </Marker>
         ))}
-      </Map>
+      </MapContainer>
 
       {/* Floating legend */}
-      <div className="absolute bottom-3 left-3 z-10">
+      <div className="absolute bottom-3 left-3 z-[1000]">
         <MapLegend />
       </div>
 
-      {/* Route info floating card (top-center) */}
+      {/* Route info floating card */}
       {routeInfo && (
-        <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 animate-fade-in">
+        <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-[1000] animate-fade-in">
           <div className="flex items-center gap-3 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-primary-500" />
@@ -235,87 +204,16 @@ const MapContent: React.FC<
           </div>
         </div>
       )}
-    </div>
-  );
-};
 
-// ==========================================
-// Main component with APIProvider wrapper
-// ==========================================
-const InteractiveMap: React.FC<InteractiveMapProps> = ({
-  height = 450,
-  className,
-  mapId,
-  ...contentProps
-}) => {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Load API key from backend
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const config = await getMapConfig();
-        if (config.apiKey) {
-          setApiKey(config.apiKey);
-        } else {
-          setError("Chave do Google Maps nao configurada");
-        }
-      } catch {
-        setError("Erro ao carregar configuracao do mapa");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadConfig();
-  }, []);
-
-  if (loading) {
-    return (
-      <div
-        className={clsx(
-          "flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-xl",
-          className
-        )}
-        style={{ height }}
-      >
-        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Carregando mapa...</span>
+      {/* Loading overlay */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-900/50 z-[1001]">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Calculando rota...</span>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  if (error || !apiKey) {
-    return (
-      <div
-        className={clsx(
-          "flex items-center justify-center bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/30",
-          className
-        )}
-        style={{ height: Math.min(height, 200) }}
-      >
-        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          {error || "Mapa indisponivel"}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={clsx(
-        "rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md",
-        className
       )}
-      style={{ height }}
-    >
-      <APIProvider apiKey={apiKey}>
-        <MapContent mapId={mapId} {...contentProps} />
-      </APIProvider>
     </div>
   );
 };
