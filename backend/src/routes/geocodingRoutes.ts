@@ -15,7 +15,7 @@ router.post("/geocode", verifyToken, async (req: AuthRequest, res: Response) => 
     if (!parsed.success) {
       res.status(400).json({
         success: false,
-        message: parsed.error.errors.map(e => e.message).join(", "),
+        message: parsed.error.issues.map((e: { message: string }) => e.message).join(", "),
       });
       return;
     }
@@ -42,7 +42,7 @@ router.post("/directions", verifyToken, async (req: AuthRequest, res: Response) 
     if (!parsed.success) {
       res.status(400).json({
         success: false,
-        message: parsed.error.errors.map(e => e.message).join(", "),
+        message: parsed.error.issues.map((e: { message: string }) => e.message).join(", "),
       });
       return;
     }
@@ -69,7 +69,7 @@ router.post("/reverse", verifyToken, async (req: AuthRequest, res: Response) => 
     if (!parsed.success) {
       res.status(400).json({
         success: false,
-        message: parsed.error.errors.map(e => e.message).join(", "),
+        message: parsed.error.issues.map((e: { message: string }) => e.message).join(", "),
       });
       return;
     }
@@ -96,7 +96,7 @@ router.post("/route-alerts", verifyToken, async (req: AuthRequest, res: Response
     if (!parsed.success) {
       res.status(400).json({
         success: false,
-        message: parsed.error.errors.map(e => e.message).join(", "),
+        message: parsed.error.issues.map((e: { message: string }) => e.message).join(", "),
       });
       return;
     }
