@@ -53,3 +53,6 @@ export type {
 
 // Company types
 export * from "./company";
+
+// Storefront types
+export * from "./storefront";
