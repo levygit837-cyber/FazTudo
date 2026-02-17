@@ -87,4 +87,20 @@ router.post(
   serviceController.rescheduleOrder,
 );
 
+// Aceitar reagendamento proposto (apenas cliente)
+router.post(
+  "/orders/:id/reschedule/accept",
+  verifyToken,
+  requireRole("CLIENT", "ADMIN"),
+  serviceController.acceptReschedule,
+);
+
+// Recusar reagendamento proposto (apenas cliente)
+router.post(
+  "/orders/:id/reschedule/reject",
+  verifyToken,
+  requireRole("CLIENT", "ADMIN"),
+  serviceController.rejectReschedule,
+);
+
 export default router;

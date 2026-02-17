@@ -531,6 +531,26 @@ export const rescheduleOrder = async (orderId: number, data: {
   return extractData(response);
 };
 
+/**
+ * Aceita proposta de reagendamento (apenas cliente)
+ */
+export const acceptReschedule = async (orderId: number): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/reschedule/accept`,
+  );
+  return extractData(response);
+};
+
+/**
+ * Recusa proposta de reagendamento (apenas cliente)
+ */
+export const rejectReschedule = async (orderId: number): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/reschedule/reject`,
+  );
+  return extractData(response);
+};
+
 // ==================== SERVIÇOS - DISPUTES ====================
 
 /**
@@ -729,4 +749,8 @@ export default {
   updateProfessionalLocation,
   getProfessionalLocation,
   clearProfessionalLocation,
+  // Reschedule
+  rescheduleOrder,
+  acceptReschedule,
+  rejectReschedule,
 };

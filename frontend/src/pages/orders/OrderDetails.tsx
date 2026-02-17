@@ -22,6 +22,7 @@ import { useToast } from "../../context/ToastContext";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import RescheduleModal from "../../components/orders/RescheduleModal";
 import DisputeModal from "../../components/orders/DisputeModal";
+import RescheduleApprovalBanner from "../../components/orders/RescheduleApprovalBanner";
 import { WazeMap } from "../../components/map";
 import ProposalComparator from "../../components/orders/ProposalComparator";
 import ReviewCTA from "../../components/orders/ReviewCTA";
@@ -364,6 +365,16 @@ const OrderDetails: React.FC = () => {
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
           {error}
         </div>
+      )}
+
+      {/* Reschedule approval (client only) */}
+      {isOrderClient && order.rescheduleStatus === "PENDING" && order.rescheduleProposedDate && (
+        <RescheduleApprovalBanner
+          orderId={order.id}
+          proposedDate={order.rescheduleProposedDate}
+          reason={order.rescheduleReason}
+          onResolved={loadOrder}
+        />
       )}
 
       {/* CHECKOUT STEPPER (pre-pagamento) */}

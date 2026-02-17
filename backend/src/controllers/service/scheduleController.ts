@@ -263,31 +263,153 @@ export const rescheduleOrder = async (
       return;
     }
 
+    // If professional reschedules, propose to client (don't apply immediately)
+    if (isProfessional) {
+      await prisma.serviceOrder.update({
+        where: { id: orderId },
+        data: {
+          rescheduleProposedDate: new Date(newDate),
+          rescheduleReason: reason || null,
+          rescheduleStatus: "PENDING",
+          rescheduleRequestedBy: req.user.id,
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: serviceOrder.clientId,
+          type: "SYSTEM_ALERT",
+          title: "Solicitação de reagendamento",
+          message: `O profissional propôs reagendar o pedido "${serviceOrder.title}" para ${new Date(newDate).toLocaleDateString("pt-BR")}${reason ? `. Motivo: ${reason}` : ""}. Acesse o pedido para aceitar ou recusar.`,
+          serviceOrderId: orderId,
+          metadata: JSON.stringify({ newDate, reason, requestedBy: req.user.id }),
+        },
+      });
+
+      res.status(200).json(successResponse(null, "Reschedule proposal sent to client"));
+    } else {
+      // Client reschedules directly
+      const updatedOrder = await prisma.serviceOrder.update({
+        where: { id: orderId },
+        data: { scheduledDate: new Date(newDate) },
+      });
+
+      if (serviceOrder.professionalId) {
+        await prisma.notification.create({
+          data: {
+            userId: serviceOrder.professionalId,
+            type: "SYSTEM_ALERT",
+            title: "Pedido reagendado",
+            message: `O cliente reagendou o pedido "${serviceOrder.title}" para ${new Date(newDate).toLocaleDateString("pt-BR")}${reason ? `. Motivo: ${reason}` : ""}`,
+            serviceOrderId: orderId,
+            metadata: JSON.stringify({ newDate, reason, rescheduledBy: req.user.id }),
+          },
+        });
+      }
+
+      res.status(200).json(successResponse({ serviceOrder: updatedOrder }, "Order rescheduled"));
+    }
+  } catch (error) {
+    log.error({ err: error }, "Reschedule order error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// POST /api/services/orders/:id/reschedule/accept
+export const acceptReschedule = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) { res.status(401).json(errorResponse("Not authenticated")); return; }
+    const orderId = parseInt(String(req.params.id), 10);
+    if (isNaN(orderId)) { res.status(400).json(errorResponse("Invalid order ID")); return; }
+
+    const serviceOrder = await prisma.serviceOrder.findUnique({ where: { id: orderId } });
+    if (!serviceOrder) { res.status(404).json(errorResponse("Order not found")); return; }
+
+    if (serviceOrder.clientId !== req.user.id) {
+      res.status(403).json(errorResponse("Only the client can accept reschedule proposals"));
+      return;
+    }
+
+    if (serviceOrder.rescheduleStatus !== "PENDING" || !serviceOrder.rescheduleProposedDate) {
+      res.status(400).json(errorResponse("No pending reschedule proposal"));
+      return;
+    }
+
     const updatedOrder = await prisma.serviceOrder.update({
       where: { id: orderId },
       data: {
-        scheduledDate: new Date(newDate),
+        scheduledDate: serviceOrder.rescheduleProposedDate,
+        rescheduleProposedDate: null,
+        rescheduleReason: null,
+        rescheduleStatus: null,
+        rescheduleRequestedBy: null,
       },
     });
 
-    // Notificar a outra parte
-    const notifyUserId = isClient ? serviceOrder.professionalId : serviceOrder.clientId;
-    if (notifyUserId) {
+    if (serviceOrder.professionalId) {
       await prisma.notification.create({
         data: {
-          userId: notifyUserId,
+          userId: serviceOrder.professionalId,
           type: "SYSTEM_ALERT",
-          title: "Pedido reagendado",
-          message: `O pedido "${serviceOrder.title}" foi reagendado para ${new Date(newDate).toLocaleDateString("pt-BR")}${reason ? `. Motivo: ${reason}` : ""}`,
+          title: "Reagendamento aceito",
+          message: `O cliente aceitou o novo horário para "${serviceOrder.title}".`,
           serviceOrderId: orderId,
-          metadata: { newDate, reason, rescheduledBy: req.user.id },
         },
       });
     }
 
-    res.status(200).json(successResponse({ serviceOrder: updatedOrder }, "Order rescheduled"));
+    res.status(200).json(successResponse({ serviceOrder: updatedOrder }, "Reschedule accepted"));
   } catch (error) {
-    log.error({ err: error }, "Reschedule order error");
+    log.error({ err: error }, "Accept reschedule error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// POST /api/services/orders/:id/reschedule/reject
+export const rejectReschedule = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) { res.status(401).json(errorResponse("Not authenticated")); return; }
+    const orderId = parseInt(String(req.params.id), 10);
+    if (isNaN(orderId)) { res.status(400).json(errorResponse("Invalid order ID")); return; }
+
+    const serviceOrder = await prisma.serviceOrder.findUnique({ where: { id: orderId } });
+    if (!serviceOrder) { res.status(404).json(errorResponse("Order not found")); return; }
+
+    if (serviceOrder.clientId !== req.user.id) {
+      res.status(403).json(errorResponse("Only the client can reject reschedule proposals"));
+      return;
+    }
+
+    if (serviceOrder.rescheduleStatus !== "PENDING") {
+      res.status(400).json(errorResponse("No pending reschedule proposal"));
+      return;
+    }
+
+    await prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: {
+        rescheduleProposedDate: null,
+        rescheduleReason: null,
+        rescheduleStatus: null,
+        rescheduleRequestedBy: null,
+      },
+    });
+
+    if (serviceOrder.professionalId) {
+      await prisma.notification.create({
+        data: {
+          userId: serviceOrder.professionalId,
+          type: "SYSTEM_ALERT",
+          title: "Reagendamento recusado",
+          message: `O cliente recusou o reagendamento para "${serviceOrder.title}". O horário original será mantido.`,
+          serviceOrderId: orderId,
+        },
+      });
+    }
+
+    res.status(200).json(successResponse(null, "Reschedule rejected"));
+  } catch (error) {
+    log.error({ err: error }, "Reject reschedule error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

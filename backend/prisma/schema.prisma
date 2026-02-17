@@ -240,6 +240,12 @@ model ServiceOrder {
   scheduleBlock ScheduleBlock?
   disputes      Dispute[]
 
+  // Reschedule approval flow
+  rescheduleProposedDate DateTime?
+  rescheduleReason       String?
+  rescheduleStatus       String?    // "PENDING", null (cleared after accept/reject)
+  rescheduleRequestedBy  Int?       // userId who requested
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -101,6 +101,12 @@ export interface ServiceOrder {
   clientConfirmedAt?: string;
   professionalConfirmedAt?: string;
 
+  // Reschedule approval flow
+  rescheduleProposedDate?: string;
+  rescheduleReason?: string;
+  rescheduleStatus?: string;
+  rescheduleRequestedBy?: number;
+
   addressId?: number;
   addressNotes?: string;
 
