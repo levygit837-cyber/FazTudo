@@ -40,7 +40,7 @@ export const updateLocation = async (
       return;
     }
 
-    const orderId = parseInt(req.params.id);
+    const orderId = parseInt(String(req.params.id), 10);
     if (isNaN(orderId)) {
       res.status(400).json(errorResponse("Invalid order ID"));
       return;
@@ -101,7 +101,7 @@ export const getLocation = async (
       return;
     }
 
-    const orderId = parseInt(req.params.id);
+    const orderId = parseInt(String(req.params.id), 10);
     if (isNaN(orderId)) {
       res.status(400).json(errorResponse("Invalid order ID"));
       return;
@@ -151,7 +151,7 @@ export const startRoute = async (
       return;
     }
 
-    const orderId = parseInt(req.params.id);
+    const orderId = parseInt(String(req.params.id), 10);
     if (isNaN(orderId)) {
       res.status(400).json(errorResponse("Invalid order ID"));
       return;
@@ -208,7 +208,7 @@ export const clearLocation = async (
       return;
     }
 
-    const orderId = parseInt(req.params.id);
+    const orderId = parseInt(String(req.params.id), 10);
     if (isNaN(orderId)) {
       res.status(400).json(errorResponse("Invalid order ID"));
       return;
