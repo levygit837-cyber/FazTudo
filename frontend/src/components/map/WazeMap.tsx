@@ -25,15 +25,10 @@ import {
 import { createWazeAvatarIcon, createWazeDestinationIcon, createAlertIcon } from "./wazeIcons";
 import WazeInfoBar from "./WazeInfoBar";
 import WazeControls from "./WazeControls";
+import { TILES, ZOOM, ANIMATION, INTERVALS, TRAIL, ROUTE_STYLE, FALLBACK_COORDS, FIT_BOUNDS_PADDING } from "./wazeConstants";
 import { useToast } from "../../context/ToastContext";
 import { useTheme } from "../../context/ThemeContext";
 import type { WazeMapProps, RoadAlert } from "../../types";
-
-// Tile URLs
-const TILES = {
-  light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-};
 
 // Camera controller sub-component
 const CameraController: React.FC<{
@@ -46,10 +41,10 @@ const CameraController: React.FC<{
 
   useEffect(() => {
     if (followMode && target && !hasFlownRef.current) {
-      map.flyTo(target, 16, { duration: 2 });
+      map.flyTo(target, ZOOM.FLY_TO, { duration: ANIMATION.FLY_DURATION });
       hasFlownRef.current = true;
     } else if (followMode && target) {
-      map.panTo(target, { animate: true, duration: 0.8 });
+      map.panTo(target, { animate: true, duration: ANIMATION.PAN_DURATION });
     }
   }, [map, target, followMode]);
 
@@ -57,7 +52,7 @@ const CameraController: React.FC<{
   useEffect(() => {
     if (!followMode && fitPoints.length >= 2) {
       const bounds = L.latLngBounds(fitPoints);
-      map.fitBounds(bounds, { padding: [60, 60] });
+      map.fitBounds(bounds, { padding: FIT_BOUNDS_PADDING });
     }
   }, [map, fitPoints, followMode]);
 
@@ -80,7 +75,7 @@ const MapController = React.forwardRef<MapControllerHandle, MapControllerProps>(
   React.useImperativeHandle(ref, () => ({
     zoomIn: () => map.zoomIn(),
     zoomOut: () => map.zoomOut(),
-    center: (pos: [number, number]) => map.flyTo(pos, map.getZoom(), { duration: 1 }),
+    center: (pos: [number, number]) => map.flyTo(pos, map.getZoom(), { duration: ANIMATION.CENTER_DURATION }),
   }));
 
   return null;
@@ -128,11 +123,11 @@ const WazeMap: React.FC<WazeMapProps> = ({
         if (result) {
           setDestination({ lat: result.lat, lng: result.lng });
         } else {
-          setDestination({ lat: -6.3629, lng: -39.2943 }); // Fallback: Iguatu, CE
+          setDestination(FALLBACK_COORDS); // Fallback: Iguatu, CE
         }
       } catch {
         toast.error("Erro", "Não foi possível localizar o endereço de destino.");
-        setDestination({ lat: -6.3629, lng: -39.2943 }); // Fallback: Iguatu, CE
+        setDestination(FALLBACK_COORDS); // Fallback: Iguatu, CE
       } finally {
         setGeocodingDest(false);
       }
@@ -158,7 +153,7 @@ const WazeMap: React.FC<WazeMapProps> = ({
   const geo = useGeolocation({
     watchPosition: isProfessional && routeStarted,
     enableHighAccuracy: true,
-    updateInterval: 5000,
+    updateInterval: INTERVALS.LOCATION_UPDATE,
     onUpdate: isProfessional ? handleLocationUpdate : undefined,
   });
 
@@ -178,7 +173,7 @@ const WazeMap: React.FC<WazeMapProps> = ({
     };
 
     pollLocation();
-    pollIntervalRef.current = setInterval(pollLocation, 5000);
+    pollIntervalRef.current = setInterval(pollLocation, INTERVALS.LOCATION_POLL);
 
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -279,8 +274,8 @@ const WazeMap: React.FC<WazeMapProps> = ({
 
   // Remaining polyline (from progress index onward)
   const remainingPolyline = routePolyline.slice(progressIndex);
-  // Fading polyline (last 5 points before progress, with opacity)
-  const fadingPolyline = routePolyline.slice(Math.max(0, progressIndex - 5), progressIndex + 1);
+  // Fading polyline (trail behind professional, with opacity)
+  const fadingPolyline = routePolyline.slice(Math.max(0, progressIndex - TRAIL.FADING_POINTS), progressIndex + 1);
 
   // Loading states
   if (isProfessional && geo.loading && !geo.latitude) {
@@ -323,7 +318,7 @@ const WazeMap: React.FC<WazeMapProps> = ({
       <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg" style={{ height: "420px" }}>
         <MapContainer
           center={[destination.lat, destination.lng]}
-          zoom={13}
+          zoom={ZOOM.DEFAULT}
           scrollWheelZoom={true}
           style={{ width: "100%", height: "100%" }}
           zoomControl={false}
@@ -346,12 +341,7 @@ const WazeMap: React.FC<WazeMapProps> = ({
           {fadingPolyline.length > 1 && routeStarted && (
             <Polyline
               positions={fadingPolyline}
-              pathOptions={{
-                color: "#93c5fd",
-                weight: 5,
-                opacity: 0.3,
-                dashArray: "4 8",
-              }}
+              pathOptions={ROUTE_STYLE.FADING}
             />
           )}
 
@@ -359,11 +349,7 @@ const WazeMap: React.FC<WazeMapProps> = ({
           {remainingPolyline.length > 1 && (
             <Polyline
               positions={remainingPolyline}
-              pathOptions={{
-                color: "#2563eb",
-                weight: 5,
-                opacity: 0.85,
-              }}
+              pathOptions={ROUTE_STYLE.REMAINING}
             />
           )}
 
