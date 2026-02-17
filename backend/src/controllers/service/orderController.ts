@@ -706,7 +706,7 @@ export const startServiceOrder = async (
   }
 };
 
-// Completar serviço (apenas profissional)
+// Cliente confirma que o serviço foi realizado
 export const completeServiceOrder = async (
   req: AuthRequest,
   res: Response,
@@ -717,10 +717,10 @@ export const completeServiceOrder = async (
       return;
     }
 
-    if (req.user.role !== "PROFESSIONAL" && req.user.role !== "ADMIN") {
+    if (req.user.role !== "CLIENT" && req.user.role !== "ADMIN") {
       res
         .status(403)
-        .json(errorResponse("Only professionals can complete service orders"));
+        .json(errorResponse("Only clients can submit service completion"));
       return;
     }
 
@@ -748,11 +748,10 @@ export const completeServiceOrder = async (
       return;
     }
 
-    // Verificar permissão (profissional designado ou admin)
-    if (
-      serviceOrder.professionalId !== req.user.id &&
-      req.user.role !== "ADMIN"
-    ) {
+    // Verificar permissão (cliente do pedido ou admin)
+    const isClient = serviceOrder.clientId === req.user.id;
+    const isAdmin = req.user.role === "ADMIN";
+    if (!isClient && !isAdmin) {
       res
         .status(403)
         .json(
@@ -761,7 +760,7 @@ export const completeServiceOrder = async (
       return;
     }
 
-    // Verificar se pedido pode ser marcado como entregue
+    // Verificar se pedido pode ser marcado como concluído
     if (serviceOrder.status !== "IN_PROGRESS") {
       res
         .status(400)
@@ -784,12 +783,12 @@ export const completeServiceOrder = async (
       return;
     }
 
-    // Atualizar status para aguardar confirmação do cliente
+    // Atualizar status para aguardar confirmação do profissional
     const updatedOrder = await prisma.serviceOrder.update({
       where: { id: orderId },
       data: {
-        status: "AWAITING_CLIENT_CONFIRMATION",
-        professionalConfirmedAt: new Date(),
+        status: "AWAITING_PROFESSIONAL_CONFIRMATION",
+        clientConfirmedAt: new Date(),
       },
       include: {
         client: {
@@ -802,15 +801,17 @@ export const completeServiceOrder = async (
       },
     });
 
-    // Criar notificação para o cliente
-    await createNotification(
-      serviceOrder.clientId,
-      NotificationType.ORDER_COMPLETED,
-      "🔔 Serviço concluído pelo profissional",
-      `O profissional ${req.user.name} marcou o serviço "${serviceOrder.title}" como concluído. Confirme a conclusão para liberar o pagamento.`,
-      orderId,
-      { professionalId: req.user.id, professionalName: req.user.name, professionalConfirmedAt: new Date().toISOString() },
-    );
+    // Criar notificação para o profissional
+    if (serviceOrder.professionalId) {
+      await createNotification(
+        serviceOrder.professionalId,
+        NotificationType.ORDER_COMPLETED,
+        "Cliente confirmou o serviço",
+        `O cliente confirmou que o serviço "${serviceOrder.title}" foi realizado. Confirme para liberar o pagamento.`,
+        orderId,
+        { clientId: req.user.id, clientName: req.user.name },
+      );
+    }
 
     res
       .status(200)
@@ -819,13 +820,13 @@ export const completeServiceOrder = async (
           {
             serviceOrder: updatedOrder,
             confirmations: {
-              professionalConfirmed: true,
-              clientConfirmed: false,
-              professionalConfirmedAt: updatedOrder.professionalConfirmedAt?.toISOString() || null,
-              clientConfirmedAt: null,
+              professionalConfirmed: false,
+              clientConfirmed: true,
+              professionalConfirmedAt: null,
+              clientConfirmedAt: updatedOrder.clientConfirmedAt?.toISOString() || null,
             },
           },
-          "Service marked as delivered. Waiting for client confirmation.",
+          "Client confirmed service completion. Waiting for professional confirmation.",
         ),
       );
   } catch (error) {

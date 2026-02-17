@@ -52,23 +52,17 @@ router.post(
   serviceController.startServiceOrder,
 );
 
-// Profissional marca como entregue (aguardando confirmacao do cliente)
+// Cliente confirma que o serviço foi realizado (aguardando confirmacao do profissional)
 router.post(
   "/orders/:id/submit-completion",
   verifyToken,
-  requireRole("PROFESSIONAL", "ADMIN"),
+  requireRole("CLIENT", "ADMIN"),
   requireVerified,
   serviceController.completeServiceOrder,
 );
 
-// Cliente confirma conclusao do servico
-router.post(
-  "/orders/:id/confirm-completion",
-  verifyToken,
-  requireRole("CLIENT", "ADMIN"),
-  requireVerified,
-  serviceController.confirmServiceOrderCompletion,
-);
+// REMOVED: confirm-completion route — no longer needed.
+// New flow: Client → submit-completion → AWAITING_PROFESSIONAL_CONFIRMATION → confirm-professional → COMPLETED
 
 // Profissional confirma conclusao (apos cliente ja ter confirmado)
 router.post(
