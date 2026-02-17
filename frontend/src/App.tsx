@@ -60,6 +60,15 @@ import CompanyAnalytics from "./pages/company/Analytics";
 import ProfessionalStorefrontPage from "./pages/ProfessionalStorefront";
 import CompanyVerifications from "./pages/admin/CompanyVerifications";
 import { UserRole } from "./types";
+import { useSessionTracking } from "./hooks/useSessionTracking";
+
+/**
+ * Invisible component that runs session tracking inside the Router context
+ */
+const SessionTracker: React.FC = () => {
+  useSessionTracking();
+  return null;
+};
 
 const NotFound = () => (
   <div className="container mx-auto px-4 py-12 text-center">
@@ -81,6 +90,7 @@ const App: React.FC = () => {
       <ThemeProvider>
         <ToastProvider>
         <AuthProvider>
+        <SessionTracker />
         <Routes>
             <Route path="/" element={<LandingPageUser />} />
             <Route path="/profissionais" element={<LandingPageProfessional />} />
