@@ -219,6 +219,16 @@ export const getService = async (
               },
             },
             certifications: true,
+            addresses: {
+              take: 1,
+              select: {
+                city: true,
+                neighborhood: true,
+                state: true,
+                latitude: true,
+                longitude: true,
+              },
+            },
           },
         },
         category: {

@@ -69,6 +69,13 @@ export interface ServiceListingWithProfessional extends Omit<
     totalReviews: number;
     certifications?: ProfessionalCertification[];
     categories?: ProfessionalCategoryInfo[];
+    addresses?: {
+      city: string;
+      neighborhood: string;
+      state: string;
+      latitude?: number;
+      longitude?: number;
+    }[];
   };
   category: {
     id: number;

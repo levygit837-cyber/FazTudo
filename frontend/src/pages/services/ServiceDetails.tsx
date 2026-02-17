@@ -15,6 +15,7 @@ import {
   Maximize2,
   Award,
   Briefcase,
+  MapPin,
 } from "lucide-react";
 import { Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -29,6 +30,7 @@ import { formatCurrency, formatRating, formatReviewCount } from "../../utils/for
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { useFavorites } from "../../hooks/useFavorites";
+import ProfessionalLocationMap from "../../components/map/ProfessionalLocationMap";
 
 const ServiceDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -502,6 +504,40 @@ const ServiceDetails: React.FC = () => {
                 Enviar mensagem
               </button>
             </div>
+
+            {/* Localizacao do profissional */}
+            {service.professional.addresses?.[0] && (
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary-500" />
+                  Regiao de atuacao
+                </h3>
+                {service.professional.addresses[0].latitude &&
+                service.professional.addresses[0].longitude ? (
+                  <ProfessionalLocationMap
+                    latitude={service.professional.addresses[0].latitude}
+                    longitude={service.professional.addresses[0].longitude}
+                    label={service.professional.name}
+                    neighborhood={service.professional.addresses[0].neighborhood}
+                    city={service.professional.addresses[0].city}
+                    state={service.professional.addresses[0].state}
+                  />
+                ) : (
+                  <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-primary-500" />
+                    <span>
+                      {[
+                        service.professional.addresses[0].neighborhood,
+                        service.professional.addresses[0].city,
+                        service.professional.addresses[0].state,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Disponibilidade do profissional */}
             <div className="card">
