@@ -595,3 +595,88 @@ export const deleteServiceListing = async (
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
+
+/** GET /api/services/professional/:userId/storefront — public professional storefront */
+export const getProfessionalStorefront = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.params.userId;
+    const professionalId = parseInt(String(userId ?? ""), 10);
+
+    if (isNaN(professionalId)) {
+      res.status(400).json({ success: false, message: "ID inválido" });
+      return;
+    }
+
+    const professional = await prisma.user.findUnique({
+      where: { id: professionalId },
+      select: {
+        id: true,
+        name: true,
+        bio: true,
+        profileImage: true,
+        role: true,
+        isVerified: true,
+        ratingAverage: true,
+        totalReviews: true,
+        createdAt: true,
+        categories: {
+          include: { category: { select: { id: true, name: true, icon: true } } },
+        },
+        certifications: {
+          select: { id: true, title: true, issuer: true, issueDate: true },
+          take: 5,
+        },
+        reviewsReceived: {
+          where: { isProfessional: true },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: {
+            id: true, rating: true, comment: true, createdAt: true,
+            author: { select: { id: true, name: true, profileImage: true } },
+          },
+        },
+        serviceListings: {
+          where: { isAvailable: true },
+          include: { category: { select: { id: true, name: true, icon: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        },
+      },
+    });
+
+    if (!professional) {
+      res.status(404).json({ success: false, message: "Profissional não encontrado" });
+      return;
+    }
+
+    if (professional.role !== "PROFESSIONAL") {
+      res.status(400).json({ success: false, message: "Usuário não é um profissional" });
+      return;
+    }
+
+    const completedOrders = await prisma.serviceOrder.count({
+      where: { professionalId, status: "COMPLETED" },
+    });
+
+    res.json({
+      success: true,
+      message: "Vitrine obtida",
+      data: {
+        user: professional,
+        services: professional.serviceListings,
+        stats: {
+          completedOrders,
+          ratingAverage: professional.ratingAverage,
+          totalReviews: professional.totalReviews,
+        },
+        recentReviews: professional.reviewsReceived,
+      },
+    });
+  } catch (err) {
+    log.error({ err }, "getProfessionalStorefront error");
+    throw err;
+  }
+};
