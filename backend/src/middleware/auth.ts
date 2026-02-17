@@ -112,18 +112,18 @@ export const verifyToken = async (
 
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      res.status(401).json({
-        success: false,
-        message: "Token inválido ou expirado",
-      });
-      return;
-    }
-
     if (error instanceof jwt.TokenExpiredError) {
       res.status(401).json({
         success: false,
         message: "Token expirado",
+      });
+      return;
+    }
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({
+        success: false,
+        message: "Token inválido",
       });
       return;
     }

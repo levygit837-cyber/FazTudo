@@ -164,6 +164,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       tokenVersion: user.tokenVersion,
     });
 
+    // Generate refresh token
+    const refreshToken = generateRefreshToken({
+      id: user.id,
+      email: user.email,
+    });
+
     // Generate email verification token
     const verifyToken = crypto.randomBytes(32).toString("hex");
     const hashedVerifyToken = crypto
@@ -171,12 +177,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       .update(verifyToken)
       .digest("hex");
 
-    // Save hashed token + 24h expiration
+    // Save hashed token + 24h expiration + refresh token (single DB write)
     await prisma.user.update({
       where: { id: user.id },
       data: {
         emailVerifyToken: hashedVerifyToken,
         emailVerifyExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        refreshToken,
       },
     });
 
@@ -193,6 +200,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         {
           user,
           token,
+          refreshToken,
         },
         "User registered successfully",
       ),
@@ -459,6 +467,7 @@ export const changePassword = async (
       data: {
         password: hashedPassword,
         tokenVersion: { increment: 1 },
+        refreshToken: null, // Revoke refresh token on password change
       },
     });
 

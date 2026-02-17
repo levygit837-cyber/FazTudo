@@ -53,6 +53,7 @@ export interface AuthResponse {
   data: {
     user: User;
     token: string;
+    refreshToken?: string;
   };
 }
 
@@ -179,8 +180,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Store in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      if ((response.data.data as any).refreshToken) {
-        localStorage.setItem("refreshToken", (response.data.data as any).refreshToken);
+      if (response.data.data.refreshToken) {
+        localStorage.setItem("refreshToken", response.data.data.refreshToken);
       }
 
       setState({
@@ -228,8 +229,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Store in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      if ((response.data.data as any).refreshToken) {
-        localStorage.setItem("refreshToken", (response.data.data as any).refreshToken);
+      if (response.data.data.refreshToken) {
+        localStorage.setItem("refreshToken", response.data.data.refreshToken);
       }
 
       setState({
