@@ -34,6 +34,7 @@ const ProfessionalCalendar: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayDetail, setDayDetail] = useState<CalendarDayDetail | null>(null);
   const [dayLoading, setDayLoading] = useState(false);
+  const [dayError, setDayError] = useState<string | null>(null);
   const pendingRequestRef = useRef<string | null>(null);
 
   const now = new Date();
@@ -69,6 +70,7 @@ const ProfessionalCalendar: React.FC = () => {
 
     const cachedDetail = DAY_DETAIL_CACHE.get(day.date);
     if (cachedDetail) {
+      setDayError(null);
       setSelectedDay(day.date);
       setDayDetail(cachedDetail);
       return;
@@ -77,6 +79,7 @@ const ProfessionalCalendar: React.FC = () => {
     const requestId = day.date;
     pendingRequestRef.current = requestId;
 
+    setDayError(null);
     setSelectedDay(day.date);
     setDayLoading(true);
 
@@ -90,6 +93,7 @@ const ProfessionalCalendar: React.FC = () => {
       if (pendingRequestRef.current === requestId) {
         console.error("Erro ao carregar detalhe do dia:", error);
         setDayDetail(null);
+        setDayError("Não foi possível carregar os detalhes deste dia.");
       }
     } finally {
       if (pendingRequestRef.current === requestId) {
@@ -256,6 +260,17 @@ const ProfessionalCalendar: React.FC = () => {
           ) : dayLoading && !dayDetail ? (
             <div className="flex items-center justify-center py-12">
               <div className="w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : dayError ? (
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <XCircle className="w-12 h-12 mb-3 text-red-400" />
+              <p className="text-sm text-red-500">{dayError}</p>
+              <button
+                onClick={() => selectedDay && handleDayClick({ date: selectedDay } as CalendarDay)}
+                className="mt-3 text-xs text-primary-600 hover:underline"
+              >
+                Tentar novamente
+              </button>
             </div>
           ) : dayDetail ? (
             <div className="relative">
