@@ -132,8 +132,9 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
       await cancelOrder(orderId, "Recusado pelo profissional");
       toast.info("Pedido recusado");
       loadOrders();
-    } catch {
-      toast.error("Erro ao recusar pedido");
+    } catch (err: any) {
+      const message = err?.response?.data?.message || "Erro ao recusar pedido";
+      toast.error(message);
     }
   };
 

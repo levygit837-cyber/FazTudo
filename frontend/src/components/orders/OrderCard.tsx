@@ -55,7 +55,7 @@ const statusBorderColors: Record<string, string> = {
   [ServiceOrderStatus.AWAITING_CLIENT_CONFIRMATION]: "border-l-purple-400",
   [ServiceOrderStatus.AWAITING_PROFESSIONAL_CONFIRMATION]: "border-l-indigo-400",
   [ServiceOrderStatus.COMPLETED]: "border-l-emerald-500",
-  [ServiceOrderStatus.CANCELLED]: "border-l-slate-400",
+  [ServiceOrderStatus.CANCELLED]: "border-l-red-500",
   [ServiceOrderStatus.EXPIRED]: "border-l-red-400",
   [ServiceOrderStatus.DISPUTED]: "border-l-red-500",
 };
@@ -95,8 +95,8 @@ const statusConfig: Record<
     icon: <CheckCircle className="w-3.5 h-3.5" />,
   },
   [ServiceOrderStatus.CANCELLED]: {
-    color: "text-slate-600 dark:text-slate-400",
-    bgColor: "bg-slate-100 dark:bg-slate-800",
+    color: "text-red-600 dark:text-red-400",
+    bgColor: "bg-red-100 dark:bg-red-900/30",
     icon: <XCircle className="w-3.5 h-3.5" />,
   },
   [ServiceOrderStatus.EXPIRED]: {
