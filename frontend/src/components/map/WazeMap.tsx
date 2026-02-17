@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { useGeolocation } from "../../hooks/useGeolocation";
+import { useRouteTracking } from "../../hooks/useRouteTracking";
 import {
   startRoute as apiStartRoute,
   updateProfessionalLocation,
@@ -18,17 +19,14 @@ import {
 } from "../../services/serviceService";
 import {
   geocode,
-  getDirections,
-  decodePolyline,
-  getRouteAlerts,
 } from "../../services/geocodingService";
 import { createWazeAvatarIcon, createWazeDestinationIcon, createAlertIcon } from "./wazeIcons";
 import WazeInfoBar from "./WazeInfoBar";
 import WazeControls from "./WazeControls";
-import { TILES, ZOOM, ANIMATION, INTERVALS, TRAIL, ROUTE_STYLE, FALLBACK_COORDS, FIT_BOUNDS_PADDING } from "./wazeConstants";
+import { TILES, ZOOM, ANIMATION, INTERVALS, ROUTE_STYLE, FALLBACK_COORDS, FIT_BOUNDS_PADDING } from "./wazeConstants";
 import { useToast } from "../../context/ToastContext";
 import { useTheme } from "../../context/ThemeContext";
-import type { WazeMapProps, RoadAlert } from "../../types";
+import type { WazeMapProps } from "../../types";
 
 // Camera controller sub-component
 const CameraController: React.FC<{
@@ -94,8 +92,6 @@ const WazeMap: React.FC<WazeMapProps> = ({
 
   // State
   const [routeStarted, setRouteStarted] = useState(false);
-  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
-  const [routePolyline, setRoutePolyline] = useState<Array<[number, number]>>([]);
   const [professionalPos, setProfessionalPos] = useState<{ lat: number; lng: number; bearing: number | null } | null>(null);
   const [startingRoute, setStartingRoute] = useState(false);
   const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(
@@ -104,9 +100,7 @@ const WazeMap: React.FC<WazeMapProps> = ({
       : null
   );
   const [geocodingDest, setGeocodingDest] = useState(false);
-  const [alerts, setAlerts] = useState<RoadAlert[]>([]);
   const [alertsEnabled, setAlertsEnabled] = useState(true);
-  const [progressIndex, setProgressIndex] = useState(0);
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mapControllerRef = useRef<MapControllerHandle | null>(null);
@@ -187,50 +181,11 @@ const WazeMap: React.FC<WazeMapProps> = ({
       : null
     : professionalPos;
 
-  // Fetch directions
-  useEffect(() => {
-    if (!origin || !destination) return;
-
-    const fetchDirections = async () => {
-      try {
-        const result = await getDirections(origin, destination);
-        if (result) {
-          setRouteInfo({ distance: result.distance, duration: result.duration });
-          const decoded = decodePolyline(result.polyline);
-          setRoutePolyline(decoded);
-
-          // Fetch road alerts
-          if (decoded.length > 0) {
-            const routeAlerts = await getRouteAlerts(decoded);
-            setAlerts(routeAlerts);
-          }
-        }
-      } catch {
-        // Directions are enhancement — don't block the map
-      }
-    };
-
-    fetchDirections();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origin?.lat, origin?.lng, destination?.lat, destination?.lng]);
-
-  // Calculate progress index (closest polyline point to professional)
-  useEffect(() => {
-    if (!origin || routePolyline.length === 0) return;
-
-    let minDist = Infinity;
-    let minIdx = 0;
-    for (let i = 0; i < routePolyline.length; i++) {
-      const dx = routePolyline[i][0] - origin.lat;
-      const dy = routePolyline[i][1] - origin.lng;
-      const dist = dx * dx + dy * dy;
-      if (dist < minDist) {
-        minDist = dist;
-        minIdx = i;
-      }
-    }
-    setProgressIndex(minIdx);
-  }, [origin, routePolyline]);
+  // Route tracking (directions, polyline, alerts, progress)
+  const {
+    routeInfo, routePolyline, alerts, progressIndex,
+    remainingPolyline, fadingPolyline, clearRoute,
+  } = useRouteTracking({ origin, destination });
 
   // Handle "Start Route"
   const handleStartRoute = async () => {
@@ -252,9 +207,7 @@ const WazeMap: React.FC<WazeMapProps> = ({
       setRouteStarted(false);
       geo.stopWatching();
       await clearProfessionalLocation(orderId);
-      setRoutePolyline([]);
-      setRouteInfo(null);
-      setAlerts([]);
+      clearRoute();
     } catch {
       // Silent fail
     }
@@ -271,11 +224,6 @@ const WazeMap: React.FC<WazeMapProps> = ({
   const destinationLabel = `${destinationAddress.street}, ${destinationAddress.number} - ${destinationAddress.neighborhood}`;
   const tileUrl = theme === "dark" ? TILES.dark : TILES.light;
   const isFollowing = routeStarted && !!origin;
-
-  // Remaining polyline (from progress index onward)
-  const remainingPolyline = routePolyline.slice(progressIndex);
-  // Fading polyline (trail behind professional, with opacity)
-  const fadingPolyline = routePolyline.slice(Math.max(0, progressIndex - TRAIL.FADING_POINTS), progressIndex + 1);
 
   // Loading states
   if (isProfessional && geo.loading && !geo.latitude) {
