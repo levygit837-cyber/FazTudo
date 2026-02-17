@@ -46,6 +46,7 @@ import Wallet from "./pages/Wallet";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminVerifications from "./pages/admin/AdminVerifications";
+import MapView from "./pages/services/MapView";
 import { UserRole } from "./types";
 
 const NotFound = () => (
@@ -81,6 +82,7 @@ const App: React.FC = () => {
               <Route path="verify-email/:token" element={<VerifyEmail />} />
               <Route path="services" element={<ServiceSearch />} />
               <Route path="services/:id" element={<ServiceDetails />} />
+              <Route path="mapa" element={<MapView />} />
               <Route path="seguranca" element={<Security />} />
               <Route path="termos" element={<TermsOfService />} />
               <Route path="privacidade" element={<PrivacyPolicy />} />
@@ -97,6 +99,7 @@ const App: React.FC = () => {
                 <Route path="orders/:id/checkout" element={<Checkout />} />
                 <Route path="orders/:id/payment-confirmed" element={<PaymentConfirmation />} />
                 <Route path="orders/:id/chat" element={<ServiceChat />} />
+                <Route path="orders/:id/mapa" element={<MapView />} />
                 <Route path="messages" element={<Messages />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="carteira" element={<Wallet />} />
@@ -116,6 +119,7 @@ const App: React.FC = () => {
                 <Route path="services" element={<ProfessionalServiceOrders />} />
                 <Route path="services/:id" element={<OrderDetails />} />
                 <Route path="services/:id/chat" element={<ServiceChat />} />
+                <Route path="services/:id/mapa" element={<MapView />} />
                 <Route
                   path="catalog"
                   element={<ServiceSearch showProfessionalCatalog />}
