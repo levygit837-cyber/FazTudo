@@ -33,6 +33,9 @@ export * from "./components";
 // Utility, theme & event types
 export * from "./utils";
 
+// Map types
+export * from "./map";
+
 // ============================================
 // COMPATIBILITY RE-EXPORTS
 // ============================================
