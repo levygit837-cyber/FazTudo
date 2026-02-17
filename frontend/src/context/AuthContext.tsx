@@ -179,6 +179,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Store in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
+      if ((response.data.data as any).refreshToken) {
+        localStorage.setItem("refreshToken", (response.data.data as any).refreshToken);
+      }
 
       setState({
         user,
@@ -225,6 +228,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Store in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
+      if ((response.data.data as any).refreshToken) {
+        localStorage.setItem("refreshToken", (response.data.data as any).refreshToken);
+      }
 
       setState({
         user,

@@ -30,52 +30,94 @@ api.interceptors.request.use(
 );
 
 // Response interceptor - trata erros globalmente
-let isRedirecting = false;
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else if (token) {
+      resolve(token);
+    }
+  });
+  failedQueue = [];
+};
 
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    // Se receber 401, tentar refresh e depois redirecionar para login
-    if (error.response?.status === 401 && !originalRequest._retry && !isRedirecting) {
-      originalRequest._retry = true;
+    // Só tentar refresh se recebeu 401 e tinha token na request
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
+    }
 
-      // Não forçar logout/redirect se não havia token na request
-      const hadToken = originalRequest.headers?.Authorization;
-      if (!hadToken) {
-        return Promise.reject(error);
+    const hadToken = originalRequest.headers?.Authorization;
+    if (!hadToken) {
+      return Promise.reject(error);
+    }
+
+    // Se já estamos fazendo refresh, enfileirar a request
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({
+          resolve: (token: string) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            resolve(api(originalRequest));
+          },
+          reject,
+        });
+      });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (!refreshToken) {
+      // Sem refresh token — NÃO fazer logout automático
+      // Apenas rejeitar o erro e deixar o componente decidir
+      isRefreshing = false;
+      return Promise.reject(error);
+    }
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+        refreshToken,
+      });
+      const { token, refreshToken: newRefreshToken } = response.data.data;
+
+      localStorage.setItem("token", token);
+      if (newRefreshToken) {
+        localStorage.setItem("refreshToken", newRefreshToken);
       }
 
-      // Tentar refresh token se disponível
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (refreshToken) {
-        try {
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken,
-          });
-          const { token } = response.data.data;
-          localStorage.setItem("token", token);
+      processQueue(null, token);
 
-          // Refazer requisição original com novo token
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-          }
-          return api(originalRequest);
-        } catch {
-          // Refresh falhou, fazer logout
-        }
+      if (originalRequest.headers) {
+        originalRequest.headers.Authorization = `Bearer ${token}`;
       }
+      return api(originalRequest);
+    } catch (refreshError) {
+      processQueue(refreshError, null);
 
-      // Limpar e redirecionar (uma única vez)
-      isRedirecting = true;
+      // Refresh falhou — agora sim, limpar e redirecionar
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
       window.location.href = "/login";
-    }
 
-    return Promise.reject(error);
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 
