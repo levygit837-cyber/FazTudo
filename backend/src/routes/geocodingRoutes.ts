@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { verifyToken, AuthRequest } from "../middleware/auth";
 import { geocodeAddress, getDirections, reverseGeocode } from "../services/geocodingService";
 import { getRouteAlerts } from "../services/overpassService";
+import { geocodeSchema, directionsSchema, reverseGeocodeSchema, routeAlertsSchema } from "../middleware/geocodingValidation";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("geocodingRoutes");
@@ -10,12 +11,15 @@ const router = Router();
 // Geocode an address (authenticated)
 router.post("/geocode", verifyToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { address } = req.body;
-
-    if (!address || typeof address !== "string") {
-      res.status(400).json({ success: false, message: "Address is required" });
+    const parsed = geocodeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        message: parsed.error.errors.map(e => e.message).join(", "),
+      });
       return;
     }
+    const { address } = parsed.data;
 
     const result = await geocodeAddress(address);
 
@@ -34,15 +38,15 @@ router.post("/geocode", verifyToken, async (req: AuthRequest, res: Response) => 
 // Get directions between two points (authenticated)
 router.post("/directions", verifyToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { origin, destination } = req.body;
-
-    if (!origin?.lat || !origin?.lng || !destination?.lat || !destination?.lng) {
+    const parsed = directionsSchema.safeParse(req.body);
+    if (!parsed.success) {
       res.status(400).json({
         success: false,
-        message: "Origin and destination with lat/lng are required",
+        message: parsed.error.errors.map(e => e.message).join(", "),
       });
       return;
     }
+    const { origin, destination } = parsed.data;
 
     const result = await getDirections(origin, destination);
 
@@ -61,12 +65,15 @@ router.post("/directions", verifyToken, async (req: AuthRequest, res: Response) 
 // Reverse geocode lat/lng to address (authenticated)
 router.post("/reverse", verifyToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { latitude, longitude } = req.body;
-
-    if (typeof latitude !== "number" || typeof longitude !== "number") {
-      res.status(400).json({ success: false, message: "latitude and longitude are required numbers" });
+    const parsed = reverseGeocodeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        message: parsed.error.errors.map(e => e.message).join(", "),
+      });
       return;
     }
+    const { latitude, longitude } = parsed.data;
 
     const result = await reverseGeocode(latitude, longitude);
 
@@ -85,17 +92,17 @@ router.post("/reverse", verifyToken, async (req: AuthRequest, res: Response) => 
 // Get road alerts along a route (authenticated)
 router.post("/route-alerts", verifyToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { polyline, radius } = req.body;
-
-    if (!Array.isArray(polyline) || polyline.length < 2) {
+    const parsed = routeAlertsSchema.safeParse(req.body);
+    if (!parsed.success) {
       res.status(400).json({
         success: false,
-        message: "polyline must be an array of [lat, lng] pairs with at least 2 points",
+        message: parsed.error.errors.map(e => e.message).join(", "),
       });
       return;
     }
+    const { polyline, radius } = parsed.data;
 
-    const alerts = await getRouteAlerts(polyline, radius || 200);
+    const alerts = await getRouteAlerts(polyline, radius);
 
     res.json({
       success: true,
