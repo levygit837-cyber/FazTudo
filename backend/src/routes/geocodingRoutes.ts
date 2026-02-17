@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { verifyToken, AuthRequest } from "../middleware/auth";
-import { geocodeAddress, getDirections } from "../services/geocodingService";
+import { geocodeAddress, getDirections, reverseGeocode } from "../services/geocodingService";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("geocodingRoutes");
@@ -53,6 +53,30 @@ router.post("/directions", verifyToken, async (req: AuthRequest, res: Response) 
     res.json({ success: true, message: "Directions computed", data: result });
   } catch (error) {
     log.error({ err: error }, "Directions endpoint error");
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+// Reverse geocode lat/lng to address (authenticated)
+router.post("/reverse", verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { latitude, longitude } = req.body;
+
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
+      res.status(400).json({ success: false, message: "latitude and longitude are required numbers" });
+      return;
+    }
+
+    const result = await reverseGeocode(latitude, longitude);
+
+    if (!result) {
+      res.status(404).json({ success: false, message: "No address found for coordinates" });
+      return;
+    }
+
+    res.json({ success: true, message: "Reverse geocoded", data: result });
+  } catch (error) {
+    log.error({ err: error }, "Reverse geocode endpoint error");
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });

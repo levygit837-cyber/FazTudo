@@ -97,3 +97,63 @@ export async function getDirections(
     return null;
   }
 }
+
+interface ReverseGeocodingResult {
+  street: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  formattedAddress: string;
+  lat: number;
+  lng: number;
+}
+
+/**
+ * Reverse geocode lat/lng to a structured address using Google Geocoding API
+ */
+export async function reverseGeocode(
+  lat: number,
+  lng: number
+): Promise<ReverseGeocodingResult | null> {
+  try {
+    const apiKey = env.PLACES_API_KEY;
+    if (!apiKey) {
+      log.warn("PLACES_API_KEY not configured");
+      return null;
+    }
+
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&language=pt-BR&result_type=street_address|route`;
+    const response = await fetch(url);
+    const data: any = await response.json();
+
+    if (data.status === "OK" && data.results.length > 0) {
+      const result = data.results[0];
+      const components = result.address_components || [];
+
+      const getComponent = (type: string): string => {
+        const comp = components.find((c: any) => c.types.includes(type));
+        return comp?.long_name || "";
+      };
+
+      return {
+        street: getComponent("route"),
+        number: getComponent("street_number"),
+        neighborhood: getComponent("sublocality_level_1") || getComponent("sublocality"),
+        city: getComponent("administrative_area_level_2") || getComponent("locality"),
+        state: getComponent("administrative_area_level_1"),
+        zipCode: getComponent("postal_code"),
+        formattedAddress: result.formatted_address,
+        lat,
+        lng,
+      };
+    }
+
+    log.warn({ status: data.status, lat, lng }, "Reverse geocoding failed");
+    return null;
+  } catch (error) {
+    log.error({ err: error, lat, lng }, "Reverse geocoding error");
+    return null;
+  }
+}
