@@ -1,4 +1,5 @@
 import api, { extractData, ApiResponse } from "./api";
+import type { ReverseGeocodingResult, RoadAlert } from "../types";
 
 interface GeocodingResult {
   lat: number;
@@ -46,6 +47,43 @@ export async function getDirections(
     return extractData(response);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Reverse geocode lat/lng to structured address via backend proxy
+ */
+export async function reverseGeocode(
+  latitude: number,
+  longitude: number
+): Promise<ReverseGeocodingResult | null> {
+  try {
+    const response = await api.post<ApiResponse<ReverseGeocodingResult>>("/geocoding/reverse", {
+      latitude,
+      longitude,
+    });
+    return extractData(response);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get road alerts along a decoded polyline
+ */
+export async function getRouteAlerts(
+  polyline: Array<[number, number]>,
+  radius: number = 200
+): Promise<RoadAlert[]> {
+  try {
+    const response = await api.post<ApiResponse<{ alerts: RoadAlert[] }>>("/geocoding/route-alerts", {
+      polyline,
+      radius,
+    });
+    const data = extractData(response);
+    return data?.alerts || [];
+  } catch {
+    return [];
   }
 }
 
