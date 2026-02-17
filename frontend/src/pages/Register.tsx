@@ -10,6 +10,7 @@ import {
   EyeOff,
   Briefcase,
   Users,
+  Building2,
   FileText,
   AlertCircle,
   Loader,
@@ -20,7 +21,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 
-const parseRoleParam = (roleParam?: string | null): "CLIENT" | "PROFESSIONAL" => {
+const parseRoleParam = (roleParam?: string | null): "CLIENT" | "PROFESSIONAL" | "COMPANY" => {
   const normalizedRole = roleParam?.toLowerCase().trim();
 
   if (
@@ -29,6 +30,13 @@ const parseRoleParam = (roleParam?: string | null): "CLIENT" | "PROFESSIONAL" =>
     normalizedRole === "pro"
   ) {
     return "PROFESSIONAL";
+  }
+
+  if (
+    normalizedRole === "company" ||
+    normalizedRole === "empresa"
+  ) {
+    return "COMPANY";
   }
 
   return "CLIENT";
@@ -46,8 +54,10 @@ const Register: React.FC = () => {
     phone: "",
     password: "",
     confirmPassword: "",
-    role: roleFromQuery,
+    role: roleFromQuery as "CLIENT" | "PROFESSIONAL" | "COMPANY",
     document: "",
+    companyName: "",
+    cnpj: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -77,7 +87,9 @@ const Register: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       role: roleFromQuery,
-      document: roleFromQuery === "CLIENT" ? "" : prev.document,
+      document: roleFromQuery === "CLIENT" || roleFromQuery === "COMPANY" ? "" : prev.document,
+      companyName: roleFromQuery !== "COMPANY" ? "" : prev.companyName,
+      cnpj: roleFromQuery !== "COMPANY" ? "" : prev.cnpj,
     }));
   }, [roleFromQuery]);
 
@@ -134,6 +146,21 @@ const Register: React.FC = () => {
       }
     }
 
+    // Campos obrigatórios para empresa
+    if (formData.role === "COMPANY") {
+      if (!formData.companyName.trim()) {
+        newErrors.companyName = "Nome da empresa é obrigatório";
+      }
+      if (!formData.cnpj.trim()) {
+        newErrors.cnpj = "CNPJ é obrigatório";
+      } else {
+        const cnpjDigits = formData.cnpj.replace(/\D/g, "");
+        if (cnpjDigits.length !== 14) {
+          newErrors.cnpj = "CNPJ deve ter 14 dígitos";
+        }
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -161,6 +188,12 @@ const Register: React.FC = () => {
     }
   };
 
+  // Formatar CNPJ
+  const formatCnpj = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  };
+
   // Manipulador de mudança nos campos
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -171,6 +204,8 @@ const Register: React.FC = () => {
       formattedValue = formatPhone(value);
     } else if (name === "document") {
       formattedValue = formatDocument(value);
+    } else if (name === "cnpj") {
+      formattedValue = formatCnpj(value);
     }
 
     setFormData((prev) => ({ ...prev, [name]: formattedValue }));
@@ -191,21 +226,24 @@ const Register: React.FC = () => {
   };
 
   // Manipulador de seleção de role
-  const handleRoleChange = (role: "CLIENT" | "PROFESSIONAL") => {
+  const handleRoleChange = (role: "CLIENT" | "PROFESSIONAL" | "COMPANY") => {
     setFormData((prev) => ({
       ...prev,
       role,
-      document: role === "CLIENT" ? "" : prev.document,
+      document: role === "CLIENT" || role === "COMPANY" ? "" : prev.document,
+      companyName: role !== "COMPANY" ? "" : prev.companyName,
+      cnpj: role !== "COMPANY" ? "" : prev.cnpj,
     }));
 
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("role", role === "PROFESSIONAL" ? "professional" : "client");
+    const roleParam = role === "PROFESSIONAL" ? "professional" : role === "COMPANY" ? "company" : "client";
+    nextParams.set("role", roleParam);
     setSearchParams(nextParams, { replace: true });
 
     if (errors.role) {
       setErrors((prev) => ({ ...prev, role: "" }));
     }
-    if (errors.document && role === "CLIENT") {
+    if (errors.document && (role === "CLIENT" || role === "COMPANY")) {
       setErrors((prev) => ({ ...prev, document: "" }));
     }
   };
@@ -223,7 +261,7 @@ const Register: React.FC = () => {
       const phoneDigits = formData.phone ? formData.phone.replace(/\D/g, "") : "";
       const documentDigits = formData.document ? formData.document.replace(/\D/g, "") : "";
 
-      const submitData = {
+      const submitData: Record<string, unknown> = {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
@@ -232,7 +270,13 @@ const Register: React.FC = () => {
         ...(documentDigits.length >= 11 ? { document: documentDigits } : {}),
       };
 
-      await register(submitData);
+      // Include company fields when role is COMPANY
+      if (formData.role === "COMPANY") {
+        submitData.companyName = formData.companyName.trim();
+        submitData.cnpj = formData.cnpj.replace(/\D/g, "");
+      }
+
+      await register(submitData as any);
       setSuccess(true);
       // O redirecionamento é tratado no contexto de autenticação
     } catch (error: any) {
@@ -306,7 +350,7 @@ const Register: React.FC = () => {
             {/* Seleção de tipo de conta */}
             <div>
               <label className="label mb-3">Tipo de conta</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => handleRoleChange("CLIENT")}
@@ -337,6 +381,22 @@ const Register: React.FC = () => {
                   <span className={clsx("font-medium", formData.role === "PROFESSIONAL" && "text-primary-700 dark:text-primary-300")}>Profissional</span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Oferecer serviços
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRoleChange("COMPANY")}
+                  className={clsx(
+                    "flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
+                    formData.role === "COMPANY"
+                      ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30"
+                      : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600",
+                  )}
+                >
+                  <Building2 className={clsx("w-6 h-6 mb-2", formData.role === "COMPANY" && "text-primary-600 dark:text-primary-400")} />
+                  <span className={clsx("font-medium", formData.role === "COMPANY" && "text-primary-700 dark:text-primary-300")}>Empresa</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Gerir equipe
                   </span>
                 </button>
               </div>
@@ -443,6 +503,54 @@ const Register: React.FC = () => {
                   <p className="form-error">{errors.document}</p>
                 )}
               </div>
+            )}
+
+            {/* Campos de Empresa (apenas para COMPANY) */}
+            {formData.role === "COMPANY" && (
+              <>
+                <div>
+                  <label htmlFor="companyName" className="label">
+                    Nome da Empresa
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Building2 className="h-5 w-5 text-slate-400 dark:text-slate-500" />
+                    </div>
+                    <input
+                      id="companyName"
+                      name="companyName"
+                      type="text"
+                      value={formData.companyName}
+                      onChange={handleChange}
+                      className={clsx("input pl-10", errors.companyName && "input-error")}
+                      placeholder="Razão Social ou Nome Fantasia"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {errors.companyName && <p className="form-error">{errors.companyName}</p>}
+                </div>
+                <div>
+                  <label htmlFor="cnpj" className="label">
+                    CNPJ
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FileText className="h-5 w-5 text-slate-400 dark:text-slate-500" />
+                    </div>
+                    <input
+                      id="cnpj"
+                      name="cnpj"
+                      type="text"
+                      value={formData.cnpj}
+                      onChange={handleChange}
+                      className={clsx("input pl-10", errors.cnpj && "input-error")}
+                      placeholder="00.000.000/0000-00"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {errors.cnpj && <p className="form-error">{errors.cnpj}</p>}
+                </div>
+              </>
             )}
 
             {/* Campo Senha */}
@@ -637,7 +745,7 @@ const Register: React.FC = () => {
                   Criando conta...
                 </>
               ) : (
-                `Criar conta como ${formData.role === "PROFESSIONAL" ? "Profissional" : "Cliente"}`
+                `Criar conta como ${formData.role === "PROFESSIONAL" ? "Profissional" : formData.role === "COMPANY" ? "Empresa" : "Cliente"}`
               )}
             </button>
           </form>
