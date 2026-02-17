@@ -80,6 +80,9 @@ export interface EnvConfig {
   // Frontend
   FRONTEND_URL: string;
 
+  // Google Maps
+  PLACES_API_KEY: string;
+
   // Development
   ENABLE_SWAGGER: boolean;
 }
@@ -174,6 +177,9 @@ function getEnvConfig(): EnvConfig {
 
     // Frontend
     FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+
+    // Google Maps
+    PLACES_API_KEY: process.env.PLACES_API || '',
 
     // Development
     ENABLE_SWAGGER: process.env.ENABLE_SWAGGER === 'true',
