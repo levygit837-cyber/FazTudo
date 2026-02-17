@@ -873,27 +873,53 @@ async function seedTestUsers() {
 
   console.log(`  - ${listings.length} service listings criados!`);
 
-  // Criar endereco para o cliente
+  // Criar endereco para o cliente (Vila Centenario, Iguatu-CE)
   const existingAddress = await prisma.address.findFirst({
     where: { userId: client.id },
   });
   if (!existingAddress) {
     await prisma.address.create({
       data: {
-        street: "Rua das Flores",
-        number: "123",
-        complement: "Apto 45",
-        neighborhood: "Jardim Paulista",
-        city: "Sao Paulo",
-        state: "SP",
-        zipCode: "01401-000",
+        street: "Rua Jose de Alencar",
+        number: "245",
+        complement: "",
+        neighborhood: "Vila Centenario",
+        city: "Iguatu",
+        state: "CE",
+        zipCode: "63502-000",
         country: "Brasil",
+        latitude: -6.3780,
+        longitude: -39.3260,
         userId: client.id,
       },
     });
   }
 
   console.log("  - Endereco do cliente criado!");
+
+  // Criar endereco para o profissional (Centro, Iguatu-CE)
+  const existingProAddress = await prisma.address.findFirst({
+    where: { userId: professional.id },
+  });
+  if (!existingProAddress) {
+    await prisma.address.create({
+      data: {
+        street: "Rua Floriano Peixoto",
+        number: "320",
+        complement: "Casa",
+        neighborhood: "Centro",
+        city: "Iguatu",
+        state: "CE",
+        zipCode: "63500-065",
+        country: "Brasil",
+        latitude: -6.3599,
+        longitude: -39.2984,
+        userId: professional.id,
+      },
+    });
+  }
+
+  console.log("  - Endereco do profissional criado!");
 
   // ============================================
   // SEED DE PEDIDOS (ServiceOrders)
