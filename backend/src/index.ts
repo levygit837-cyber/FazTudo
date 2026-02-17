@@ -31,6 +31,7 @@ import companyTeamRoutes from "./routes/companyTeamRoutes";
 import companyChannelRoutes from "./routes/companyChannelRoutes";
 import locationRoutes from "./routes/locationRoutes";
 import geocodingRoutes from "./routes/geocodingRoutes";
+import sessionRoutes from "./routes/sessionRoutes";
 import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
 
 const app = express();
@@ -153,6 +154,7 @@ app.use("/api/geocoding", geocodingRoutes);         // Geocoding & directions pr
 app.use("/api/categories", categoryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/sessions", sessionRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/company", companyRoutes);
 app.use("/api/company/members", companyMemberRoutes);
