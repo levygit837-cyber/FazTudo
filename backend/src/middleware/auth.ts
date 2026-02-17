@@ -236,6 +236,18 @@ export const generateToken = (user: {
   });
 };
 
+// Gerar refresh token (longa duração)
+export const generateRefreshToken = (user: {
+  id: number;
+  email: string;
+}): string => {
+  return jwt.sign(
+    { id: user.id, email: user.email, type: 'refresh' },
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_REFRESH_EXPIRES_IN as any }
+  );
+};
+
 // Hash de senha
 export const hashPassword = async (password: string): Promise<string> => {
   const salt = await bcrypt.genSalt(env.BCRYPT_SALT_ROUNDS);
@@ -359,6 +371,7 @@ export default {
   requireSelfOrAdmin,
   requireProfessionalOrAdmin,
   generateToken,
+  generateRefreshToken,
   hashPassword,
   comparePassword,
   requireVerified,

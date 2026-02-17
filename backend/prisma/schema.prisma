@@ -96,6 +96,7 @@ model User {
   totalReviews  Int        @default(0)
   balance       Float      @default(0.0)
   tokenVersion  Int        @default(0)
+  refreshToken         String?
   resetPasswordToken   String?   @unique
   resetPasswordExpires DateTime?
   emailVerified          Boolean   @default(false)

@@ -1,12 +1,15 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma";
 import {
   generateToken,
+  generateRefreshToken,
   hashPassword,
   comparePassword,
   AuthRequest,
 } from "../middleware/auth";
+import { env } from "../config/env";
 import { VerificationType } from "@prisma/client";
 import { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail } from "../services/emailService";
 
@@ -267,11 +270,21 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       tokenVersion: user.tokenVersion,
     });
 
+    // Generate refresh token
+    const newRefreshToken = generateRefreshToken(user);
+
+    // Store refresh token in database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: newRefreshToken },
+    });
+
     res.status(200).json(
       successResponse(
         {
           user: userWithoutPassword,
           token,
+          refreshToken: newRefreshToken,
         },
         "Login successful",
       ),
@@ -949,9 +962,86 @@ export const upgradeToProfessional = async (
   }
 };
 
+// Refresh access token
+export const refreshAccessToken = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      res.status(400).json(errorResponse("Refresh token is required"));
+      return;
+    }
+
+    // Verify refresh token
+    let decoded: any;
+    try {
+      decoded = jwt.verify(refreshToken, env.JWT_SECRET);
+    } catch {
+      res.status(401).json(errorResponse("Invalid or expired refresh token"));
+      return;
+    }
+
+    if (decoded.type !== 'refresh') {
+      res.status(401).json(errorResponse("Invalid token type"));
+      return;
+    }
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        tokenVersion: true,
+        refreshToken: true,
+      },
+    });
+
+    if (!user || user.status !== "ACTIVE") {
+      res.status(401).json(errorResponse("User not found or inactive"));
+      return;
+    }
+
+    // Verify stored refresh token matches
+    if (user.refreshToken !== refreshToken) {
+      res.status(401).json(errorResponse("Refresh token has been revoked"));
+      return;
+    }
+
+    // Generate new access token
+    const newToken = generateToken(user);
+
+    // Generate new refresh token (rotation)
+    const newRefreshToken = generateRefreshToken(user);
+
+    // Update stored refresh token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: newRefreshToken },
+    });
+
+    res.status(200).json(
+      successResponse(
+        { token: newToken, refreshToken: newRefreshToken },
+        "Token refreshed successfully",
+      ),
+    );
+  } catch (error) {
+    log.error({ err: error }, "Refresh token error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
 export default {
   register,
   login,
+  refreshAccessToken,
   getProfile,
   updateProfile,
   changePassword,
