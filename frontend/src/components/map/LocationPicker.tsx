@@ -116,20 +116,24 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ value, onChange }) => {
 
         // Reverse geocode
         setLoading(true);
-        const result = await reverseGeocode(latitude, longitude);
-        if (result) {
-          onChange({
-            ...value,
-            street: result.street,
-            number: result.number,
-            neighborhood: result.neighborhood,
-            city: result.city,
-            state: result.state,
-            zipCode: result.zipCode,
-            latitude: result.lat,
-            longitude: result.lng,
-          });
-        } else {
+        try {
+          const result = await reverseGeocode(latitude, longitude);
+          if (result) {
+            onChange({
+              ...value,
+              street: result.street,
+              number: result.number,
+              neighborhood: result.neighborhood,
+              city: result.city,
+              state: result.state,
+              zipCode: result.zipCode,
+              latitude: result.lat,
+              longitude: result.lng,
+            });
+          } else {
+            onChange({ ...value, latitude, longitude });
+          }
+        } catch {
           onChange({ ...value, latitude, longitude });
         }
         setLoading(false);
@@ -148,20 +152,24 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ value, onChange }) => {
       setMapPosition([lat, lng]);
       setLoading(true);
 
-      const result = await reverseGeocode(lat, lng);
-      if (result) {
-        onChange({
-          ...value,
-          street: result.street,
-          number: result.number,
-          neighborhood: result.neighborhood,
-          city: result.city,
-          state: result.state,
-          zipCode: result.zipCode,
-          latitude: result.lat,
-          longitude: result.lng,
-        });
-      } else {
+      try {
+        const result = await reverseGeocode(lat, lng);
+        if (result) {
+          onChange({
+            ...value,
+            street: result.street,
+            number: result.number,
+            neighborhood: result.neighborhood,
+            city: result.city,
+            state: result.state,
+            zipCode: result.zipCode,
+            latitude: result.lat,
+            longitude: result.lng,
+          });
+        } else {
+          onChange({ ...value, latitude: lat, longitude: lng });
+        }
+      } catch {
         onChange({ ...value, latitude: lat, longitude: lng });
       }
       setLoading(false);

@@ -24,12 +24,8 @@ interface DirectionsResult {
  * Geocode an address via backend proxy (does NOT expose Google API key)
  */
 export async function geocode(address: string): Promise<GeocodingResult | null> {
-  try {
-    const response = await api.post<ApiResponse<GeocodingResult>>("/geocoding/geocode", { address });
-    return extractData(response);
-  } catch {
-    return null;
-  }
+  const response = await api.post<ApiResponse<GeocodingResult>>("/geocoding/geocode", { address });
+  return extractData(response);
 }
 
 /**
@@ -39,15 +35,11 @@ export async function getDirections(
   origin: { lat: number; lng: number },
   destination: { lat: number; lng: number },
 ): Promise<DirectionsResult | null> {
-  try {
-    const response = await api.post<ApiResponse<DirectionsResult>>("/geocoding/directions", {
-      origin,
-      destination,
-    });
-    return extractData(response);
-  } catch {
-    return null;
-  }
+  const response = await api.post<ApiResponse<DirectionsResult>>("/geocoding/directions", {
+    origin,
+    destination,
+  });
+  return extractData(response);
 }
 
 /**
@@ -57,15 +49,11 @@ export async function reverseGeocode(
   latitude: number,
   longitude: number
 ): Promise<ReverseGeocodingResult | null> {
-  try {
-    const response = await api.post<ApiResponse<ReverseGeocodingResult>>("/geocoding/reverse", {
-      latitude,
-      longitude,
-    });
-    return extractData(response);
-  } catch {
-    return null;
-  }
+  const response = await api.post<ApiResponse<ReverseGeocodingResult>>("/geocoding/reverse", {
+    latitude,
+    longitude,
+  });
+  return extractData(response);
 }
 
 interface BackendRoadAlert {

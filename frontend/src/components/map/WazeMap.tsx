@@ -122,14 +122,20 @@ const WazeMap: React.FC<WazeMapProps> = ({
 
     const doGeocode = async () => {
       setGeocodingDest(true);
-      const addressStr = `${destinationAddress.street}, ${destinationAddress.number}, ${destinationAddress.neighborhood}, ${destinationAddress.city}, ${destinationAddress.state}, Brasil`;
-      const result = await geocode(addressStr);
-      if (result) {
-        setDestination({ lat: result.lat, lng: result.lng });
-      } else {
+      try {
+        const addressStr = `${destinationAddress.street}, ${destinationAddress.number}, ${destinationAddress.neighborhood}, ${destinationAddress.city}, ${destinationAddress.state}, Brasil`;
+        const result = await geocode(addressStr);
+        if (result) {
+          setDestination({ lat: result.lat, lng: result.lng });
+        } else {
+          setDestination({ lat: -6.3629, lng: -39.2943 }); // Fallback: Iguatu, CE
+        }
+      } catch {
+        toast.error("Erro", "Não foi possível localizar o endereço de destino.");
         setDestination({ lat: -6.3629, lng: -39.2943 }); // Fallback: Iguatu, CE
+      } finally {
+        setGeocodingDest(false);
       }
-      setGeocodingDest(false);
     };
 
     doGeocode();
@@ -191,17 +197,21 @@ const WazeMap: React.FC<WazeMapProps> = ({
     if (!origin || !destination) return;
 
     const fetchDirections = async () => {
-      const result = await getDirections(origin, destination);
-      if (result) {
-        setRouteInfo({ distance: result.distance, duration: result.duration });
-        const decoded = decodePolyline(result.polyline);
-        setRoutePolyline(decoded);
+      try {
+        const result = await getDirections(origin, destination);
+        if (result) {
+          setRouteInfo({ distance: result.distance, duration: result.duration });
+          const decoded = decodePolyline(result.polyline);
+          setRoutePolyline(decoded);
 
-        // Fetch road alerts
-        if (decoded.length > 0) {
-          const routeAlerts = await getRouteAlerts(decoded);
-          setAlerts(routeAlerts);
+          // Fetch road alerts
+          if (decoded.length > 0) {
+            const routeAlerts = await getRouteAlerts(decoded);
+            setAlerts(routeAlerts);
+          }
         }
+      } catch {
+        // Directions are enhancement — don't block the map
       }
     };
 

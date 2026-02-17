@@ -82,15 +82,21 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
 
     const doGeocode = async () => {
       setGeocodingDest(true);
-      const addressStr = `${destinationAddress.street}, ${destinationAddress.number}, ${destinationAddress.neighborhood}, ${destinationAddress.city}, ${destinationAddress.state}, Brasil`;
-      const result = await geocode(addressStr);
-      if (result) {
-        setDestination({ lat: result.lat, lng: result.lng });
-      } else {
-        // Fallback to center of Iguatu, CE
+      try {
+        const addressStr = `${destinationAddress.street}, ${destinationAddress.number}, ${destinationAddress.neighborhood}, ${destinationAddress.city}, ${destinationAddress.state}, Brasil`;
+        const result = await geocode(addressStr);
+        if (result) {
+          setDestination({ lat: result.lat, lng: result.lng });
+        } else {
+          // Fallback to center of Iguatu, CE
+          setDestination({ lat: -6.3629, lng: -39.2943 });
+        }
+      } catch {
+        toast.error("Erro", "Não foi possível localizar o endereço de destino.");
         setDestination({ lat: -6.3629, lng: -39.2943 });
+      } finally {
+        setGeocodingDest(false);
       }
-      setGeocodingDest(false);
     };
 
     doGeocode();
@@ -155,13 +161,17 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
     if (!origin || !destination) return;
 
     const fetchDirections = async () => {
-      const result = await getDirections(origin, destination);
-      if (result) {
-        setRouteInfo({
-          distance: result.distance,
-          duration: result.duration,
-        });
-        setRoutePolyline(decodePolyline(result.polyline));
+      try {
+        const result = await getDirections(origin, destination);
+        if (result) {
+          setRouteInfo({
+            distance: result.distance,
+            duration: result.duration,
+          });
+          setRoutePolyline(decodePolyline(result.polyline));
+        }
+      } catch {
+        // Directions are enhancement — don't block the map
       }
     };
 
