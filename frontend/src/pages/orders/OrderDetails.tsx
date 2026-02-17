@@ -22,7 +22,7 @@ import { useToast } from "../../context/ToastContext";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import RescheduleModal from "../../components/orders/RescheduleModal";
 import DisputeModal from "../../components/orders/DisputeModal";
-import OrderLocationMap from "../../components/orders/OrderLocationMap";
+import { WazeMap } from "../../components/map";
 import ProposalComparator from "../../components/orders/ProposalComparator";
 import ReviewCTA from "../../components/orders/ReviewCTA";
 import { SkeletonOrderCard, Skeleton, SkeletonText } from "../../components/common/Skeleton";
@@ -549,10 +549,20 @@ const OrderDetails: React.FC = () => {
 
                   {/* Location map (only after payment) */}
                   {paymentApproved && order.address && (
-                    <OrderLocationMap
+                    <WazeMap
                       orderId={order.id}
                       isProfessional={true}
-                      destinationAddress={order.address}
+                      professionalName={order.professional?.name || "Profissional"}
+                      destinationAddress={{
+                        street: order.address.street || "",
+                        number: order.address.number || "",
+                        neighborhood: order.address.neighborhood || "",
+                        city: order.address.city || "",
+                        state: order.address.state || "",
+                        zipCode: order.address.zipCode || "",
+                        latitude: order.address.latitude,
+                        longitude: order.address.longitude,
+                      }}
                       orderStatus={order.status}
                     />
                   )}
@@ -655,10 +665,20 @@ const OrderDetails: React.FC = () => {
                 <Navigation className="w-5 h-5 text-blue-500" />
                 Localizacao do Profissional
               </h2>
-              <OrderLocationMap
+              <WazeMap
                 orderId={order.id}
                 isProfessional={false}
-                destinationAddress={order.address}
+                professionalName={order.professional?.name || "Profissional"}
+                destinationAddress={{
+                  street: order.address.street || "",
+                  number: order.address.number || "",
+                  neighborhood: order.address.neighborhood || "",
+                  city: order.address.city || "",
+                  state: order.address.state || "",
+                  zipCode: order.address.zipCode || "",
+                  latitude: order.address.latitude,
+                  longitude: order.address.longitude,
+                }}
                 orderStatus={order.status}
               />
             </div>
