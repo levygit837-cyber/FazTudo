@@ -24,8 +24,9 @@ interface RegisterBody {
   password: string;
   name: string;
   phone?: string;
-  role?: "CLIENT" | "PROFESSIONAL";
+  role?: "CLIENT" | "PROFESSIONAL" | "COMPANY";
   document?: string;
+  cnpj?: string;
 }
 
 interface LoginBody {
@@ -81,6 +82,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       phone,
       role = "CLIENT",
       document,
+      cnpj,
     }: RegisterBody = req.body;
 
     // Basic validation
@@ -111,7 +113,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Validate role
-    const validRoles = ["CLIENT", "PROFESSIONAL"];
+    const validRoles = ["CLIENT", "PROFESSIONAL", "COMPANY"];
     if (role && !validRoles.includes(role)) {
       res.status(400).json(errorResponse("Invalid role"));
       return;
@@ -169,6 +171,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       id: user.id,
       email: user.email,
     });
+
+    // If registering as COMPANY, create the CompanyProfile
+    if (role === "COMPANY") {
+      await prisma.companyProfile.create({
+        data: {
+          userId: user.id,
+          companyName: name,
+          cnpj: cnpj!,
+        },
+      });
+    }
 
     // Generate email verification token
     const verifyToken = crypto.randomBytes(32).toString("hex");
