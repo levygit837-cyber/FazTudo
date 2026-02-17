@@ -50,8 +50,6 @@ export interface InteractiveMapProps {
   onRouteInfo?: (info: RouteInfo) => void;
   /** Extra CSS class for the container */
   className?: string;
-  /** Google Maps Map ID for custom styling (optional) */
-  mapId?: string;
 }
 
 /**
