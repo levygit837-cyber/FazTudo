@@ -924,225 +924,82 @@ async function seedTestUsers() {
   // ============================================
   // SEED DE PEDIDOS (ServiceOrders)
   // ============================================
-  console.log("\n  Criando pedidos de teste...");
+  console.log("\n  Limpando pedidos antigos...");
+
+  // Limpar todos os pedidos existentes e dados relacionados
+  await prisma.review.deleteMany({});
+  await prisma.transaction.deleteMany({});
+  await prisma.payment.deleteMany({});
+  await prisma.message.deleteMany({});
+  await prisma.notification.deleteMany({});
+  await prisma.serviceOrder.deleteMany({});
+
+  console.log("  - Pedidos antigos removidos!");
+  console.log("  Criando 10 pedidos PENDING de teste...");
 
   const prof1Listings = await prisma.serviceListing.findMany({
     where: { professionalId: professional.id },
-    take: 5,
+  });
+  const prof2Listings = await prisma.serviceListing.findMany({
+    where: { professionalId: professional2.id },
   });
 
+  const allListings = [...prof1Listings, ...prof2Listings];
   const orders: any[] = [];
 
-  // 4 pedidos PENDING para profissional1
-  for (let i = 0; i < Math.min(4, prof1Listings.length); i++) {
-    const listing = prof1Listings[i];
+  // 10 pedidos PENDING — todos podem ser aceitos ou recusados
+  const pendingOrderDescriptions = [
+    { title: "Trocar tomada da sala", desc: "Preciso trocar 3 tomadas que estao com mal contato na sala de estar." },
+    { title: "Consertar vazamento na cozinha", desc: "A torneira da cozinha esta pingando e o sifao parece solto." },
+    { title: "Instalar ventilador de teto", desc: "Quero instalar um ventilador de teto no quarto. Ja tenho o ventilador." },
+    { title: "Trocar disjuntor do chuveiro", desc: "O disjuntor do chuveiro esta desarmando toda hora. Preciso trocar." },
+    { title: "Limpeza geral do apartamento", desc: "Apartamento de 70m2, 2 quartos. Limpeza completa incluindo banheiros e cozinha." },
+    { title: "Limpeza pos-reforma do banheiro", desc: "Reformei o banheiro e preciso de limpeza pesada para remover residuos de obra." },
+    { title: "Instalar ponto eletrico na varanda", desc: "Preciso de um ponto eletrico novo na varanda para ligar uma churrasqueira eletrica." },
+    { title: "Desentupir ralo do banheiro", desc: "O ralo do banheiro esta entupido e a agua demora a escoar." },
+    { title: "Limpeza de apartamento para mudanca", desc: "Estou me mudando e preciso entregar o apartamento limpo. 80m2, 3 quartos." },
+    { title: "Trocar fiacao antiga do quarto", desc: "A fiacao do quarto e antiga e preciso trocar por seguranca. Quarto de 15m2." },
+  ];
+
+  for (let i = 0; i < 10; i++) {
+    const listing = allListings[i % allListings.length];
     if (!listing) continue;
-    const existingOrder = await prisma.serviceOrder.findFirst({
-      where: {
+
+    const profId = listing.professionalId;
+    const orderInfo = pendingOrderDescriptions[i]!;
+
+    const order = await prisma.serviceOrder.create({
+      data: {
+        title: orderInfo.title,
         serviceListingId: listing.id,
         clientId: client.id,
+        professionalId: profId,
         status: "PENDING",
+        price: listing.price + (i * 15), // Precos variados
+        description: orderInfo.desc,
+        scheduledDate: new Date(Date.now() + (i + 1) * 2 * 24 * 60 * 60 * 1000), // A cada 2 dias
       },
     });
-
-    if (!existingOrder) {
-      const order = await prisma.serviceOrder.create({
-        data: {
-          title: `Pedido: ${listing.title}`,
-          serviceListingId: listing.id,
-          clientId: client.id,
-          professionalId: professional.id,
-          status: "PENDING",
-          price: listing.price,
-          description: `Pedido de teste para: ${listing.title}`,
-          scheduledDate: new Date(Date.now() + (i + 1) * 7 * 24 * 60 * 60 * 1000),
-        },
-      });
-      orders.push(order);
-    }
+    orders.push(order);
   }
 
-  // 1 pedido COMPLETED (para reviews e transacoes)
-  const completedListing = prof1Listings[0];
-  let completedOrder: any = null;
-  if (completedListing) {
-    const existingCompleted = await prisma.serviceOrder.findFirst({
-      where: {
-        serviceListingId: completedListing.id,
-        clientId: client.id,
-        status: "COMPLETED",
-      },
-    });
+  console.log(`  - ${orders.length} pedidos PENDING criados!`);
 
-    if (!existingCompleted) {
-      completedOrder = await prisma.serviceOrder.create({
-        data: {
-          title: `Pedido concluido: ${completedListing.title}`,
-          serviceListingId: completedListing.id,
-          clientId: client.id,
-          professionalId: professional.id,
-          status: "COMPLETED",
-          price: completedListing.price,
-          description: "Pedido concluido de teste",
-          scheduledDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-          completedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          clientConfirmedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-          professionalConfirmedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        },
-      });
-      orders.push(completedOrder);
-    } else {
-      completedOrder = existingCompleted;
-    }
-  }
-
-  // 1 pedido IN_PROGRESS
-  if (prof1Listings[1]) {
-    const existingInProgress = await prisma.serviceOrder.findFirst({
-      where: {
-        serviceListingId: prof1Listings[1].id,
-        clientId: client.id,
-        status: "IN_PROGRESS",
-      },
-    });
-
-    if (!existingInProgress) {
-      const inProgressOrder = await prisma.serviceOrder.create({
-        data: {
-          title: `Pedido em andamento: ${prof1Listings[1].title}`,
-          serviceListingId: prof1Listings[1].id,
-          clientId: client.id,
-          professionalId: professional.id,
-          status: "IN_PROGRESS",
-          price: prof1Listings[1].price,
-          description: "Pedido em andamento de teste",
-          scheduledDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-          startedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        },
-      });
-      orders.push(inProgressOrder);
-    }
-  }
-
-  console.log(`  - ${orders.length} pedidos de teste criados!`);
-
-  // ============================================
-  // SEED DE PAGAMENTOS E TRANSACOES
-  // ============================================
-  console.log("  Criando pagamentos e transacoes de teste...");
-
-  const completedOrders = await prisma.serviceOrder.findMany({
-    where: { status: "COMPLETED", professionalId: professional.id },
-    include: { serviceListing: true },
-  });
-
-  for (const order of completedOrders) {
-    const existingPayment = await prisma.payment.findFirst({
-      where: { serviceOrderId: order.id },
-    });
-
-    if (!existingPayment) {
-      const payment = await prisma.payment.create({
-        data: {
-          amount: order.price,
-          status: "RELEASED",
-          paymentMethod: "pix",
-          transactionId: `test_txn_${order.id}_${Date.now()}`,
-          serviceOrderId: order.id,
-          clientId: order.clientId,
-          professionalId: order.professionalId,
-          paidAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-          releasedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        },
-      });
-
-      // Transacao de pagamento para o profissional (90%)
-      const professionalAmount = order.price * 0.9;
-      const platformFee = order.price * 0.1;
-
-      await prisma.transaction.create({
-        data: {
-          type: "PAYMENT",
-          amount: professionalAmount,
-          description: `Pagamento por: ${order.description || order.title}`,
-          balanceBefore: 0,
-          balanceAfter: professionalAmount,
-          userId: professional.id,
-          paymentId: payment.id,
-        },
-      });
-
-      // Transacao de taxa da plataforma
-      await prisma.transaction.create({
-        data: {
-          type: "FEE",
-          amount: platformFee,
-          description: `Taxa plataforma (10%) - Pedido #${order.id}`,
-          balanceBefore: professionalAmount,
-          balanceAfter: professionalAmount - platformFee,
-          userId: professional.id,
-          paymentId: payment.id,
-        },
-      });
-
-      // Transacao de gasto do cliente
-      await prisma.transaction.create({
-        data: {
-          type: "PAYMENT",
-          amount: order.price,
-          description: `Pagamento por: ${order.description || order.title}`,
-          balanceBefore: 0,
-          balanceAfter: -order.price,
-          userId: client.id,
-          paymentId: payment.id,
-        },
-      });
-    }
-  }
-
-  // Atualizar saldo do profissional
-  const profPaymentTxns = await prisma.transaction.findMany({
-    where: { userId: professional.id, type: "PAYMENT" },
-  });
-  const profFeeTxns = await prisma.transaction.findMany({
-    where: { userId: professional.id, type: "FEE" },
-  });
-  const totalPayments = profPaymentTxns.reduce((sum: number, t: any) => sum + t.amount, 0);
-  const totalFees = profFeeTxns.reduce((sum: number, t: any) => sum + t.amount, 0);
-  const newBalance = totalPayments - totalFees;
-
+  // (Sem pagamentos/transacoes — todos pedidos sao PENDING)
+  // Zerar saldo dos profissionais
   await prisma.user.update({
     where: { id: professional.id },
-    data: { balance: newBalance },
+    data: { balance: 0 },
+  });
+  await prisma.user.update({
+    where: { id: professional2.id },
+    data: { balance: 0 },
   });
 
-  console.log("  - Pagamentos e transacoes criados!");
+  console.log("  - Saldos zerados (sem pedidos concluidos)!");
 
-  // ============================================
-  // SEED DE REVIEWS
-  // ============================================
-  console.log("  Criando reviews de teste...");
-
-  for (const order of completedOrders) {
-    const existingReview = await prisma.review.findFirst({
-      where: { serviceOrderId: order.id },
-    });
-
-    if (!existingReview) {
-      await prisma.review.create({
-        data: {
-          rating: 5,
-          comment: "Excelente servico! Profissional muito competente e pontual. Recomendo!",
-          isProfessional: true,
-          serviceOrderId: order.id,
-          authorId: client.id,
-          targetId: professional.id,
-        },
-      });
-    }
-  }
-
-  console.log("  - Reviews de teste criados!");
+  // (Sem reviews — todos pedidos sao PENDING)
+  console.log("  - Sem reviews (nenhum pedido concluido)!");
 
   // ============================================
   // SEED DE AGENDA PROFISSIONAL
@@ -1181,52 +1038,30 @@ async function seedTestUsers() {
   // ============================================
   console.log("  Criando notificacoes de teste...");
 
-  const existingNotification = await prisma.notification.findFirst({
-    where: { userId: professional.id },
-  });
-
-  if (!existingNotification) {
+  // Notificacoes para o profissional sobre novos pedidos
+  for (let i = 0; i < Math.min(5, orders.length); i++) {
+    const order = orders[i];
     await prisma.notification.create({
       data: {
         type: "ORDER_CREATED",
         title: "Novo pedido recebido",
-        message: "Voce recebeu um novo pedido de servico eletrico.",
-        userId: professional.id,
-        status: "UNREAD",
-      },
-    });
-
-    await prisma.notification.create({
-      data: {
-        type: "ORDER_CREATED",
-        title: "Novo pedido recebido",
-        message: "Voce recebeu um novo pedido de conserto.",
-        userId: professional.id,
-        status: "UNREAD",
-      },
-    });
-
-    await prisma.notification.create({
-      data: {
-        type: "PAYMENT_RECEIVED",
-        title: "Pagamento recebido",
-        message: "Pagamento de R$ 150,00 foi liberado para sua carteira.",
-        userId: professional.id,
-        status: "READ",
-      },
-    });
-
-    // Notificacao para o cliente
-    await prisma.notification.create({
-      data: {
-        type: "ORDER_ACCEPTED",
-        title: "Pedido aceito",
-        message: "Seu pedido foi aceito pelo profissional Joao Santos.",
-        userId: client.id,
+        message: `Voce recebeu um novo pedido: "${order.title}".`,
+        userId: order.professionalId,
         status: "UNREAD",
       },
     });
   }
+
+  // Notificacao para o cliente
+  await prisma.notification.create({
+    data: {
+      type: "ORDER_CREATED",
+      title: "Pedido enviado",
+      message: "Seus pedidos foram enviados com sucesso. Aguarde a resposta dos profissionais.",
+      userId: client.id,
+      status: "UNREAD",
+    },
+  });
 
   console.log("  - Notificacoes de teste criadas!");
 

@@ -354,13 +354,13 @@ export const confirmProfessionalCompletion = async (id: number): Promise<Service
 export const cancelOrder = async (
   id: number,
   reason?: string,
-): Promise<ServiceOrder> => {
+): Promise<any> => {
   const response = await api.post<ApiResponse<any>>(
     `/services/orders/${id}/cancel`,
     { reason },
   );
   const payload = extractData(response);
-  return payload.serviceOrder || payload;
+  return payload?.serviceOrder || payload || { success: true };
 };
 
 // ==================== SERVIÇOS - PAYMENTS ====================

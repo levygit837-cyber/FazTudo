@@ -350,7 +350,7 @@ const OrderDetails: React.FC = () => {
         </div>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
           order.status === "COMPLETED" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
-          order.status === "CANCELLED" ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" :
+          order.status === "CANCELLED" ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400" :
           order.status === "AWAITING_CLIENT_CONFIRMATION" || order.status === "AWAITING_PROFESSIONAL_CONFIRMATION" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
           order.status === "IN_PROGRESS" ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400" :
           order.status === "PENDING" ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400" :
@@ -375,6 +375,36 @@ const OrderDetails: React.FC = () => {
           reason={order.rescheduleReason}
           onResolved={loadOrder}
         />
+      )}
+
+      {/* Cancelled order banner */}
+      {order.status === "CANCELLED" && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-5 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+              <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-800 dark:text-red-300 text-sm">
+                Pedido Cancelado
+              </h3>
+              <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                Este pedido foi cancelado e não pode mais ser alterado.
+                {order.cancelledAt && (
+                  <span> Cancelado em {formatDateTime(order.cancelledAt)}.</span>
+                )}
+              </p>
+              {isOrderClient && order.serviceListingId && (
+                <button
+                  onClick={() => navigate(`/services/${order.serviceListingId}`)}
+                  className="mt-3 text-sm font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-200 underline underline-offset-2"
+                >
+                  Ver serviço original →
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* CHECKOUT STEPPER (pre-pagamento) */}
@@ -445,6 +475,89 @@ const OrderDetails: React.FC = () => {
             <div className="card">
               <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Progresso do Servico</h2>
               <OrderProgressStepper order={order} />
+            </div>
+          )}
+
+          {/* CANCELLED: Historico do pedido cancelado */}
+          {order.status === "CANCELLED" && (
+            <div className="card">
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Histórico do Pedido</h2>
+              <div className="relative">
+                {/* Pedido criado */}
+                <div className="relative flex items-start gap-3 pb-6">
+                  <div className="absolute left-4 top-8 w-0.5 h-[calc(100%-8px)] z-0 bg-green-300 dark:bg-green-700" />
+                  <div className="relative z-10 w-8 h-8 rounded-full ring-2 ring-white dark:ring-slate-900 flex items-center justify-center flex-shrink-0 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                    <CheckCircle className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 pt-1">
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Pedido Criado</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{formatDateTime(order.createdAt)}</p>
+                  </div>
+                </div>
+
+                {/* Aceito (se startedAt existe, o pedido passou por aceito) */}
+                {order.startedAt && (
+                  <div className="relative flex items-start gap-3 pb-6">
+                    <div className="absolute left-4 top-8 w-0.5 h-[calc(100%-8px)] z-0 bg-green-300 dark:bg-green-700" />
+                    <div className="relative z-10 w-8 h-8 rounded-full ring-2 ring-white dark:ring-slate-900 flex items-center justify-center flex-shrink-0 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0 pt-1">
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Pedido Aceito</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Profissional aceitou o pedido</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Iniciado */}
+                {order.startedAt && (
+                  <div className="relative flex items-start gap-3 pb-6">
+                    <div className="absolute left-4 top-8 w-0.5 h-[calc(100%-8px)] z-0 bg-red-300 dark:bg-red-700" />
+                    <div className="relative z-10 w-8 h-8 rounded-full ring-2 ring-white dark:ring-slate-900 flex items-center justify-center flex-shrink-0 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0 pt-1">
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Serviço Iniciado</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{formatDateTime(order.startedAt)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cancelado */}
+                <div className="relative flex items-start gap-3">
+                  <div className="relative z-10 w-8 h-8 rounded-full ring-2 ring-white dark:ring-slate-900 flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                    <XCircle className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 pt-1">
+                    <p className="text-sm font-medium text-red-700 dark:text-red-400">Pedido Cancelado</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {order.cancelledAt ? formatDateTime(order.cancelledAt) : "Data não registrada"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Acoes pos-cancelamento */}
+              <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-3">
+                {paymentApproved && (
+                  <button
+                    onClick={() => navigate(chatRoute)}
+                    className="btn btn-outline flex items-center gap-2 text-sm"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Ver mensagens
+                  </button>
+                )}
+                {isOrderClient && order.serviceListingId && (
+                  <button
+                    onClick={() => navigate(`/services/${order.serviceListingId}`)}
+                    className="btn btn-outline flex items-center gap-2 text-sm"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Recontratar serviço
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -696,7 +809,7 @@ const OrderDetails: React.FC = () => {
           )}
 
           {/* Acoes do cliente */}
-          {isOrderClient && (
+          {isOrderClient && !["CANCELLED", "EXPIRED"].includes(order.status) && (
             <div className="card">
               <div className="flex flex-wrap gap-3">
                 {/* Botao de Chat - so aparece apos pagamento aprovado */}
@@ -805,9 +918,6 @@ const OrderDetails: React.FC = () => {
                 )}
 
                 {/* Status finais */}
-                {order.status === "CANCELLED" && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Este pedido foi cancelado.</p>
-                )}
                 {order.status === "COMPLETED" && hasReleasedPayment && (
                   <p className="text-sm text-green-600">Pagamento liberado com sucesso!</p>
                 )}
