@@ -6,3 +6,4 @@ export { createWazeAvatarIcon, createWazeDestinationIcon, createAlertIcon } from
 export { default as WazeMap } from "./WazeMap";
 export { default as WazeInfoBar } from "./WazeInfoBar";
 export { default as WazeControls } from "./WazeControls";
+export { default as LocationPicker } from "./LocationPicker";
