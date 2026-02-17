@@ -167,3 +167,21 @@ export interface PendingCompany {
   };
   _count: { members: number };
 }
+
+export interface CompanyChannel {
+  id: number;
+  companyId: number;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  members?: CompanyChannelMember[];
+  _count?: { members: number };
+}
+
+export interface CompanyChannelMember {
+  id: number;
+  channelId: number;
+  memberId: number;
+  member: CompanyMember;
+}
