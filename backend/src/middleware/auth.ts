@@ -320,18 +320,17 @@ export const authLogger = (
     (p) => req.path === p || req.path.endsWith(p),
   );
 
-  const userInfo = req.user
-    ? `[User: ${req.user.id}, Role: ${req.user.role}]`
-    : (isPublicRoute || req.method === "GET")
-      ? "[Public]"
-      : "[Unauthenticated]";
-
-  log.debug({ userInfo, method: req.method, path: req.path }, "Request started");
+  log.debug({ method: req.method, path: req.path }, "Request started");
 
   res.on("finish", () => {
     const duration = Date.now() - startTime;
+    // Resolve userInfo here, AFTER verifyToken has had a chance to populate req.user
+    const userFields = req.user
+      ? { userId: req.user.id, userRole: req.user.role }
+      : { userId: null as null, userRole: isPublicRoute ? "[Public]" : "[Unauthenticated]" };
+
     log.info(
-      { userInfo, method: req.method, path: req.path, statusCode: res.statusCode, duration },
+      { ...userFields, method: req.method, path: req.path, statusCode: res.statusCode, duration },
       "Request completed",
     );
   });
