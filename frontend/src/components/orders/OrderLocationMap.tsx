@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import {
-  APIProvider,
-  Map,
-  AdvancedMarker,
-  useMap,
-  useMapsLibrary,
-  Pin,
-} from "@vis.gl/react-google-maps";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   Navigation,
   Clock,
@@ -17,12 +12,13 @@ import {
 } from "lucide-react";
 import { useGeolocation } from "../../hooks/useGeolocation";
 import {
-  getMapConfig,
   startRoute as apiStartRoute,
   updateProfessionalLocation,
   getProfessionalLocation,
   clearProfessionalLocation,
 } from "../../services/serviceService";
+import { geocode, getDirections, decodePolyline } from "../../services/geocodingService";
+import { professionalIcon, destinationIcon } from "../map/leafletIcons";
 import { useToast } from "../../context/ToastContext";
 
 interface OrderLocationMapProps {
@@ -41,16 +37,23 @@ interface OrderLocationMapProps {
   orderStatus: string;
 }
 
-// Inner component that uses Google Maps hooks (must be inside APIProvider)
-const MapContent: React.FC<{
-  isProfessional: boolean;
-  orderId: number;
-  destinationAddress: OrderLocationMapProps["destinationAddress"];
-  orderStatus: string;
-}> = ({ isProfessional, orderId, destinationAddress, orderStatus: _orderStatus }) => {
+// Component to fit map bounds dynamically
+const FitBounds: React.FC<{ points: Array<[number, number]> }> = ({ points }) => {
   const map = useMap();
-  const routesLibrary = useMapsLibrary("routes");
-  const geocodingLibrary = useMapsLibrary("geocoding");
+  useEffect(() => {
+    if (points.length < 2) return;
+    const bounds = L.latLngBounds(points);
+    map.fitBounds(bounds, { padding: [60, 60] });
+  }, [map, points]);
+  return null;
+};
+
+const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
+  orderId,
+  isProfessional,
+  destinationAddress,
+  orderStatus: _orderStatus,
+}) => {
   const toast = useToast();
 
   const [routeStarted, setRouteStarted] = useState(false);
@@ -58,6 +61,7 @@ const MapContent: React.FC<{
     distance: string;
     duration: string;
   } | null>(null);
+  const [routePolyline, setRoutePolyline] = useState<Array<[number, number]>>([]);
   const [professionalPos, setProfessionalPos] = useState<{
     lat: number;
     lng: number;
@@ -68,47 +72,30 @@ const MapContent: React.FC<{
       ? { lat: destinationAddress.latitude, lng: destinationAddress.longitude }
       : null
   );
+  const [geocodingDest, setGeocodingDest] = useState(false);
 
-  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Apply custom FazTudo map styles (force 2D roadmap)
+  // Geocode address if no lat/lng via backend proxy
   useEffect(() => {
-    if (!map) return;
-    map.setOptions({
-      styles: [
-        { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-        { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#e8eaed" }] },
-        { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadce0" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9d7e8" }] },
-        { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-        { featureType: "poi.business", stylers: [{ visibility: "off" }] },
-        { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5f5e0" }] },
-        { featureType: "transit", stylers: [{ visibility: "off" }] },
-      ],
-      mapTypeId: "roadmap",
-    });
-  }, [map]);
+    if (destination) return;
 
-  // Geocode address if no lat/lng
-  useEffect(() => {
-    if (destination || !geocodingLibrary) return;
-
-    const addressStr = `${destinationAddress.street}, ${destinationAddress.number}, ${destinationAddress.neighborhood}, ${destinationAddress.city}, ${destinationAddress.state}, Brasil`;
-    const geocoder = new geocodingLibrary.Geocoder();
-    geocoder.geocode({ address: addressStr }, (results, status) => {
-      if (status === "OK" && results && results[0]) {
-        const loc = results[0].geometry.location;
-        setDestination({ lat: loc.lat(), lng: loc.lng() });
+    const doGeocode = async () => {
+      setGeocodingDest(true);
+      const addressStr = `${destinationAddress.street}, ${destinationAddress.number}, ${destinationAddress.neighborhood}, ${destinationAddress.city}, ${destinationAddress.state}, Brasil`;
+      const result = await geocode(addressStr);
+      if (result) {
+        setDestination({ lat: result.lat, lng: result.lng });
       } else {
         // Fallback to center of Sao Paulo
         setDestination({ lat: -23.5505, lng: -46.6333 });
       }
-    });
-  }, [geocodingLibrary, destination, destinationAddress]);
+      setGeocodingDest(false);
+    };
+
+    doGeocode();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destination]);
 
   // Professional: track own position
   const handleLocationUpdate = useCallback(
@@ -163,55 +150,24 @@ const MapContent: React.FC<{
       : null
     : professionalPos;
 
-  // Render directions route
+  // Fetch directions from backend proxy
   useEffect(() => {
-    if (!routesLibrary || !map || !origin || !destination) return;
+    if (!origin || !destination) return;
 
-    // Create renderer if not exists
-    if (!directionsRendererRef.current) {
-      directionsRendererRef.current = new routesLibrary.DirectionsRenderer({
-        map,
-        suppressMarkers: true, // We'll render our own markers
-        polylineOptions: {
-          strokeColor: "#3b82f6",
-          strokeWeight: 5,
-          strokeOpacity: 0.8,
-        },
-      });
-    }
-
-    const directionsService = new routesLibrary.DirectionsService();
-
-    directionsService.route(
-      {
-        origin: new google.maps.LatLng(origin.lat, origin.lng),
-        destination: new google.maps.LatLng(destination.lat, destination.lng),
-        travelMode: google.maps.TravelMode.DRIVING,
-      },
-      (response, status) => {
-        if (status === "OK" && response) {
-          directionsRendererRef.current?.setDirections(response);
-          const leg = response.routes[0]?.legs[0];
-          if (leg) {
-            setRouteInfo({
-              distance: leg.distance?.text || "",
-              duration: leg.duration?.text || "",
-            });
-          }
-        }
+    const fetchDirections = async () => {
+      const result = await getDirections(origin, destination);
+      if (result) {
+        setRouteInfo({
+          distance: result.distance,
+          duration: result.duration,
+        });
+        setRoutePolyline(decodePolyline(result.polyline));
       }
-    );
-  }, [routesLibrary, map, origin, destination]);
+    };
 
-  // Fit map bounds to show both points
-  useEffect(() => {
-    if (!map || !origin || !destination) return;
-
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend(new google.maps.LatLng(origin.lat, origin.lng));
-    bounds.extend(new google.maps.LatLng(destination.lat, destination.lng));
-    map.fitBounds(bounds, { top: 60, bottom: 60, left: 40, right: 40 });
-  }, [map, origin, destination]);
+    fetchDirections();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origin?.lat, origin?.lng, destination?.lat, destination?.lng]);
 
   // Handle "Start Route" click
   const handleStartRoute = async () => {
@@ -233,10 +189,7 @@ const MapContent: React.FC<{
       setRouteStarted(false);
       geo.stopWatching();
       await clearProfessionalLocation(orderId);
-      if (directionsRendererRef.current) {
-        directionsRendererRef.current.setMap(null);
-        directionsRendererRef.current = null;
-      }
+      setRoutePolyline([]);
       setRouteInfo(null);
     } catch {
       // Silent fail
@@ -264,7 +217,7 @@ const MapContent: React.FC<{
     );
   }
 
-  if (!destination) {
+  if (!destination || geocodingDest) {
     return (
       <div className="flex items-center justify-center h-48 text-slate-500 dark:text-slate-400">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -272,6 +225,11 @@ const MapContent: React.FC<{
       </div>
     );
   }
+
+  // Compute fit bounds points
+  const fitPoints: Array<[number, number]> = [];
+  if (origin) fitPoints.push([origin.lat, origin.lng]);
+  fitPoints.push([destination.lat, destination.lng]);
 
   return (
     <div className="space-y-4">
@@ -302,33 +260,52 @@ const MapContent: React.FC<{
 
       {/* Map container */}
       <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700" style={{ height: "350px" }}>
-        <Map
-          defaultCenter={destination}
-          defaultZoom={13}
-          mapId="faztudo-route-map"
-          gestureHandling="greedy"
-          disableDefaultUI={false}
-          zoomControl={true}
-          streetViewControl={false}
-          mapTypeControl={false}
-          fullscreenControl={true}
+        <MapContainer
+          center={[destination.lat, destination.lng]}
+          zoom={13}
+          scrollWheelZoom={true}
           style={{ width: "100%", height: "100%" }}
+          zoomControl={true}
+          attributionControl={false}
         >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          />
+
+          {fitPoints.length >= 2 && <FitBounds points={fitPoints} />}
+
+          {/* Route polyline */}
+          {routePolyline.length > 0 && (
+            <Polyline
+              positions={routePolyline}
+              pathOptions={{
+                color: "#3b82f6",
+                weight: 5,
+                opacity: 0.8,
+              }}
+            />
+          )}
+
           {/* Destination marker (client's address) */}
-          <AdvancedMarker position={destination} title={destinationLabel}>
-            <Pin background="#ef4444" glyphColor="#fff" borderColor="#dc2626" />
-          </AdvancedMarker>
+          <Marker position={[destination.lat, destination.lng]} icon={destinationIcon}>
+            <Popup>
+              <div className="text-sm font-medium">{destinationLabel}</div>
+            </Popup>
+          </Marker>
 
           {/* Professional's current position */}
           {origin && (
-            <AdvancedMarker position={origin} title="Profissional">
-              <Pin background="#3b82f6" glyphColor="#fff" borderColor="#2563eb" />
-            </AdvancedMarker>
+            <Marker position={[origin.lat, origin.lng]} icon={professionalIcon}>
+              <Popup>
+                <div className="text-sm font-medium">Profissional</div>
+              </Popup>
+            </Marker>
           )}
-        </Map>
+        </MapContainer>
 
         {/* Floating legend */}
-        <div className="absolute bottom-3 left-3 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md text-xs space-y-1">
+        <div className="absolute bottom-3 left-3 z-[1000] bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md text-xs space-y-1">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
             <span className="text-slate-600 dark:text-slate-400">Profissional</span>
@@ -377,66 +354,6 @@ const MapContent: React.FC<{
         </div>
       )}
     </div>
-  );
-};
-
-// Main component with APIProvider wrapper
-const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
-  orderId,
-  isProfessional,
-  destinationAddress,
-  orderStatus,
-}) => {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [loadingKey, setLoadingKey] = useState(true);
-  const [keyError, setKeyError] = useState<string | null>(null);
-
-  // Load API key
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const config = await getMapConfig();
-        if (config.apiKey) {
-          setApiKey(config.apiKey);
-        } else {
-          setKeyError("Chave do Google Maps nao configurada");
-        }
-      } catch {
-        setKeyError("Erro ao carregar configuracao do mapa");
-      } finally {
-        setLoadingKey(false);
-      }
-    };
-    loadConfig();
-  }, []);
-
-  if (loadingKey) {
-    return (
-      <div className="flex items-center justify-center h-48 text-slate-500 dark:text-slate-400">
-        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-        Carregando mapa...
-      </div>
-    );
-  }
-
-  if (keyError || !apiKey) {
-    return (
-      <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl text-red-700 dark:text-red-400 text-sm">
-        <AlertCircle className="w-5 h-5 flex-shrink-0" />
-        {keyError || "Mapa indisponivel"}
-      </div>
-    );
-  }
-
-  return (
-    <APIProvider apiKey={apiKey}>
-      <MapContent
-        isProfessional={isProfessional}
-        orderId={orderId}
-        destinationAddress={destinationAddress}
-        orderStatus={orderStatus}
-      />
-    </APIProvider>
   );
 };
 
