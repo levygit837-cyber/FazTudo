@@ -65,7 +65,7 @@ function useFocusTrap(containerRef: React.RefObject<HTMLElement | null>, active:
 
 const Layout: React.FC = () => {
   const location = useLocation();
-  const { user, isAuthenticated, isProfessional, isClient, isAdmin, logout } =
+  const { user, isAuthenticated, isProfessional, isClient, isAdmin, isCompany, logout } =
     useAuth();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -190,6 +190,35 @@ const Layout: React.FC = () => {
             path: "/professional/messages",
             label: "Mensagens",
             icon: <MessageSquare size={20} />,
+          },
+        ]
+      : []),
+    ...(isAuthenticated && isCompany
+      ? [
+          {
+            path: "/company/dashboard",
+            label: "Dashboard",
+            icon: <LayoutGrid size={20} />,
+          },
+          {
+            path: "/company/orders",
+            label: "Pedidos",
+            icon: <FileText size={20} />,
+          },
+          {
+            path: "/company/channels",
+            label: "Canais",
+            icon: <MessageSquare size={20} />,
+          },
+          {
+            path: "/company/members",
+            label: "Equipe",
+            icon: <Users size={20} />,
+          },
+          {
+            path: "/company/salary",
+            label: "Financeiro",
+            icon: <Wallet size={20} />,
           },
         ]
       : []),
