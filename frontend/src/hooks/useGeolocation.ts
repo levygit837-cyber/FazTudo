@@ -4,6 +4,7 @@ interface GeolocationState {
   latitude: number | null;
   longitude: number | null;
   accuracy: number | null;
+  bearing: number | null;
   error: string | null;
   loading: boolean;
 }
@@ -28,6 +29,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
     latitude: null,
     longitude: null,
     accuracy: null,
+    bearing: null,
     error: null,
     loading: true,
   });
@@ -35,14 +37,32 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
   const watchIdRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestPositionRef = useRef<{ lat: number; lng: number } | null>(null);
+  const previousPositionRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const handleSuccess = useCallback(
     (position: GeolocationPosition) => {
       const { latitude, longitude, accuracy } = position.coords;
+
+      // Calculate bearing from previous position
+      let bearing: number | null = null;
+      const prev = previousPositionRef.current;
+      if (prev) {
+        const toRad = (d: number) => (d * Math.PI) / 180;
+        const toDeg = (r: number) => (r * 180) / Math.PI;
+        const dLng = toRad(longitude - prev.lng);
+        const lat1r = toRad(prev.lat);
+        const lat2r = toRad(latitude);
+        const x = Math.sin(dLng) * Math.cos(lat2r);
+        const y = Math.cos(lat1r) * Math.sin(lat2r) - Math.sin(lat1r) * Math.cos(lat2r) * Math.cos(dLng);
+        bearing = (toDeg(Math.atan2(x, y)) + 360) % 360;
+      }
+      previousPositionRef.current = { lat: latitude, lng: longitude };
+
       setState({
         latitude,
         longitude,
         accuracy,
+        bearing,
         error: null,
         loading: false,
       });
