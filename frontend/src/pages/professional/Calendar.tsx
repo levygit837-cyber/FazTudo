@@ -149,7 +149,7 @@ const ProfessionalCalendar: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar Grid */}
-        <div className="lg:col-span-2 card">
+        <div className="lg:col-span-2 card min-w-0">
           {/* Month Navigation */}
           <div className="flex items-center justify-between mb-6">
             <button
@@ -182,7 +182,7 @@ const ProfessionalCalendar: React.FC = () => {
           </div>
 
           {/* Calendar Days */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1 w-full">
             {/* Empty cells for days before month start */}
             {Array.from({ length: firstDayOfWeek }).map((_, i) => (
               <div key={`empty-${i}`} className="aspect-square" />
@@ -202,7 +202,7 @@ const ProfessionalCalendar: React.FC = () => {
                     aspect-square rounded-lg p-1 flex flex-col items-center justify-center
                     text-sm transition-all relative
                     ${isSelected
-                      ? "bg-primary-600 text-white ring-2 ring-primary-300"
+                      ? "bg-primary-600 text-white ring-2 ring-inset ring-primary-300/70"
                       : isToday
                         ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 ring-1 ring-primary-200"
                         : !day.isAvailable
