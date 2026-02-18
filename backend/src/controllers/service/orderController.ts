@@ -257,6 +257,7 @@ export const getUserServiceOrders = async (
     // Filtrar por status se fornecido
     if (status && status !== "all") {
       const validStatuses = [
+        "DRAFT",
         "PENDING",
         "ACCEPTED",
         "IN_PROGRESS",
@@ -1290,6 +1291,246 @@ export const cancelServiceOrder = async (
       .json(successResponse(null, "Service order cancelled successfully"));
   } catch (error) {
     log.error({ err: error }, "Cancel service order error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// Criar pedido rascunho (DRAFT) para conversar antes de formalizar
+export const createDraftOrder = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    if (req.user.role !== "CLIENT") {
+      res.status(403).json(errorResponse("Only clients can create draft orders"));
+      return;
+    }
+
+    const { serviceListingId, message } = req.body;
+
+    if (!serviceListingId) {
+      res.status(400).json(errorResponse("Service listing ID is required"));
+      return;
+    }
+
+    const serviceListing = await prisma.serviceListing.findUnique({
+      where: { id: serviceListingId },
+      include: {
+        professional: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    if (!serviceListing) {
+      res.status(404).json(errorResponse("Service listing not found"));
+      return;
+    }
+
+    if (!serviceListing.isAvailable) {
+      res.status(400).json(errorResponse("This service is not available"));
+      return;
+    }
+
+    // Verificar se já existe DRAFT ativo para este listing + cliente
+    const existingDraft = await prisma.serviceOrder.findFirst({
+      where: {
+        clientId: req.user.id,
+        serviceListingId,
+        status: "DRAFT",
+      },
+    });
+
+    if (existingDraft) {
+      // Retornar o draft existente em vez de criar novo
+      res.status(200).json(
+        successResponse(
+          { serviceOrder: existingDraft },
+          "Existing draft order found",
+        ),
+      );
+      return;
+    }
+
+    const draftOrder = await prisma.serviceOrder.create({
+      data: {
+        title: `Conversa sobre: ${serviceListing.title}`,
+        description: null,
+        price: serviceListing.price,
+        status: "DRAFT",
+        deadlineDays: env.DEFAULT_ESCROW_HOLD_DAYS,
+        deadlineDate: calculateDeadlineDate(env.DEFAULT_ESCROW_HOLD_DAYS),
+        clientId: req.user.id,
+        professionalId: serviceListing.professionalId,
+        serviceListingId,
+      },
+      include: {
+        client: {
+          select: { id: true, name: true, profileImage: true },
+        },
+        professional: {
+          select: { id: true, name: true, profileImage: true },
+        },
+        serviceListing: {
+          select: { id: true, title: true, price: true },
+        },
+      },
+    });
+
+    // Se o cliente enviou uma mensagem inicial, criar mensagem
+    if (message && message.trim().length > 0) {
+      await prisma.message.create({
+        data: {
+          content: message.trim(),
+          type: "TEXT",
+          senderId: req.user.id,
+          recipientId: serviceListing.professionalId,
+          serviceOrderId: draftOrder.id,
+        },
+      });
+    }
+
+    // Notificar profissional
+    await createNotification(
+      serviceListing.professionalId,
+      NotificationType.NEW_MESSAGE,
+      "Novo contato recebido",
+      `${req.user.name} quer conversar sobre "${serviceListing.title}"`,
+      draftOrder.id,
+      { clientId: req.user.id, clientName: req.user.name },
+    );
+
+    // Socket.io
+    emitToUser(serviceListing.professionalId, "order:draft", {
+      orderId: draftOrder.id,
+      clientName: req.user.name,
+      listingTitle: serviceListing.title,
+    });
+
+    res.status(201).json(
+      successResponse(
+        { serviceOrder: draftOrder },
+        "Draft order created successfully",
+      ),
+    );
+  } catch (error) {
+    log.error({ err: error }, "Create draft order error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// Converter DRAFT em pedido real (PENDING) — requer confirmação de ambas as partes
+export const convertDraftToOrder = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    const orderId = parseInt(String(req.params.id), 10);
+    if (isNaN(orderId)) {
+      res.status(400).json(errorResponse("Invalid order ID"));
+      return;
+    }
+
+    const { title, description, scheduledDate, price } = req.body;
+
+    const serviceOrder = await prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        serviceListing: {
+          select: { title: true, price: true },
+        },
+      },
+    });
+
+    if (!serviceOrder) {
+      res.status(404).json(errorResponse("Service order not found"));
+      return;
+    }
+
+    if (serviceOrder.status !== "DRAFT") {
+      res.status(400).json(errorResponse("Only draft orders can be converted"));
+      return;
+    }
+
+    // Verificar que o usuário é participante
+    const isClient = serviceOrder.clientId === req.user.id;
+    const isProfessional = serviceOrder.professionalId === req.user.id;
+
+    if (!isClient && !isProfessional) {
+      res.status(403).json(errorResponse("You are not part of this order"));
+      return;
+    }
+
+    // Converter scheduledDate
+    let scheduledDateObj: Date | undefined;
+    if (scheduledDate) {
+      scheduledDateObj = new Date(scheduledDate);
+      if (isNaN(scheduledDateObj.getTime())) {
+        res.status(400).json(errorResponse("Invalid scheduled date"));
+        return;
+      }
+    }
+
+    const updatedOrder = await prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: {
+        status: "PENDING",
+        title: title || serviceOrder.title,
+        description: description || serviceOrder.description,
+        price: price || serviceOrder.price,
+        scheduledDate: scheduledDateObj || serviceOrder.scheduledDate,
+      },
+      include: {
+        client: {
+          select: { id: true, name: true, profileImage: true },
+        },
+        professional: {
+          select: { id: true, name: true, profileImage: true },
+        },
+        serviceListing: {
+          select: { id: true, title: true, price: true },
+        },
+      },
+    });
+
+    // Notificar a outra parte
+    const notifyUserId = isClient
+      ? serviceOrder.professionalId!
+      : serviceOrder.clientId;
+    const actorLabel = isClient ? "cliente" : "profissional";
+
+    await createNotification(
+      notifyUserId,
+      NotificationType.ORDER_CREATED,
+      "Conversa convertida em pedido",
+      `O ${actorLabel} ${req.user.name} formalizou o pedido "${updatedOrder.title}"`,
+      orderId,
+      { convertedBy: req.user.id },
+    );
+
+    emitToOrder(orderId, "order:statusChanged", {
+      orderId,
+      status: "PENDING",
+    });
+
+    res.status(200).json(
+      successResponse(
+        { serviceOrder: updatedOrder },
+        "Draft converted to order successfully",
+      ),
+    );
+  } catch (error) {
+    log.error({ err: error }, "Convert draft to order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

@@ -22,6 +22,7 @@ enum UserStatus {
 }
 
 enum ServiceOrderStatus {
+  DRAFT // Rascunho - conversa antes de formalizar pedido
   PENDING // Aguardando aceitação do profissional
   ACCEPTED // Aceito pelo profissional
   IN_PROGRESS // Em andamento

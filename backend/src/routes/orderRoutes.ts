@@ -104,4 +104,21 @@ router.post(
   serviceController.rejectReschedule,
 );
 
+// Criar pedido rascunho (DRAFT) para conversar antes de formalizar
+router.post(
+  "/orders/draft",
+  verifyToken,
+  requireRole("CLIENT"),
+  requireVerified,
+  serviceController.createDraftOrder,
+);
+
+// Converter DRAFT em pedido real (PENDING)
+router.post(
+  "/orders/:id/convert",
+  verifyToken,
+  requireVerified,
+  serviceController.convertDraftToOrder,
+);
+
 export default router;
