@@ -231,7 +231,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else if (user.role === "COMPANY") {
         navigate("/company/dashboard");
       } else if (user.role === "ADMIN") {
-        navigate("/admin/dashboard");
+        const adminUrl = (import.meta.env.VITE_ADMIN_URL as string | undefined) || "http://localhost:5174";
+        window.location.href = adminUrl;
       }
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;

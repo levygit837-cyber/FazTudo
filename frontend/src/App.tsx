@@ -43,9 +43,6 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Notifications from "./pages/Notifications";
 import Wallet from "./pages/Wallet";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminVerifications from "./pages/admin/AdminVerifications";
 import MapView from "./pages/services/MapView";
 import CompanyDashboard from "./pages/company/Dashboard";
 import CompanyProfile from "./pages/company/Profile";
@@ -58,7 +55,6 @@ import ChannelDetail from "./pages/company/ChannelDetail";
 import CompanyStorefront from "./pages/CompanyStorefront";
 import CompanyAnalytics from "./pages/company/Analytics";
 import ProfessionalStorefrontPage from "./pages/ProfessionalStorefront";
-import CompanyVerifications from "./pages/admin/CompanyVerifications";
 import { UserRole } from "./types";
 import { useSessionTracking } from "./hooks/useSessionTracking";
 
@@ -175,20 +171,6 @@ const App: React.FC = () => {
                 <Route path="orders/:id/chat" element={<ServiceChat />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="carteira" element={<Wallet />} />
-              </Route>
-
-              <Route
-                path="admin"
-                element={
-                  <ProtectedRoute allowedRoles={[UserRole.ADMIN]} />
-                }
-              >
-                <Route index element={<Navigate to="dashboard" replace />} />
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="users" element={<AdminUsers />} />
-                <Route path="verifications" element={<AdminVerifications />} />
-                <Route path="companies" element={<CompanyVerifications />} />
-                <Route path="notifications" element={<Notifications />} />
               </Route>
 
               <Route
