@@ -178,3 +178,24 @@ export interface ReverseGeocodingResult {
   lat: number;
   lng: number;
 }
+
+/**
+ * Props for NavigationMap component (premium GL-rendered navigation map).
+ * Same shape as WazeMapProps for backward compatibility.
+ */
+export interface NavigationMapProps {
+  orderId: number;
+  isProfessional: boolean;
+  professionalName: string;
+  destinationAddress: {
+    street: string;
+    number: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  orderStatus: string;
+}
