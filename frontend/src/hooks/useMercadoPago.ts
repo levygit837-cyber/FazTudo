@@ -31,6 +31,7 @@ export function useMercadoPago() {
             const script = document.createElement("script");
             script.src = "https://sdk.mercadopago.com/js/v2";
             script.async = true;
+            script.crossOrigin = "anonymous";
             script.onload = () => {
               scriptLoadedRef.current = true;
               resolve();
