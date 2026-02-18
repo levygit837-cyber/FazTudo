@@ -129,7 +129,7 @@ export async function listUsers(
   search?: string,
   role?: string,
   status?: string
-) {
+): Promise<PaginatedResponse<UserListItem>> {
   const params: Record<string, string | number> = {};
   if (page) params.page = page;
   if (limit) params.limit = limit;
@@ -137,11 +137,18 @@ export async function listUsers(
   if (role) params.role = role;
   if (status) params.status = status;
 
-  const res = await api.get<ApiResponse<PaginatedResponse<UserListItem>>>(
+  const res = await api.get<ApiResponse<{ users: UserListItem[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>>(
     "/admin/users",
     { params }
   );
-  return res.data.data;
+  const { users, pagination } = res.data.data;
+  return {
+    items: users,
+    total: pagination.total,
+    page: pagination.page,
+    limit: pagination.limit,
+    totalPages: pagination.totalPages,
+  };
 }
 
 export async function getUserDetails(id: number) {
@@ -150,7 +157,7 @@ export async function getUserDetails(id: number) {
 }
 
 export async function updateUserStatus(id: number, status: string) {
-  const res = await api.patch<ApiResponse<UserDetails>>(
+  const res = await api.put<ApiResponse<UserDetails>>(
     `/admin/users/${id}/status`,
     { status }
   );
