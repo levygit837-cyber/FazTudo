@@ -91,6 +91,17 @@
     cursor: default;
   }
 
+  /* Tailwind v4 removeu cursor:pointer de <button> no preflight (breaking change vs v3).
+     Esta regra restaura o comportamento esperado globalmente. */
+  button,
+  [role="button"],
+  [type="button"],
+  [type="reset"],
+  [type="submit"],
+  ::file-selector-button {
+    cursor: pointer;
+  }
+
   body {
     @apply bg-slate-50 text-slate-900 antialiased font-sans;
     line-height: 1.5;
