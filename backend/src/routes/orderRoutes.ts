@@ -77,6 +77,7 @@ router.post(
 router.post(
   "/orders/:id/cancel",
   verifyToken,
+  requireVerified,
   serviceController.cancelServiceOrder,
 );
 
