@@ -467,9 +467,9 @@ const DevicesSection: React.FC<{ stats: TrafficStats }> = ({ stats }) => {
                         color: "#f1f5f9",
                         fontSize: "12px",
                       }}
-                      formatter={(value: number, name: string) => [
-                        `${formatNumber(value)} sessões`,
-                        name,
+                      formatter={(value: number | undefined, name: string | undefined) => [
+                        `${formatNumber(value ?? 0)} sessões`,
+                        name ?? "",
                       ]}
                     />
                   </PieChart>

@@ -520,8 +520,8 @@ const DashboardPage: React.FC = () => {
                       />
                       <Tooltip
                         {...darkTooltip}
-                        formatter={(v: number) => [
-                          formatNumber(v),
+                        formatter={(v: number | undefined) => [
+                          formatNumber(v ?? 0),
                           "Usuários",
                         ]}
                       />
@@ -603,8 +603,8 @@ const DashboardPage: React.FC = () => {
                       />
                       <Tooltip
                         {...darkTooltip}
-                        formatter={(v: number) => [
-                          formatCurrency(v),
+                        formatter={(v: number | undefined) => [
+                          formatCurrency(v ?? 0),
                           "Receita",
                         ]}
                       />
