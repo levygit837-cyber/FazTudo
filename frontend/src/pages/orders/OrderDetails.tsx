@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Clock,
@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useSocket, useOrderRoom } from "../../hooks/useSocket";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import RescheduleModal from "../../components/orders/RescheduleModal";
 import DisputeModal from "../../components/orders/DisputeModal";
@@ -220,7 +221,7 @@ const OrderDetails: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<ServiceOrder | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Confirmation dialog state
@@ -247,10 +248,23 @@ const OrderDetails: React.FC = () => {
     ? `/professional/services/${id}/chat`
     : `/client/orders/${id}/chat`;
 
-  const loadOrder = async () => {
+  // Socket.io: join order room for real-time updates
+  useOrderRoom(order?.id);
+
+  // Socket.io: listen for status changes
+  const handleStatusChanged = useCallback(
+    (data: { orderId: number; status: string }) => {
+      if (!order || data.orderId !== order.id) return;
+      setOrder((prev) => (prev ? { ...prev, status: data.status as any } : prev));
+    },
+    [order?.id],
+  );
+  useSocket("order:statusChanged", handleStatusChanged);
+
+  const loadOrder = async (showSpinner = true) => {
     if (!id) return;
     try {
-      setLoading(true);
+      if (showSpinner) setLoading(true);
       const orderData = await getOrderById(parseInt(id));
       setOrder(orderData);
       if (orderData.reviews && orderData.reviews.length > 0) {
@@ -284,19 +298,34 @@ const OrderDetails: React.FC = () => {
     }
   }, []);
 
-  const handleAction = async (action: () => Promise<any>, successMsg?: string) => {
+  const handleAction = async (
+    action: () => Promise<any>,
+    successMsg?: string,
+    optimisticStatus?: string,
+  ) => {
+    const actionId = String(Date.now());
+    const previousOrder = order;
     try {
-      setActionLoading(true);
+      setActionLoading(actionId);
       setError(null);
+      // Optimistic update: apply new status immediately
+      if (optimisticStatus && order) {
+        setOrder({ ...order, status: optimisticStatus as any });
+      }
       await action();
-      await loadOrder();
+      // Background refresh (no spinner)
+      await loadOrder(false);
       toast.success(successMsg || "Acao realizada com sucesso");
     } catch (err: any) {
+      // Revert optimistic update on failure
+      if (optimisticStatus && previousOrder) {
+        setOrder(previousOrder);
+      }
       const msg = err?.response?.data?.message || "Erro ao executar acao";
       setError(msg);
       toast.error("Erro", msg);
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
@@ -622,11 +651,11 @@ const OrderDetails: React.FC = () => {
                   {/* Action buttons - prominent */}
                   <div className="flex gap-3 pt-1">
                     <button
-                      onClick={() => handleAction(() => acceptOrder(order.id), "Pedido aceito!")}
-                      disabled={actionLoading}
+                      onClick={() => handleAction(() => acceptOrder(order.id), "Pedido aceito!", "ACCEPTED")}
+                      disabled={!!actionLoading}
                       className="btn btn-primary flex-1 py-2.5 flex items-center justify-center gap-2"
                     >
-                      {actionLoading ? (
+                      {!!actionLoading ? (
                         <span className="loader h-4 w-4" />
                       ) : (
                         <CheckCircle className="w-4 h-4" />
@@ -643,7 +672,7 @@ const OrderDetails: React.FC = () => {
                           action: () => cancelOrder(order.id, "Recusado pelo profissional"),
                         })
                       }
-                      disabled={actionLoading}
+                      disabled={!!actionLoading}
                       className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 py-2.5"
                     >
                       <XCircle className="w-4 h-4" />
@@ -694,8 +723,8 @@ const OrderDetails: React.FC = () => {
                   {/* Start service button */}
                   {paymentApproved && (
                     <button
-                      onClick={() => handleAction(() => startOrder(order.id), "Servico iniciado!")}
-                      disabled={actionLoading}
+                      onClick={() => handleAction(() => startOrder(order.id), "Servico iniciado!", "IN_PROGRESS")}
+                      disabled={!!actionLoading}
                       className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
                     >
                       <Clock className="w-4 h-4" />
@@ -707,7 +736,7 @@ const OrderDetails: React.FC = () => {
                   {order.professionalId && (
                     <button
                       onClick={() => setShowReschedule(true)}
-                      disabled={actionLoading}
+                      disabled={!!actionLoading}
                       className="btn btn-outline w-full"
                     >
                       <CalendarClock className="w-4 h-4 mr-2" />
@@ -729,7 +758,7 @@ const OrderDetails: React.FC = () => {
                   {order.professionalId && (
                     <button
                       onClick={() => setShowReschedule(true)}
-                      disabled={actionLoading}
+                      disabled={!!actionLoading}
                       className="btn btn-outline w-full"
                     >
                       <CalendarClock className="w-4 h-4 mr-2" />
@@ -738,7 +767,7 @@ const OrderDetails: React.FC = () => {
                   )}
                   <button
                     onClick={() => setShowDispute(true)}
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 w-full"
                   >
                     <AlertTriangle className="w-4 h-4 mr-2" />
@@ -760,7 +789,7 @@ const OrderDetails: React.FC = () => {
                         action: () => confirmProfessionalCompletion(order.id),
                       })
                     }
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
                   >
                     <CheckCircle className="w-4 h-4" />
@@ -835,7 +864,7 @@ const OrderDetails: React.FC = () => {
                         action: () => submitOrderCompletion(order.id),
                       })
                     }
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
                   >
                     <CheckCircle className="w-4 h-4" />
@@ -865,7 +894,7 @@ const OrderDetails: React.FC = () => {
                         action: () => releasePayment(order.id),
                       })
                     }
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-primary"
                   >
                     <DollarSign className="w-4 h-4 mr-2" />
@@ -885,7 +914,7 @@ const OrderDetails: React.FC = () => {
                         action: () => cancelOrder(order.id, "Cancelado pelo cliente"),
                       })
                     }
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <XCircle className="w-4 h-4 mr-2" />
@@ -897,7 +926,7 @@ const OrderDetails: React.FC = () => {
                 {["ACCEPTED", "IN_PROGRESS"].includes(order.status) && order.professionalId && (
                   <button
                     onClick={() => setShowReschedule(true)}
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-outline"
                   >
                     <CalendarClock className="w-4 h-4 mr-2" />
@@ -909,7 +938,7 @@ const OrderDetails: React.FC = () => {
                 {["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION"].includes(order.status) && (
                   <button
                     onClick={() => setShowDispute(true)}
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <AlertTriangle className="w-4 h-4 mr-2" />
@@ -935,7 +964,7 @@ const OrderDetails: React.FC = () => {
               }}
               professionalName={order.professional?.name}
               alreadyReviewed={reviewSubmitted || (order.reviews?.some((r: any) => r.authorId === user?.id) ?? false)}
-              loading={actionLoading}
+              loading={!!actionLoading}
             />
           )}
 
@@ -968,7 +997,7 @@ const OrderDetails: React.FC = () => {
                 <button
                   onClick={async () => {
                     try {
-                      setActionLoading(true);
+                      setActionLoading("rehire");
                       const newOrder = await createOrder({
                         serviceListingId: order.serviceListingId!,
                         title: order.title,
@@ -978,10 +1007,10 @@ const OrderDetails: React.FC = () => {
                     } catch (err: any) {
                       toast.error("Erro", err?.response?.data?.message || "Erro ao recontratar");
                     } finally {
-                      setActionLoading(false);
+                      setActionLoading(null);
                     }
                   }}
-                  disabled={actionLoading}
+                  disabled={!!actionLoading}
                   className="btn btn-primary mt-4 w-full"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
@@ -1124,7 +1153,7 @@ const OrderDetails: React.FC = () => {
         message={confirmAction?.message || ""}
         confirmLabel={confirmAction?.confirmLabel || "Confirmar"}
         variant={confirmAction?.variant || "danger"}
-        loading={actionLoading}
+        loading={!!actionLoading}
       />
     </div>
   );
