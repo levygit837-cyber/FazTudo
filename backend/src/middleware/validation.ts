@@ -229,7 +229,7 @@ export const sendMessageSchema = z.object({
 // ============================================
 
 export const createReviewSchema = z.object({
-  rating: z.number().min(1, 'Nota minima e 1').max(5, 'Nota maxima e 5'),
+  rating: z.number().int("Rating deve ser um número inteiro").min(1, 'Nota minima e 1').max(5, 'Nota maxima e 5'),
   comment: sanitizedString
     .pipe(z.string().max(1000, 'Comentario muito longo'))
     .optional(),
@@ -416,3 +416,30 @@ export const delayResponseSchema = z
     (data) => data.arrived !== undefined || data.action !== undefined,
     { message: "Informe 'arrived' ou 'action'" },
   );
+
+// Order state transition schemas
+export const acceptOrderSchema = z.object({
+  message: z.string().max(500).optional(),
+});
+
+export const startOrderSchema = z.object({
+  message: z.string().max(500).optional(),
+});
+
+export const submitCompletionSchema = z.object({
+  completionNote: z.string().max(2000).optional(),
+  attachments: z.array(z.string().url()).max(10).optional(),
+});
+
+export const confirmOrderSchema = z.object({
+  feedback: z.string().max(1000).optional(),
+});
+
+export const cancelOrderSchema = z.object({
+  reason: z.string().min(10, "Motivo deve ter ao menos 10 caracteres").max(500),
+});
+
+export const rescheduleOrderSchema = z.object({
+  scheduledDate: z.string().datetime("Data inválida"),
+  message: z.string().max(500).optional(),
+});

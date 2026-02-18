@@ -7,7 +7,16 @@ import {
   authLogger,
 } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
-import { createOrderSchema, delayResponseSchema } from "../middleware/validation";
+import {
+  createOrderSchema,
+  delayResponseSchema,
+  acceptOrderSchema,
+  startOrderSchema,
+  submitCompletionSchema,
+  confirmOrderSchema,
+  cancelOrderSchema,
+  rescheduleOrderSchema,
+} from "../middleware/validation";
 
 const router = Router();
 
@@ -40,6 +49,7 @@ router.post(
   verifyToken,
   requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
   requireVerified,
+  validateBody(acceptOrderSchema),
   serviceController.acceptServiceOrder,
 );
 
@@ -49,6 +59,7 @@ router.post(
   verifyToken,
   requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
   requireVerified,
+  validateBody(startOrderSchema),
   serviceController.startServiceOrder,
 );
 
@@ -58,6 +69,7 @@ router.post(
   verifyToken,
   requireRole("CLIENT", "ADMIN"),
   requireVerified,
+  validateBody(submitCompletionSchema),
   serviceController.completeServiceOrder,
 );
 
@@ -70,6 +82,7 @@ router.post(
   verifyToken,
   requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
   requireVerified,
+  validateBody(confirmOrderSchema),
   serviceController.confirmProfessionalCompletion,
 );
 
@@ -78,6 +91,7 @@ router.post(
   "/orders/:id/cancel",
   verifyToken,
   requireVerified,
+  validateBody(cancelOrderSchema),
   serviceController.cancelServiceOrder,
 );
 
@@ -85,6 +99,9 @@ router.post(
 router.post(
   "/orders/:id/reschedule",
   verifyToken,
+  requireVerified,
+  requireRole("CLIENT", "PROFESSIONAL", "COMPANY", "ADMIN"),
+  validateBody(rescheduleOrderSchema),
   serviceController.rescheduleOrder,
 );
 
