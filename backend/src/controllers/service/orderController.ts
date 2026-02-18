@@ -4,6 +4,7 @@ import { SAFE_USER_SELECT } from "../../lib/safeSelect";
 import type { AuthRequest } from "../../middleware/auth";
 import { env } from "../../config/env";
 import { NotificationType } from "@prisma/client";
+import { emitToUser, emitToOrder } from "../../lib/socket";
 
 import { createLogger } from "../../lib/logger";
 
@@ -594,6 +595,17 @@ export const acceptServiceOrder = async (
       { professionalId: req.user.id, professionalName: req.user.name },
     );
 
+    // Real-time Socket.io emissions
+    emitToUser(serviceOrder.clientId, "order:accepted", {
+      orderId: serviceOrder.id,
+      title: serviceOrder.title,
+      professionalName: req.user.name,
+    });
+    emitToOrder(serviceOrder.id, "order:statusChanged", {
+      orderId: serviceOrder.id,
+      status: "ACCEPTED",
+    });
+
     res
       .status(200)
       .json(
@@ -692,6 +704,12 @@ export const startServiceOrder = async (
       orderId,
       { professionalId: req.user.id, professionalName: req.user.name },
     );
+
+    // Real-time Socket.io emissions
+    emitToOrder(serviceOrder.id, "order:statusChanged", {
+      orderId: serviceOrder.id,
+      status: "IN_PROGRESS",
+    });
 
     res
       .status(200)
@@ -813,6 +831,12 @@ export const completeServiceOrder = async (
         { clientId: req.user.id, clientName: req.user.name },
       );
     }
+
+    // Real-time Socket.io emissions
+    emitToOrder(orderId, "order:statusChanged", {
+      orderId,
+      status: "AWAITING_PROFESSIONAL_CONFIRMATION",
+    });
 
     res
       .status(200)
@@ -1091,6 +1115,12 @@ export const confirmProfessionalCompletion = async (
       { professionalId: req.user.id, professionalName: req.user.name },
     );
 
+    // Real-time Socket.io emissions
+    emitToOrder(orderId, "order:statusChanged", {
+      orderId,
+      status: "COMPLETED",
+    });
+
     res.status(200).json(
       successResponse(
         { serviceOrder: updatedOrder },
@@ -1230,6 +1260,12 @@ export const cancelServiceOrder = async (
       orderId,
       { cancelledById: req.user.id, cancelledByName: actorName, reason },
     );
+
+    // Real-time Socket.io emissions
+    emitToOrder(orderId, "order:statusChanged", {
+      orderId,
+      status: "CANCELLED",
+    });
 
     res
       .status(200)

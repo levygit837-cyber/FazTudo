@@ -3,6 +3,7 @@ import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { NotificationType } from "@prisma/client";
 import { filterChatContent, getBlockedContentMessage } from "../../middleware/chatFilter";
+import { emitToOrder } from "../../lib/socket";
 
 import { createLogger } from "../../lib/logger";
 
@@ -229,6 +230,16 @@ export const sendMessage = async (
       orderId,
       { senderId, senderName: req.user.name, messageId: message.id },
     );
+
+    // Real-time Socket.io emission
+    emitToOrder(orderId, "chat:message", {
+      id: message.id,
+      content: message.content,
+      type: message.type,
+      senderId: message.senderId,
+      sender: message.sender,
+      createdAt: message.createdAt,
+    });
 
     res
       .status(201)
