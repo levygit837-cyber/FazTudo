@@ -797,7 +797,7 @@ const TrafficPage: React.FC = () => {
       {/* ---- Layout: sidebar + content ---- */}
       <div className="flex gap-5 items-start">
         {/* Metric sidebar */}
-        <aside className="w-52 shrink-0 sticky top-24 space-y-1.5">
+        <aside className="w-52 shrink-0 sticky top-4 space-y-1.5">
           {SIDEBAR_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
