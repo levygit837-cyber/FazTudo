@@ -98,6 +98,34 @@ export const uploadChatFile = async (
       return;
     }
 
+    // SECURITY: Validate magic bytes to prevent MIME spoofing
+    // file-type v19 is ESM-only, requires dynamic import
+    const { fileTypeFromFile } = await import("file-type");
+    const detectedType = await fileTypeFromFile(req.file.path).catch(() => null);
+    const declaredMime = req.file.mimetype;
+
+    if (detectedType && detectedType.mime !== declaredMime) {
+      // Magic bytes differ from declared MIME — possible spoofing
+      fs.unlinkSync(req.file.path);
+      log.warn(
+        { declared: declaredMime, detected: detectedType.mime, userId: req.user?.id },
+        "File upload rejected: magic bytes mismatch (possible MIME spoofing)"
+      );
+      res.status(400).json(
+        errorResponse("Arquivo inválido: tipo de arquivo não corresponde ao conteúdo")
+      );
+      return;
+    }
+
+    // Also verify detected type is in allowed list
+    if (detectedType && !ALLOWED_MIME_TYPES.includes(detectedType.mime)) {
+      fs.unlinkSync(req.file.path);
+      res.status(400).json(
+        errorResponse(`Tipo de arquivo não permitido: ${detectedType.mime}`)
+      );
+      return;
+    }
+
     // Verificar que o usuário faz parte do pedido
     const serviceOrder = await prisma.serviceOrder.findUnique({
       where: { id: orderId },
