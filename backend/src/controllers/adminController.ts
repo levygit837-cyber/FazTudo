@@ -729,13 +729,15 @@ export const adminLogin = async (
       tokenVersion: user.tokenVersion,
     };
 
-    const token = jwt.sign(tokenPayload, env.JWT_SECRET, {
+    const token = jwt.sign(tokenPayload, env.JWT_ACCESS_SECRET, {
       expiresIn: env.JWT_EXPIRES_IN as any,
     });
 
-    const refreshToken = jwt.sign(tokenPayload, env.JWT_SECRET, {
-      expiresIn: env.JWT_REFRESH_EXPIRES_IN as any,
-    });
+    const refreshToken = jwt.sign(
+      { id: user.id, email: user.email, type: "refresh" },
+      env.JWT_REFRESH_SECRET,
+      { expiresIn: env.JWT_REFRESH_EXPIRES_IN as any }
+    );
 
     const { password: _, tokenVersion: _tv, ...userData } = user;
 

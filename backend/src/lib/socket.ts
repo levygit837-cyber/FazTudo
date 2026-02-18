@@ -35,7 +35,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
     }
 
     try {
-      const decoded = jwt.verify(token, env.JWT_SECRET) as AuthPayload;
+      const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as AuthPayload;
       (socket as any).userId = decoded.userId;
       (socket as any).userRole = decoded.role;
       next();

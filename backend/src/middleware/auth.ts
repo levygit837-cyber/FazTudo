@@ -62,7 +62,7 @@ export const verifyToken = async (
     }
 
     // Verificar token
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload;
 
     // Buscar usuário no banco de dados
     const user = await prisma.user.findUnique({
@@ -233,7 +233,7 @@ export const generateToken = (user: {
     tokenVersion: user.tokenVersion,
   };
 
-  return jwt.sign(payload, env.JWT_SECRET, {
+  return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
     expiresIn: env.JWT_EXPIRES_IN as any,
   });
 };
@@ -245,7 +245,7 @@ export const generateRefreshToken = (user: {
 }): string => {
   return jwt.sign(
     { id: user.id, email: user.email, type: 'refresh' },
-    env.JWT_SECRET,
+    env.JWT_REFRESH_SECRET,
     { expiresIn: env.JWT_REFRESH_EXPIRES_IN as any }
   );
 };

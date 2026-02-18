@@ -37,6 +37,8 @@ export interface EnvConfig {
 
   // Authentication
   JWT_SECRET: string;
+  JWT_ACCESS_SECRET: string;
+  JWT_REFRESH_SECRET: string;
   JWT_EXPIRES_IN: string;
   JWT_REFRESH_EXPIRES_IN: string;
   BCRYPT_SALT_ROUNDS: number;
@@ -117,6 +119,15 @@ function getEnvConfig(): EnvConfig {
     log.warn("⚠️  JWT_SECRET is too short. Use at least 32 characters for security.");
   }
 
+  // JWT_ACCESS_SECRET / JWT_REFRESH_SECRET: falls back to JWT_SECRET for backward compatibility
+  const jwtAccessSecret = process.env.JWT_ACCESS_SECRET || jwtSecret;
+  const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET || jwtSecret;
+
+  if (nodeEnv === 'production' && jwtAccessSecret === jwtRefreshSecret) {
+    log.warn("⚠️  JWT_ACCESS_SECRET and JWT_REFRESH_SECRET are the same. " +
+      "Set different secrets in production for enhanced security.");
+  }
+
   // CORS: REQUIRED specific origin in production
   const corsOrigin = process.env.CORS_ORIGIN || (nodeEnv === 'production' ? '' : 'http://localhost:5173');
   if (nodeEnv === 'production' && (!corsOrigin || corsOrigin === '*')) {
@@ -135,6 +146,8 @@ function getEnvConfig(): EnvConfig {
 
     // Authentication — reduced default expiry for security
     JWT_SECRET: jwtSecret,
+    JWT_ACCESS_SECRET: jwtAccessSecret,
+    JWT_REFRESH_SECRET: jwtRefreshSecret,
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1h',
     JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
     BCRYPT_SALT_ROUNDS: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10),
