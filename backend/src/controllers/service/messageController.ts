@@ -157,10 +157,20 @@ export const sendMessage = async (
     }
 
     // Payment gate: chat is only available after payment is approved
-    if (!isAdmin && serviceOrder.payments.length === 0) {
+    // Exception: DRAFT orders allow text-only messages (pre-payment negotiation)
+    const isDraft = serviceOrder.status === "DRAFT";
+    if (!isAdmin && !isDraft && serviceOrder.payments.length === 0) {
       res
         .status(403)
         .json(errorResponse("Chat is only available after payment is approved"));
+      return;
+    }
+
+    // DRAFT orders: only text messages allowed (no attachments or location)
+    if (isDraft && messageType !== "TEXT") {
+      res
+        .status(403)
+        .json(errorResponse("Only text messages are allowed for draft orders"));
       return;
     }
 
