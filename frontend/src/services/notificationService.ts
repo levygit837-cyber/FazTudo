@@ -26,6 +26,7 @@ export const markAllAsRead = async (): Promise<void> => {
 };
 
 export const getUnreadCount = async (): Promise<number> => {
-  const data = await getNotifications({ status: NotificationStatus.UNREAD, limit: 0 });
+  // Use limit:1 to minimize payload while still getting accurate unreadCount metadata
+  const data = await getNotifications({ status: NotificationStatus.UNREAD, limit: 1 });
   return data.unreadCount;
 };

@@ -92,7 +92,7 @@ const Layout: React.FC = () => {
     };
 
     fetchUnread();
-    const interval = setInterval(fetchUnread, 60000);
+    const interval = setInterval(fetchUnread, 300000); // 5 minutes
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
