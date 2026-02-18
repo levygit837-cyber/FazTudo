@@ -7,17 +7,9 @@ import {
   getLocation,
   startRoute,
   clearLocation,
-  getMapConfig,
 } from "../controllers/service/locationController";
 
 const router = Router();
-
-// Get Google Maps API key (must be BEFORE :id routes)
-router.get(
-  "/map-config",
-  verifyToken,
-  getMapConfig
-);
 
 // Professional updates location while en route
 router.post(

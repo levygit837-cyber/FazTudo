@@ -245,29 +245,4 @@ export const clearLocation = async (
   }
 };
 
-/**
- * GET /api/services/map-config
- * Returns the Google Maps API key for the frontend
- */
-export const getMapConfig = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json(errorResponse("Not authenticated"));
-      return;
-    }
-
-    const { env } = await import("../../config/env");
-
-    res.status(200).json(
-      successResponse({
-        apiKey: env.PLACES_API_KEY,
-      })
-    );
-  } catch (error) {
-    log.error({ err: error }, "Get map config error");
-    res.status(500).json(errorResponse("Internal server error", 500));
-  }
-};
+// getMapConfig removed: SECURITY — never expose server-side API keys to clients (CRÍTICA-3)

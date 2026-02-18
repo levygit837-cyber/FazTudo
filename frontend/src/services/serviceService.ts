@@ -667,10 +667,7 @@ export const createOrderWithBrief = async (data: {
 
 // ==================== LOCATION TRACKING ====================
 
-export const getMapConfig = async (): Promise<{ apiKey: string }> => {
-  const response = await api.get<ApiResponse<{ apiKey: string }>>("/services/map-config");
-  return extractData(response);
-};
+// getMapConfig removed: SECURITY — API keys should never be exposed to frontend (CRÍTICA-3)
 
 export const startRoute = async (orderId: number): Promise<any> => {
   const response = await api.post<ApiResponse<any>>(`/services/orders/${orderId}/start-route`);
@@ -800,7 +797,6 @@ export default {
   acceptProposal,
   rejectProposal,
   // Location Tracking
-  getMapConfig,
   startRoute,
   updateProfessionalLocation,
   getProfessionalLocation,
