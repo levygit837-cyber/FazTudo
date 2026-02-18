@@ -235,15 +235,45 @@ export async function resolveDispute(
 
 // ==================== Platform Config ====================
 
-export async function getPlatformConfig() {
-  const res = await api.get<ApiResponse<PlatformConfig>>("/admin/config");
-  return res.data.data;
+// Raw API shape from backend (GET /admin/config)
+interface RawConfigResponse {
+  escrow: {
+    platformFeePercentage: number;
+    defaultHoldDays: number;
+    disputePeriodDays: number;
+    [key: string]: unknown;
+  } | null;
+  system: Array<{ key: string; value: string }>;
 }
 
-export async function updatePlatformConfig(data: Partial<PlatformConfig>) {
-  const res = await api.put<ApiResponse<PlatformConfig>>(
-    "/admin/config",
-    data
-  );
-  return res.data.data;
+function normalizeConfig(raw: RawConfigResponse): PlatformConfig {
+  const sysMap: Record<string, string> = {};
+  for (const entry of raw.system) {
+    sysMap[entry.key] = entry.value;
+  }
+  return {
+    platformFeePercentage: raw.escrow?.platformFeePercentage ?? 10,
+    escrowHoldDays: raw.escrow?.defaultHoldDays ?? 7,
+    maxFileUploadSize: sysMap["max_file_upload_size"]
+      ? Number(JSON.parse(sysMap["max_file_upload_size"]))
+      : 10485760,
+    maintenanceMode: sysMap["maintenance_mode"]
+      ? JSON.parse(sysMap["maintenance_mode"]) === true
+      : false,
+  };
+}
+
+export async function getPlatformConfig(): Promise<PlatformConfig> {
+  const res = await api.get<ApiResponse<RawConfigResponse>>("/admin/config");
+  return normalizeConfig(res.data.data);
+}
+
+export async function updatePlatformConfig(data: Partial<PlatformConfig>): Promise<void> {
+  await api.put("/admin/config", {
+    platformFeePercentage: data.platformFeePercentage,
+    defaultHoldDays: data.escrowHoldDays,
+    max_file_upload_size: data.maxFileUploadSize,
+    maintenance_mode: data.maintenanceMode,
+  });
+  // Backend returns null — caller should re-fetch after save
 }

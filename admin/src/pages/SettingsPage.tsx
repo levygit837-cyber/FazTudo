@@ -61,7 +61,7 @@ const SettingsPage: React.FC = () => {
       setConfig(data);
       setFeePercentage(String(data.platformFeePercentage));
       setHoldDays(String(data.escrowHoldDays));
-      setMaxUpload(String(data.maxFileUploadSize));
+      setMaxUpload(data.maxFileUploadSize > 0 ? String(data.maxFileUploadSize) : "");
       setMaintenanceMode(data.maintenanceMode);
     } catch (err) {
       setError(
@@ -102,13 +102,15 @@ const SettingsPage: React.FC = () => {
     setSaving(true);
     setToast(null);
     try {
-      const updated = await updatePlatformConfig({
+      await updatePlatformConfig({
         platformFeePercentage: Number(feePercentage),
         escrowHoldDays: Number(holdDays),
         maxFileUploadSize: Number(maxUpload),
         maintenanceMode,
       });
-      setConfig(updated);
+      // Re-fetch to show updated values (backend returns null on PUT /admin/config)
+      const fresh = await getPlatformConfig();
+      setConfig(fresh);
       setToast({ message: "Configuracoes salvas com sucesso!", type: "success" });
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
@@ -331,9 +333,9 @@ const SettingsPage: React.FC = () => {
                   </p>
                 )}
                 <p className="text-xs text-slate-400 mt-1">
-                  {maxUpload
+                  {maxUpload && Number(maxUpload) > 0
                     ? `~${(Number(maxUpload) / (1024 * 1024)).toFixed(1)} MB`
-                    : "—"}
+                    : "Insira um valor em bytes"}
                 </p>
               </div>
 
