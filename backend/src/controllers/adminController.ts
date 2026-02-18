@@ -846,6 +846,14 @@ export const getDashboardStats = async (
         select: {
           id: true,
           name: true,
+          serviceListings: {
+            select: {
+              serviceOrders: {
+                where: { status: "COMPLETED", updatedAt: { gte: startDate } },
+                select: { id: true },
+              },
+            },
+          },
         },
         take: 20,
       }),
@@ -905,10 +913,16 @@ export const getDashboardStats = async (
     }
 
     // Top categories by completed order count (simple metric)
-    const topCategories = categoryStats.map((cat) => ({
-      id: cat.id,
-      name: cat.name,
-    }));
+    const topCategories = categoryStats
+      .map((cat) => {
+        const count = cat.serviceListings.reduce(
+          (sum, listing) => sum + listing.serviceOrders.length,
+          0
+        );
+        return { id: cat.id, name: cat.name, count };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
 
     // Rates
     const totalOrdersInPeriod = allOrders.length;
