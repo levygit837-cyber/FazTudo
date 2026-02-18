@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as adminController from "../controllers/adminController";
 import { getAllCompanies, getPendingCompanies, verifyCompany } from "../controllers/adminController";
 import { verifyToken, requireRole } from "../middleware/auth";
+import { authLimiter } from "../middleware/rateLimiter";
 import { validateBody } from "../middleware/validate";
 import {
   updateUserStatusSchema,
@@ -15,7 +16,7 @@ import { auditLog } from "../middleware/auditLog";
 const router = Router();
 
 // Public admin login (no auth required)
-router.post("/login", validateBody(adminLoginSchema), adminController.adminLogin);
+router.post("/login", authLimiter, validateBody(adminLoginSchema), adminController.adminLogin);
 
 // All routes below require admin auth
 router.use(verifyToken, requireRole("ADMIN"));
