@@ -9,7 +9,28 @@
     <meta name="author" content="FazTudo" />
 
     <!-- Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://sdk.mercadopago.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https: blob:; connect-src 'self' http://localhost:3001 https://*.mercadopago.com https://*.tile.openstreetmap.org https://nominatim.openstreetmap.org https://router.project-osrm.org https://overpass-api.de; font-src 'self'; frame-src 'none'; object-src 'none';" />
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' https://sdk.mercadopago.com;
+      style-src 'self' 'unsafe-inline' https://unpkg.com;
+      img-src 'self' data: https: blob:;
+      connect-src 'self'
+        http://localhost:3001
+        https://*.mercadopago.com
+        https://*.tile.openstreetmap.org
+        https://*.basemaps.cartocdn.com
+        https://nominatim.openstreetmap.org
+        https://router.project-osrm.org
+        https://overpass-api.de
+        https://demotiles.maplibre.org
+        https://*.mapbox.com;
+      font-src 'self' https://unpkg.com;
+      worker-src 'self' blob:;
+      frame-src 'none';
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+    " />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
