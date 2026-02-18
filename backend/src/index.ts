@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import path from "path";
 import { env } from "./config/env";
 import { initializeSocket } from "./lib/socket";
@@ -98,13 +99,16 @@ app.use(
     origin: env.CORS_ORIGIN === "*" ? "*" : env.CORS_ORIGIN.split(","),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   }),
 );
 
 // Body parsing with size limits
 app.use(express.json({ limit: env.BODY_SIZE_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: env.BODY_SIZE_LIMIT }));
+
+// Cookie parser for httpOnly JWT cookies
+app.use(cookieParser());
 
 // XSS sanitization for all incoming data
 app.use(xssSanitizer);

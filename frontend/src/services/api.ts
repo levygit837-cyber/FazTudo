@@ -8,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api"
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
+  withCredentials: true, // Send httpOnly cookies automatically
   headers: {
     "Content-Type": "application/json",
   },
@@ -15,9 +16,11 @@ const api: AxiosInstance = axios.create({
 
 // ==================== INTERCEPTORS ====================
 
-// Request interceptor - adiciona token de autenticação
+// Request interceptor - adds token from localStorage as fallback (cookies are preferred)
 api.interceptors.request.use(
   (config) => {
+    // Only add Authorization header as backward compat fallback
+    // httpOnly cookies are sent automatically via withCredentials
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -81,23 +84,23 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     const refreshToken = localStorage.getItem("refreshToken");
+    // Try refresh — cookie-based refresh is sent automatically via withCredentials
+    // localStorage refreshToken is kept as backward compat fallback
     if (!refreshToken) {
-      // Sem refresh token — NÃO fazer logout automático
-      // Apenas rejeitar o erro e deixar o componente decidir
-      isRefreshing = false;
-      return Promise.reject(error);
+      // Even without localStorage refreshToken, try cookie-based refresh
+      // The httpOnly cookie will be sent automatically
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-        refreshToken,
-      });
-      const { token, refreshToken: newRefreshToken } = response.data.data;
+      const response = await axios.post(
+        `${API_BASE_URL}/auth/refresh`,
+        { refreshToken: refreshToken || undefined },
+        { withCredentials: true },
+      );
+      const { token, refreshToken: _newRefreshToken } = response.data.data;
 
       localStorage.setItem("token", token);
-      if (newRefreshToken) {
-        localStorage.setItem("refreshToken", newRefreshToken);
-      }
+      // Don't store refreshToken in localStorage — it's in httpOnly cookie now
 
       processQueue(null, token);
 

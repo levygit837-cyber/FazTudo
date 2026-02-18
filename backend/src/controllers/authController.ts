@@ -17,6 +17,18 @@ import { createLogger } from "../lib/logger";
 
 const log = createLogger("authController");
 
+// httpOnly cookie options for JWT tokens
+const getCookieOptions = (maxAgeMs: number) => ({
+  httpOnly: true,
+  secure: env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  path: "/",
+  maxAge: maxAgeMs,
+});
+
+const ACCESS_TOKEN_MAX_AGE = 60 * 60 * 1000; // 1 hour
+const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+
 
 // Types for request bodies
 interface RegisterBody {
@@ -207,6 +219,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       log.error({ err, email: user.email }, "Failed to send verification email");
     });
 
+    // Set httpOnly cookies for secure token storage
+    res.cookie("accessToken", token, getCookieOptions(ACCESS_TOKEN_MAX_AGE));
+    res.cookie("refreshToken", refreshToken, getCookieOptions(REFRESH_TOKEN_MAX_AGE));
+
     res.status(201).json(
       successResponse(
         {
@@ -300,6 +316,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       data: { refreshToken: newRefreshToken },
     });
 
+    // Set httpOnly cookies for secure token storage
+    res.cookie("accessToken", token, getCookieOptions(ACCESS_TOKEN_MAX_AGE));
+    res.cookie("refreshToken", newRefreshToken, getCookieOptions(REFRESH_TOKEN_MAX_AGE));
+
     res.status(200).json(
       successResponse(
         {
@@ -312,6 +332,27 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     );
   } catch (error) {
     log.error({ err: error }, "Login error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// Logout — clear httpOnly cookies
+export const logout = async (
+  _req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const clearOpts = {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: "strict" as const,
+      path: "/",
+    };
+    res.clearCookie("accessToken", clearOpts);
+    res.clearCookie("refreshToken", clearOpts);
+    res.status(200).json(successResponse(null, "Logout successful"));
+  } catch (error) {
+    log.error({ err: error }, "Logout error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };

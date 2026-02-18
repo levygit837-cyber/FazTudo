@@ -209,11 +209,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { user, token } = response.data.data;
 
       // Store in localStorage
+      // Tokens are now primarily stored in httpOnly cookies by the backend.
+      // Keep localStorage for backward compat during transition.
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      if (response.data.data.refreshToken) {
-        localStorage.setItem("refreshToken", response.data.data.refreshToken);
-      }
+      // refreshToken is now in httpOnly cookie — don't store in localStorage
+      // (kept in response body for backward compat, but prefer cookie)
 
       setState({
         user,
@@ -261,11 +262,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { user, token } = response.data.data;
 
       // Store in localStorage
+      // Tokens are now primarily stored in httpOnly cookies by the backend.
+      // Keep localStorage for backward compat during transition.
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      if (response.data.data.refreshToken) {
-        localStorage.setItem("refreshToken", response.data.data.refreshToken);
-      }
+      // refreshToken is now in httpOnly cookie — don't store in localStorage
+      // (kept in response body for backward compat, but prefer cookie)
 
       setState({
         user,
@@ -303,6 +305,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Logout function
   const logout = () => {
+    // Call backend to clear httpOnly cookies
+    api.post("/auth/logout").catch(() => {
+      // Ignore errors — clear local state regardless
+    });
+
     // Clear localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("user");

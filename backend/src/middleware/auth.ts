@@ -39,24 +39,24 @@ export const verifyToken = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
+    // Try httpOnly cookie first (preferred, secure), then fallback to Authorization header
+    let token: string | undefined;
 
-    if (!authHeader) {
-      res.status(401).json({
-        success: false,
-        message: "Token de autorização não fornecido",
-      });
-      return;
+    if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    } else {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.substring(7);
+      } else if (authHeader) {
+        token = authHeader;
+      }
     }
-
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : authHeader;
 
     if (!token) {
       res.status(401).json({
         success: false,
-        message: "Formato de token inválido",
+        message: "Token de autorização não fornecido",
       });
       return;
     }

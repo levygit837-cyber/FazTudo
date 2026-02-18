@@ -32,6 +32,7 @@ router.post("/reset-password", sensitiveLimiter, validateBody(resetPasswordSchem
 router.post("/verify-email", sensitiveLimiter, authController.verifyEmail);
 router.post("/resend-verification", verifyToken, sensitiveLimiter, authController.resendVerificationEmail);
 router.post("/refresh", authLimiter, authController.refreshAccessToken);
+router.post("/logout", verifyToken, authController.logout);
 
 // Rotas protegidas (requerem autenticacao + validacao)
 router.get("/profile", verifyToken, authController.getProfile);
