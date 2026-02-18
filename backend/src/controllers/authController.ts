@@ -251,6 +251,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         ratingAverage: true,
         totalReviews: true,
         tokenVersion: true,
+        refreshToken: true,
         createdAt: true,
         updatedAt: true,
       },
