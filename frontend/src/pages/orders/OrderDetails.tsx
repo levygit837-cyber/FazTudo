@@ -23,7 +23,7 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 import RescheduleModal from "../../components/orders/RescheduleModal";
 import DisputeModal from "../../components/orders/DisputeModal";
 import RescheduleApprovalBanner from "../../components/orders/RescheduleApprovalBanner";
-import { WazeMap } from "../../components/map";
+import { NavigationMap } from "../../components/map";
 import ProposalComparator from "../../components/orders/ProposalComparator";
 import ReviewCTA from "../../components/orders/ReviewCTA";
 import { SkeletonOrderCard, Skeleton, SkeletonText } from "../../components/common/Skeleton";
@@ -673,7 +673,7 @@ const OrderDetails: React.FC = () => {
 
                   {/* Location map (only after payment) */}
                   {paymentApproved && order.address && (
-                    <WazeMap
+                    <NavigationMap
                       orderId={order.id}
                       isProfessional={true}
                       professionalName={order.professional?.name || "Profissional"}
@@ -789,7 +789,7 @@ const OrderDetails: React.FC = () => {
                 <Navigation className="w-5 h-5 text-blue-500" />
                 Localizacao do Profissional
               </h2>
-              <WazeMap
+              <NavigationMap
                 orderId={order.id}
                 isProfessional={false}
                 professionalName={order.professional?.name || "Profissional"}
