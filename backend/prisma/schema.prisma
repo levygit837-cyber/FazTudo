@@ -265,6 +265,8 @@ model ServiceOrder {
   @@index([status])
   @@index([deadlineDate])
   @@index([createdAt])
+  @@index([professionalId, status])
+  @@index([clientId, status])
 }
 
 model Payment {
@@ -301,6 +303,7 @@ model Payment {
   @@index([professionalId])
   @@index([status])
   @@index([paidAt])
+  @@index([serviceOrderId, status])
 }
 
 model Transaction {
@@ -372,6 +375,7 @@ model Notification {
   @@index([serviceOrderId])
   @@index([status])
   @@index([createdAt])
+  @@index([userId, status])
 }
 
 model Address {
@@ -439,6 +443,7 @@ model Message {
   @@index([recipientId])
   @@index([serviceOrderId])
   @@index([createdAt])
+  @@index([serviceOrderId, recipientId, isRead])
 }
 
 model File {
