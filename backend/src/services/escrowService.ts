@@ -39,13 +39,17 @@ interface ReleasePaymentResult {
 
 // ==================== CONFIGURAÇÃO ====================
 
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
 let cachedConfig: EscrowConfig | null = null;
+let cacheExpiresAt: number = 0;
 
 /**
- * Obtém configuração de escrow do banco de dados
+ * Obtém configuração de escrow do banco de dados (cached com TTL de 5min)
  */
 export const getEscrowConfig = async (): Promise<EscrowConfig> => {
-  if (cachedConfig) {
+  const now = Date.now();
+  if (cachedConfig && now < cacheExpiresAt) {
     return cachedConfig;
   }
 
@@ -74,6 +78,7 @@ export const getEscrowConfig = async (): Promise<EscrowConfig> => {
     };
   }
 
+  cacheExpiresAt = Date.now() + CACHE_TTL_MS;
   return cachedConfig;
 };
 
@@ -82,6 +87,8 @@ export const getEscrowConfig = async (): Promise<EscrowConfig> => {
  */
 export const invalidateConfigCache = (): void => {
   cachedConfig = null;
+  cacheExpiresAt = 0;
+  log.info("Escrow config cache invalidated");
 };
 
 // ==================== CRIAÇÃO DE PAGAMENTO ====================

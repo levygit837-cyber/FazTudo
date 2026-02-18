@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma";
 import type { AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
+import { invalidateConfigCache } from "../services/escrowService";
 
 import { createLogger } from "../lib/logger";
 
@@ -1327,6 +1328,7 @@ export const updatePlatformConfig = async (
         where: { name: "default" },
         data: escrowData,
       });
+      invalidateConfigCache();
     }
 
     // Update system configs
