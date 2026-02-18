@@ -8,6 +8,7 @@ import {
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import { SocketProvider } from "./context/SocketContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import ToastContainer from "./components/common/Toast";
@@ -86,6 +87,7 @@ const App: React.FC = () => {
       <ThemeProvider>
         <ToastProvider>
         <AuthProvider>
+        <SocketProvider>
         <SessionTracker />
         <Routes>
             <Route path="/" element={<LandingPageUser />} />
@@ -191,6 +193,7 @@ const App: React.FC = () => {
               <Route path="*" element={<NotFound />} />
             </Route>
         </Routes>
+        </SocketProvider>
         </AuthProvider>
         <ToastContainer />
         </ToastProvider>
