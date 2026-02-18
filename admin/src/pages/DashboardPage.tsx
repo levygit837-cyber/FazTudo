@@ -37,8 +37,8 @@ interface DashboardData {
     averageTicket: { value: number; change: number };
   };
   charts: {
-    dailyUsers: Array<{ date: string; count: number }>;
-    dailyRevenue: Array<{ date: string; revenue: number }>;
+    dailyUsers: Array<{ date: string; value: number }>;
+    dailyRevenue: Array<{ date: string; value: number }>;
   };
   funnel: {
     totalUsers: number;
@@ -338,16 +338,16 @@ const DashboardPage: React.FC = () => {
     : [];
 
   const dailyUsersData =
-    d?.charts?.dailyUsers?.map((p: { date: string; count: number }) => ({
+    d?.charts?.dailyUsers?.map((p: { date: string; value: number }) => ({
       name: formatDateShort(p.date),
-      usuarios: p.count,
+      usuarios: p.value,
     })) ?? [];
 
   const dailyRevenueData =
     d?.charts?.dailyRevenue?.map(
-      (p: { date: string; revenue: number }) => ({
+      (p: { date: string; value: number }) => ({
         name: formatDateShort(p.date),
-        receita: p.revenue,
+        receita: p.value,
       })
     ) ?? [];
 
