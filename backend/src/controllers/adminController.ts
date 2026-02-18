@@ -736,7 +736,7 @@ export const adminLogin = async (
       expiresIn: env.JWT_REFRESH_EXPIRES_IN as any,
     });
 
-    const { password: _, tokenVersion: _tv, refreshToken: _rt, ...userData } = user;
+    const { password: _, tokenVersion: _tv, ...userData } = user;
 
     res.status(200).json(
       successResponse(
