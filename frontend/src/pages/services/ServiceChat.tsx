@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -10,6 +10,10 @@ import {
   Download,
   AlertTriangle,
   Info,
+  MessageCircle,
+  ShoppingCart,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Skeleton } from "../../components/common/Skeleton";
@@ -18,11 +22,14 @@ import {
   getOrderMessages,
   sendMessage,
   uploadChatFile,
+  convertDraftOrder,
 } from "../../services/serviceService";
 import { Message, ServiceOrder } from "../../types";
 import { formatRelativeTime } from "../../utils/formatters";
+import { useSocket, useOrderRoom } from "../../hooks/useSocket";
+import { useToast } from "../../context/ToastContext";
 
-const POLLING_INTERVAL_MS = 5000;
+const POLLING_INTERVAL_MS = 30000; // Fallback polling — Socket.io handles real-time
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const formatFileSize = (bytes: number): string => {
@@ -46,11 +53,54 @@ const ServiceChat: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [filterWarning, setFilterWarning] = useState<string | null>(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [convertProposal, setConvertProposal] = useState<{ proposedBy: number; proposerName: string } | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
 
   const isProfessionalRoute = location.pathname.includes("/professional/");
+  const isDraft = order?.status === "DRAFT";
+  const orderId = id ? parseInt(id, 10) : undefined;
+
+  // Socket.io: join order room for real-time messages
+  useOrderRoom(orderId);
+
+  // Socket.io: receive new messages in real-time
+  const handleSocketMessage = useCallback((msg: any) => {
+    if (!msg || !msg.id) return;
+    setMessages((prev) => {
+      // Deduplicate by ID
+      if (prev.some((m) => m.id === msg.id)) return prev;
+      return [...prev, msg as Message];
+    });
+  }, []);
+  useSocket("chat:message", handleSocketMessage);
+
+  // Socket.io: handle order status changes (e.g. DRAFT → PENDING)
+  const handleStatusChanged = useCallback((data: { orderId: number; status: string }) => {
+    if (!order || data.orderId !== order.id) return;
+    setOrder((prev) => prev ? { ...prev, status: data.status as any } : prev);
+  }, [order]);
+  useSocket("order:statusChanged", handleStatusChanged);
+
+  // Socket.io: handle convert proposal from other party
+  const handleConvertProposal = useCallback((data: { orderId: number; proposedBy: number; proposerName: string }) => {
+    if (orderId && data.orderId === orderId) {
+      setConvertProposal({ proposedBy: data.proposedBy, proposerName: data.proposerName });
+    }
+  }, [orderId]);
+  useSocket("order:convertProposal", handleConvertProposal);
+
+  // Socket.io: convert accepted — redirect client to checkout
+  const handleConvertAccepted = useCallback((data: { orderId: number }) => {
+    if (orderId && data.orderId === orderId) {
+      toast.success("Pedido formalizado! Redirecionando para o checkout...");
+      navigate(`/client/orders/${orderId}/checkout`);
+    }
+  }, [orderId, navigate, toast]);
+  useSocket("order:convertAccepted", handleConvertAccepted);
 
   const chatTitle = useMemo(() => {
     if (!order || !user) return "Chat do Serviço";
@@ -433,6 +483,91 @@ const ServiceChat: React.FC = () => {
         </div>
       </div>
 
+      {/* DRAFT Order Banner */}
+      {isDraft && (
+        <div className="border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+          {convertProposal && convertProposal.proposedBy !== user?.id ? (
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <ShoppingCart size={16} className="text-emerald-600 flex-shrink-0" />
+                <span className="text-sm text-emerald-800 dark:text-emerald-200">
+                  {convertProposal.proposerName} quer converter esta conversa em pedido formal
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    if (!orderId) return;
+                    setConverting(true);
+                    try {
+                      await convertDraftOrder(orderId, "accept");
+                      toast.success("Pedido formalizado!");
+                    } catch (err: any) {
+                      toast.error(err?.response?.data?.message || "Erro ao aceitar proposta");
+                    } finally {
+                      setConverting(false);
+                    }
+                  }}
+                  disabled={converting}
+                  className="flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-1.5 disabled:opacity-50"
+                >
+                  {converting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  Aceitar
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!orderId) return;
+                    setConverting(true);
+                    try {
+                      await convertDraftOrder(orderId, "reject");
+                      setConvertProposal(null);
+                      toast.info("Proposta recusada");
+                    } catch (err: any) {
+                      toast.error(err?.response?.data?.message || "Erro ao recusar");
+                    } finally {
+                      setConverting(false);
+                    }
+                  }}
+                  disabled={converting}
+                  className="flex items-center gap-1 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                >
+                  <X size={14} />
+                  Recusar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <MessageCircle size={16} className="text-amber-600 flex-shrink-0" />
+                <span className="text-sm text-amber-800 dark:text-amber-200">
+                  Conversa de duvidas — ainda nao e um pedido formal
+                </span>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!orderId) return;
+                  setConverting(true);
+                  try {
+                    await convertDraftOrder(orderId, "propose");
+                    toast.success("Proposta enviada! Aguardando confirmacao.");
+                  } catch (err: any) {
+                    toast.error(err?.response?.data?.message || "Erro ao propor pedido");
+                  } finally {
+                    setConverting(false);
+                  }
+                }}
+                disabled={converting}
+                className="flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-1.5 disabled:opacity-50"
+              >
+                {converting ? <Loader2 size={14} className="animate-spin" /> : <ShoppingCart size={14} />}
+                Contratar servico
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filter Warning */}
       {filterWarning && (
         <div className="mx-4 mt-2 flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
@@ -509,34 +644,40 @@ const ServiceChat: React.FC = () => {
       {/* Input */}
       <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3">
         <div className="flex gap-2">
-          {/* File upload */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            className="hidden"
-            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading || sending}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-50"
-            aria-label="Anexar arquivo"
-            title="Anexar arquivo"
-          >
-            <Paperclip className="h-5 w-5" />
-          </button>
+          {/* File upload — hidden for DRAFT orders */}
+          {!isDraft && (
+            <>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || sending}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-50"
+                aria-label="Anexar arquivo"
+                title="Anexar arquivo"
+              >
+                <Paperclip className="h-5 w-5" />
+              </button>
+            </>
+          )}
 
-          {/* Location */}
-          <button
-            onClick={() => setShowLocationPicker(!showLocationPicker)}
-            disabled={sending}
-            className={`rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 ${showLocationPicker ? "text-primary-600" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"}`}
-            aria-label="Compartilhar localização"
-            title="Compartilhar localização"
-          >
-            <MapPin className="h-5 w-5" />
-          </button>
+          {/* Location — hidden for DRAFT orders */}
+          {!isDraft && (
+            <button
+              onClick={() => setShowLocationPicker(!showLocationPicker)}
+              disabled={sending}
+              className={`rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 ${showLocationPicker ? "text-primary-600" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"}`}
+              aria-label="Compartilhar localização"
+              title="Compartilhar localização"
+            >
+              <MapPin className="h-5 w-5" />
+            </button>
+          )}
 
           {/* Text input */}
           <input
