@@ -92,7 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     try {
       const response = await api.post<ApiResponse<LoginResponseData>>(
-        "/auth/login",
+        "/admin/login",
         { email, password }
       );
       const { user, token } = response.data.data;
