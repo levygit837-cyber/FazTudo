@@ -1010,3 +1010,33 @@
     transition: none !important;
   }
 }
+
+/* ============================================
+   Navigation Map Animations (MapLibre GL)
+   ============================================ */
+
+@keyframes nav-glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 6px rgba(59, 130, 246, 0.15),
+      0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 10px rgba(59, 130, 246, 0.08),
+      0 4px 20px rgba(59, 130, 246, 0.3);
+  }
+}
+
+@keyframes nav-dest-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+/* Reduced motion: disable NavigationMap animations */
+@media (prefers-reduced-motion: reduce) {
+  [style*="nav-glow-pulse"],
+  [style*="nav-dest-pulse"] {
+    animation: none !important;
+  }
+}
