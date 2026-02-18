@@ -6,6 +6,8 @@ import {
   requireVerified,
   authLogger,
 } from "../middleware/auth";
+import { validateBody } from "../middleware/validate";
+import { updateScheduleSchema } from "../middleware/validation";
 
 const router = Router();
 
@@ -25,6 +27,7 @@ router.put(
   verifyToken,
   requireRole("PROFESSIONAL"),
   requireVerified,
+  validateBody(updateScheduleSchema),
   serviceController.updateProfessionalSchedule,
 );
 

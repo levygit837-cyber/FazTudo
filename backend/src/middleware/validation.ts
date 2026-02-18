@@ -316,3 +316,11 @@ export const createProposalSchema = z.object({
   estimatedHours: z.number().int().min(0).max(24).optional(),
   guaranteeDays: z.number().int().min(0).max(365).optional(),
 });
+
+export const updateScheduleSchema = z.object({
+  schedule: z.array(z.object({
+    dayOfWeek: z.number().int().min(0).max(6),
+    startTime: z.string().min(1).max(10),
+    endTime: z.string().min(1).max(10),
+  })).max(50),
+});
