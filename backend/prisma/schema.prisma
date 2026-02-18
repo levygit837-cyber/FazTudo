@@ -644,7 +644,7 @@ model Dispute {
 model CompanyProfile {
   id           Int       @id @default(autoincrement())
   userId       Int       @unique
-  user         User      @relation(fields: [userId], references: [id])
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   companyName  String
   cnpj         String    @unique
   description  String?
@@ -666,7 +666,7 @@ model CompanyProfile {
 model CompanyRole {
   id          Int            @id @default(autoincrement())
   companyId   Int
-  company     CompanyProfile @relation(fields: [companyId], references: [id])
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name        String
   level       Int
   permissions Json
@@ -680,11 +680,11 @@ model CompanyRole {
 model CompanyMember {
   id                Int            @id @default(autoincrement())
   companyId         Int
-  company           CompanyProfile @relation(fields: [companyId], references: [id])
+  company           CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
   userId            Int            @unique
-  user              User           @relation(fields: [userId], references: [id])
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   roleId            Int
-  role              CompanyRole    @relation(fields: [roleId], references: [id])
+  role              CompanyRole    @relation(fields: [roleId], references: [id], onDelete: Cascade)
   customPermissions Json?
   joinedAt          DateTime       @default(now())
   isActive          Boolean        @default(true)
@@ -713,9 +713,9 @@ model CompanySalaryRule {
 model CompanySalaryPayment {
   id       Int               @id @default(autoincrement())
   ruleId   Int
-  rule     CompanySalaryRule @relation(fields: [ruleId], references: [id])
+  rule     CompanySalaryRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   memberId Int
-  member   CompanyMember     @relation(fields: [memberId], references: [id])
+  member   CompanyMember     @relation(fields: [memberId], references: [id], onDelete: Cascade)
   amount   Float
   paidAt   DateTime
   status   SalaryStatus
@@ -725,7 +725,7 @@ model CompanySalaryPayment {
 model ServiceTeam {
   id        Int           @id @default(autoincrement())
   orderId   Int           @unique
-  order     ServiceOrder  @relation(fields: [orderId], references: [id])
+  order     ServiceOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
   leaderId  Int
   leader    CompanyMember @relation("TeamLeader", fields: [leaderId], references: [id])
   createdAt DateTime      @default(now())
@@ -737,16 +737,16 @@ model ServiceTeam {
 model ServiceTeamMember {
   id       Int           @id @default(autoincrement())
   teamId   Int
-  team     ServiceTeam   @relation(fields: [teamId], references: [id])
+  team     ServiceTeam   @relation(fields: [teamId], references: [id], onDelete: Cascade)
   memberId Int
-  member   CompanyMember @relation(fields: [memberId], references: [id])
+  member   CompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
 
 
 model CompanyChannel {
   id          Int            @id @default(autoincrement())
   companyId   Int
-  company     CompanyProfile @relation(fields: [companyId], references: [id])
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name        String
   description String?
   isActive    Boolean        @default(true)
@@ -758,9 +758,9 @@ model CompanyChannel {
 model CompanyChannelMember {
   id        Int            @id @default(autoincrement())
   channelId Int
-  channel   CompanyChannel @relation(fields: [channelId], references: [id])
+  channel   CompanyChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   memberId  Int
-  member    CompanyMember  @relation(fields: [memberId], references: [id])
+  member    CompanyMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([channelId, memberId])
 }
@@ -772,7 +772,7 @@ model CompanyChannelMember {
 model UserSession {
   id          String     @id @default(uuid())
   userId      Int
-  user        User       @relation(fields: [userId], references: [id])
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   startedAt   DateTime   @default(now())
   endedAt     DateTime?
   duration    Int?
@@ -788,7 +788,7 @@ model UserSession {
 model PageView {
   id        String      @id @default(uuid())
   sessionId String
-  session   UserSession @relation(fields: [sessionId], references: [id])
+  session   UserSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   path      String
   enteredAt DateTime    @default(now())
   duration  Int?
