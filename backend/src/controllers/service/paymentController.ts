@@ -569,7 +569,7 @@ export const mercadoPagoWebhook = async (
         transactionId: String(mpPaymentId),
         status: { in: ["PENDING", "HELD"] },
       },
-      include: { serviceOrder: true },
+      include: { serviceOrder: { select: { id: true, clientId: true, professionalId: true, title: true, status: true, price: true } } },
     });
 
     // Fallback: buscar por externalReference
@@ -582,7 +582,7 @@ export const mercadoPagoWebhook = async (
             serviceOrderId: orderId,
             status: "PENDING",
           },
-          include: { serviceOrder: true },
+          include: { serviceOrder: { select: { id: true, clientId: true, professionalId: true, title: true, status: true, price: true } } },
         });
       }
     }
