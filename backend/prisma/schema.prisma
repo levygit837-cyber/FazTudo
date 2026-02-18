@@ -22,6 +22,7 @@ enum UserStatus {
 }
 
 enum ServiceOrderStatus {
+  DRAFT // Rascunho - conversa antes de formalizar pedido
   PENDING // Aguardando aceitação do profissional
   ACCEPTED // Aceito pelo profissional
   IN_PROGRESS // Em andamento
@@ -225,6 +226,13 @@ model ServiceOrder {
   // Confirmação dupla de conclusão
   clientConfirmedAt       DateTime?
   professionalConfirmedAt DateTime?
+
+  // DRAFT conversion flow
+  convertProposedBy Int?    // userId who proposed converting DRAFT to order
+  convertStatus     String? // "PROPOSED", "ACCEPTED", "REJECTED"
+
+  // Professional en-route tracking
+  enRouteAt DateTime?
 
   // Localização do serviço
   addressId    Int?

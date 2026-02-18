@@ -47,14 +47,22 @@ export const getUserChats = async (
           ? { professionalId: userId }
           : { OR: [{ clientId: userId }, { professionalId: userId }] };
 
+    // Include orders with payments OR DRAFT orders (pre-payment chat)
     const orders = await prisma.serviceOrder.findMany({
       where: {
         ...whereClause,
-        payments: {
-          some: {
-            status: { in: ["HELD", "RELEASED", "PARTIALLY_REFUNDED"] },
+        OR: [
+          {
+            payments: {
+              some: {
+                status: { in: ["HELD", "RELEASED", "PARTIALLY_REFUNDED"] },
+              },
+            },
           },
-        },
+          {
+            status: "DRAFT",
+          },
+        ],
       },
       select: {
         id: true,

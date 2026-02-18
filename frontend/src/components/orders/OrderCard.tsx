@@ -8,6 +8,7 @@ import {
   XCircle,
   Star,
   MapPin,
+  MessageCircle,
 } from "lucide-react";
 import { ServiceOrderStatus } from "../../types";
 import {
@@ -46,9 +47,11 @@ interface OrderCardProps {
   className?: string;
   onAccept?: (id: number) => void;
   onReject?: (id: number) => void;
+  loading?: boolean;
 }
 
 const statusBorderColors: Record<string, string> = {
+  [ServiceOrderStatus.DRAFT]: "border-l-slate-400",
   [ServiceOrderStatus.PENDING]: "border-l-amber-400",
   [ServiceOrderStatus.ACCEPTED]: "border-l-emerald-400",
   [ServiceOrderStatus.IN_PROGRESS]: "border-l-blue-400",
@@ -64,6 +67,11 @@ const statusConfig: Record<
   ServiceOrderStatus,
   { color: string; icon: React.ReactNode; bgColor: string }
 > = {
+  [ServiceOrderStatus.DRAFT]: {
+    color: "text-slate-600 dark:text-slate-400",
+    bgColor: "bg-slate-100 dark:bg-slate-900/30",
+    icon: <MessageCircle className="w-3.5 h-3.5" />,
+  },
   [ServiceOrderStatus.PENDING]: {
     color: "text-amber-600 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
@@ -127,6 +135,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   className = "",
   onAccept,
   onReject,
+  loading = false,
 }) => {
   const config = statusConfig[status];
   const borderColor = statusBorderColors[status] || "border-l-slate-300";
@@ -246,9 +255,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                   e.stopPropagation();
                   onAccept(id);
                 }}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                disabled={loading}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors disabled:opacity-50"
               >
-                Aceitar
+                {loading ? <span className="loader h-3 w-3 inline-block" /> : "Aceitar"}
               </button>
               {onReject && (
                 <button
@@ -257,7 +267,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                     e.stopPropagation();
                     onReject(id);
                   }}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  disabled={loading}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                 >
                   Recusar
                 </button>

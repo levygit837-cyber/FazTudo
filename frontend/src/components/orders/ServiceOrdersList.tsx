@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { OrderCard } from "./OrderCard";
 import { SkeletonOrderCard } from "../common/Skeleton";
@@ -7,6 +7,7 @@ import { SearchBar } from "../common/SearchBar";
 import Tabs from "../common/Tabs";
 import { listOrders, acceptOrder, cancelOrder } from "../../services/serviceService";
 import { useToast } from "../../context/ToastContext";
+import { useSocket } from "../../hooks/useSocket";
 import { ServiceOrder, ServiceOrderStatus } from "../../types";
 
 interface RoleConfig {
@@ -68,7 +69,21 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
+  const [buttonLoading, setButtonLoading] = useState<number | null>(null);
   const isInitialLoad = useRef(true);
+
+  // Socket.io: real-time status updates
+  const handleStatusChanged = useCallback(
+    (data: { orderId: number; status: string }) => {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === data.orderId ? { ...o, status: data.status as ServiceOrderStatus } : o,
+        ),
+      );
+    },
+    [],
+  );
+  useSocket("order:statusChanged", handleStatusChanged);
 
   const statusTabs = [
     { id: "all", label: "Todos" },
@@ -119,22 +134,36 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
 
   const handleAcceptOrder = async (orderId: number) => {
     try {
+      setButtonLoading(orderId);
+      // Optimistic update
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: ServiceOrderStatus.ACCEPTED } : o)),
+      );
       await acceptOrder(orderId);
       toast.success("Pedido aceito com sucesso!");
-      loadOrders();
     } catch {
       toast.error("Erro ao aceitar pedido");
+      loadOrders(); // Revert by reloading
+    } finally {
+      setButtonLoading(null);
     }
   };
 
   const handleRejectOrder = async (orderId: number) => {
     try {
+      setButtonLoading(orderId);
+      // Optimistic update
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: ServiceOrderStatus.CANCELLED } : o)),
+      );
       await cancelOrder(orderId, "Recusado pelo profissional");
       toast.info("Pedido recusado");
-      loadOrders();
     } catch (err: any) {
       const message = err?.response?.data?.message || "Erro ao recusar pedido";
       toast.error(message);
+      loadOrders(); // Revert by reloading
+    } finally {
+      setButtonLoading(null);
     }
   };
 
@@ -219,6 +248,7 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
                     isProfessionalView: true,
                     onAccept: handleAcceptOrder,
                     onReject: handleRejectOrder,
+                    loading: buttonLoading === order.id,
                   }
                 : {
                     professional: order.professional

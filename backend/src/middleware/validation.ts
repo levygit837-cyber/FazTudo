@@ -406,3 +406,13 @@ export const verifyCompanySchema = z.object({
   approved: z.boolean(),
   reason: z.string().max(500).optional(),
 });
+
+export const delayResponseSchema = z
+  .object({
+    arrived: z.boolean().optional(),
+    action: z.enum(["message", "dispute"]).optional(),
+  })
+  .refine(
+    (data) => data.arrived !== undefined || data.action !== undefined,
+    { message: "Informe 'arrived' ou 'action'" },
+  );

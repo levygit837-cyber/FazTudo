@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Clock,
@@ -19,11 +19,13 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useSocket, useOrderRoom } from "../../hooks/useSocket";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import RescheduleModal from "../../components/orders/RescheduleModal";
 import DisputeModal from "../../components/orders/DisputeModal";
 import RescheduleApprovalBanner from "../../components/orders/RescheduleApprovalBanner";
-import { NavigationMap } from "../../components/map";
+import DelayAlertModal from "../../components/orders/DelayAlertModal";
+import { WazeMap } from "../../components/map";
 import ProposalComparator from "../../components/orders/ProposalComparator";
 import ReviewCTA from "../../components/orders/ReviewCTA";
 import { SkeletonOrderCard, Skeleton, SkeletonText } from "../../components/common/Skeleton";
@@ -37,6 +39,8 @@ import {
   releasePayment,
   createReview,
   createOrder,
+  markEnRoute,
+  delayResponse,
 } from "../../services/serviceService";
 import { ServiceOrder } from "../../types";
 import {
@@ -220,7 +224,7 @@ const OrderDetails: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<ServiceOrder | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Confirmation dialog state
@@ -241,16 +245,59 @@ const OrderDetails: React.FC = () => {
   // Dispute state
   const [showDispute, setShowDispute] = useState(false);
 
+  // Delay alert state
+  const [delayAlert, setDelayAlert] = useState<{
+    orderId: number;
+    orderTitle: string;
+    professionalName: string;
+  } | null>(null);
+
   const isOrderClient = order?.clientId === user?.id;
   const isOrderProfessional = order?.professionalId === user?.id;
   const chatRoute = isOrderProfessional
     ? `/professional/services/${id}/chat`
     : `/client/orders/${id}/chat`;
 
-  const loadOrder = async () => {
+  // Socket.io: join order room for real-time updates
+  useOrderRoom(order?.id);
+
+  // Socket.io: listen for status changes
+  const handleStatusChanged = useCallback(
+    (data: { orderId: number; status: string }) => {
+      if (!order || data.orderId !== order.id) return;
+      setOrder((prev) => (prev ? { ...prev, status: data.status as any } : prev));
+    },
+    [order?.id],
+  );
+  useSocket("order:statusChanged", handleStatusChanged);
+
+  // Socket.io: listen for delay alerts (client only)
+  const handleDelayAlert = useCallback(
+    (data: { orderId: number; orderTitle: string; professionalName: string }) => {
+      if (order && data.orderId === order.id) {
+        setDelayAlert(data);
+      }
+    },
+    [order?.id],
+  );
+  useSocket("order:delayAlert", handleDelayAlert);
+
+  // Socket.io: listen for en-route notification (client only)
+  const handleEnRoute = useCallback(
+    (data: { orderId: number; professionalName: string; enRouteAt: string }) => {
+      if (order && data.orderId === order.id) {
+        setOrder((prev) => (prev ? { ...prev, enRouteAt: data.enRouteAt } : prev));
+        toast.success(`${data.professionalName} esta a caminho!`);
+      }
+    },
+    [order?.id, toast],
+  );
+  useSocket("order:enRoute", handleEnRoute);
+
+  const loadOrder = async (showSpinner = true) => {
     if (!id) return;
     try {
-      setLoading(true);
+      if (showSpinner) setLoading(true);
       const orderData = await getOrderById(parseInt(id));
       setOrder(orderData);
       if (orderData.reviews && orderData.reviews.length > 0) {
@@ -284,19 +331,34 @@ const OrderDetails: React.FC = () => {
     }
   }, []);
 
-  const handleAction = async (action: () => Promise<any>, successMsg?: string) => {
+  const handleAction = async (
+    action: () => Promise<any>,
+    successMsg?: string,
+    optimisticStatus?: string,
+  ) => {
+    const actionId = String(Date.now());
+    const previousOrder = order;
     try {
-      setActionLoading(true);
+      setActionLoading(actionId);
       setError(null);
+      // Optimistic update: apply new status immediately
+      if (optimisticStatus && order) {
+        setOrder({ ...order, status: optimisticStatus as any });
+      }
       await action();
-      await loadOrder();
+      // Background refresh (no spinner)
+      await loadOrder(false);
       toast.success(successMsg || "Acao realizada com sucesso");
     } catch (err: any) {
+      // Revert optimistic update on failure
+      if (optimisticStatus && previousOrder) {
+        setOrder(previousOrder);
+      }
       const msg = err?.response?.data?.message || "Erro ao executar acao";
       setError(msg);
       toast.error("Erro", msg);
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
@@ -377,6 +439,55 @@ const OrderDetails: React.FC = () => {
         />
       )}
 
+      {/* Countdown banner — time until scheduled date */}
+      {order.scheduledDate && ["ACCEPTED", "IN_PROGRESS"].includes(order.status) && (() => {
+        const now = new Date();
+        const scheduled = new Date(order.scheduledDate!);
+        const diffMs = scheduled.getTime() - now.getTime();
+        const isLate = diffMs < 0;
+        const absDiff = Math.abs(diffMs);
+        const hours = Math.floor(absDiff / (1000 * 60 * 60));
+        const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const days = Math.floor(hours / 24);
+        const remainingHours = hours % 24;
+
+        let timeLabel: string;
+        if (days > 0) {
+          timeLabel = `${days}d ${remainingHours}h`;
+        } else if (hours > 0) {
+          timeLabel = `${hours}h ${minutes}min`;
+        } else {
+          timeLabel = `${minutes}min`;
+        }
+
+        return (
+          <div
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+              isLate
+                ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+            }`}
+          >
+            <Clock
+              className={`w-5 h-5 flex-shrink-0 ${
+                isLate ? "text-red-500" : "text-blue-500"
+              }`}
+            />
+            <p
+              className={`text-sm font-medium ${
+                isLate
+                  ? "text-red-700 dark:text-red-400"
+                  : "text-blue-700 dark:text-blue-400"
+              }`}
+            >
+              {isLate
+                ? `Atrasado por ${timeLabel} — o horario agendado ja passou`
+                : `Faltam ${timeLabel} para o horario agendado`}
+            </p>
+          </div>
+        );
+      })()}
+
       {/* Cancelled order banner */}
       {order.status === "CANCELLED" && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-5 animate-fade-in">
@@ -440,6 +551,54 @@ const OrderDetails: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Order Brief — instructions for professional */}
+          {order.brief && isOrderProfessional && (
+            <div className="card border-l-4 border-l-blue-400">
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-blue-500" />
+                Instruções do Cliente
+              </h2>
+              {order.brief.notes && (
+                <p className="text-slate-600 dark:text-slate-400 mb-3">{order.brief.notes}</p>
+              )}
+              {order.brief.urgencyLevel && order.brief.urgencyLevel !== "NORMAL" && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Urgência:</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    order.brief.urgencyLevel === "URGENT"
+                      ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                      : order.brief.urgencyLevel === "HIGH"
+                      ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                      : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                  }`}>
+                    {order.brief.urgencyLevel === "URGENT" ? "Urgente" :
+                     order.brief.urgencyLevel === "HIGH" ? "Alta" :
+                     order.brief.urgencyLevel === "LOW" ? "Baixa" : order.brief.urgencyLevel}
+                  </span>
+                </div>
+              )}
+              {order.brief.briefData && Object.keys(order.brief.briefData).length > 0 && (
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 space-y-2">
+                  {Object.entries(order.brief.briefData).map(([key, value]) => (
+                    <div key={key} className="flex justify-between text-sm">
+                      <span className="text-slate-500 dark:text-slate-400 capitalize">
+                        {key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}
+                      </span>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                        {String(value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {order.brief.category && (
+                <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                  Categoria: {order.brief.category.name}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* CHECKOUT: Pagamento (apenas se esta na fase de checkout) */}
           {isCheckoutPhase && isOrderClient && (
@@ -622,11 +781,11 @@ const OrderDetails: React.FC = () => {
                   {/* Action buttons - prominent */}
                   <div className="flex gap-3 pt-1">
                     <button
-                      onClick={() => handleAction(() => acceptOrder(order.id), "Pedido aceito!")}
-                      disabled={actionLoading}
+                      onClick={() => handleAction(() => acceptOrder(order.id), "Pedido aceito!", "ACCEPTED")}
+                      disabled={!!actionLoading}
                       className="btn btn-primary flex-1 py-2.5 flex items-center justify-center gap-2"
                     >
-                      {actionLoading ? (
+                      {!!actionLoading ? (
                         <span className="loader h-4 w-4" />
                       ) : (
                         <CheckCircle className="w-4 h-4" />
@@ -643,7 +802,7 @@ const OrderDetails: React.FC = () => {
                           action: () => cancelOrder(order.id, "Recusado pelo profissional"),
                         })
                       }
-                      disabled={actionLoading}
+                      disabled={!!actionLoading}
                       className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 py-2.5"
                     >
                       <XCircle className="w-4 h-4" />
@@ -673,7 +832,7 @@ const OrderDetails: React.FC = () => {
 
                   {/* Location map (only after payment) */}
                   {paymentApproved && order.address && (
-                    <NavigationMap
+                    <WazeMap
                       orderId={order.id}
                       isProfessional={true}
                       professionalName={order.professional?.name || "Profissional"}
@@ -691,11 +850,52 @@ const OrderDetails: React.FC = () => {
                     />
                   )}
 
+                  {/* En-route button (professional, before starting service) */}
+                  {paymentApproved && !order.enRouteAt && (
+                    <button
+                      onClick={async () => {
+                        setActionLoading("enroute");
+                        try {
+                          await markEnRoute(order.id);
+                          setOrder((prev) =>
+                            prev ? { ...prev, enRouteAt: new Date().toISOString() } : prev,
+                          );
+                          toast.success("Trajeto iniciado! O cliente foi notificado.");
+                        } catch (err: any) {
+                          toast.error(
+                            err?.response?.data?.message || "Erro ao iniciar trajeto",
+                          );
+                        } finally {
+                          setActionLoading(null);
+                        }
+                      }}
+                      disabled={!!actionLoading}
+                      className="btn bg-blue-600 hover:bg-blue-700 text-white w-full py-2.5 flex items-center justify-center gap-2"
+                    >
+                      {actionLoading === "enroute" ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Navigation className="w-4 h-4" />
+                      )}
+                      Iniciar trajeto
+                    </button>
+                  )}
+
+                  {/* En-route confirmed badge */}
+                  {paymentApproved && order.enRouteAt && (
+                    <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                      <Navigation className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <p className="text-sm text-blue-700 dark:text-blue-400">
+                        Voce esta a caminho — o cliente foi notificado.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Start service button */}
                   {paymentApproved && (
                     <button
-                      onClick={() => handleAction(() => startOrder(order.id), "Servico iniciado!")}
-                      disabled={actionLoading}
+                      onClick={() => handleAction(() => startOrder(order.id), "Servico iniciado!", "IN_PROGRESS")}
+                      disabled={!!actionLoading}
                       className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
                     >
                       <Clock className="w-4 h-4" />
@@ -707,7 +907,7 @@ const OrderDetails: React.FC = () => {
                   {order.professionalId && (
                     <button
                       onClick={() => setShowReschedule(true)}
-                      disabled={actionLoading}
+                      disabled={!!actionLoading}
                       className="btn btn-outline w-full"
                     >
                       <CalendarClock className="w-4 h-4 mr-2" />
@@ -729,7 +929,7 @@ const OrderDetails: React.FC = () => {
                   {order.professionalId && (
                     <button
                       onClick={() => setShowReschedule(true)}
-                      disabled={actionLoading}
+                      disabled={!!actionLoading}
                       className="btn btn-outline w-full"
                     >
                       <CalendarClock className="w-4 h-4 mr-2" />
@@ -738,7 +938,7 @@ const OrderDetails: React.FC = () => {
                   )}
                   <button
                     onClick={() => setShowDispute(true)}
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 w-full"
                   >
                     <AlertTriangle className="w-4 h-4 mr-2" />
@@ -760,7 +960,7 @@ const OrderDetails: React.FC = () => {
                         action: () => confirmProfessionalCompletion(order.id),
                       })
                     }
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
                   >
                     <CheckCircle className="w-4 h-4" />
@@ -789,7 +989,7 @@ const OrderDetails: React.FC = () => {
                 <Navigation className="w-5 h-5 text-blue-500" />
                 Localizacao do Profissional
               </h2>
-              <NavigationMap
+              <WazeMap
                 orderId={order.id}
                 isProfessional={false}
                 professionalName={order.professional?.name || "Profissional"}
@@ -835,7 +1035,7 @@ const OrderDetails: React.FC = () => {
                         action: () => submitOrderCompletion(order.id),
                       })
                     }
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2"
                   >
                     <CheckCircle className="w-4 h-4" />
@@ -865,7 +1065,7 @@ const OrderDetails: React.FC = () => {
                         action: () => releasePayment(order.id),
                       })
                     }
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-primary"
                   >
                     <DollarSign className="w-4 h-4 mr-2" />
@@ -885,7 +1085,7 @@ const OrderDetails: React.FC = () => {
                         action: () => cancelOrder(order.id, "Cancelado pelo cliente"),
                       })
                     }
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <XCircle className="w-4 h-4 mr-2" />
@@ -897,7 +1097,7 @@ const OrderDetails: React.FC = () => {
                 {["ACCEPTED", "IN_PROGRESS"].includes(order.status) && order.professionalId && (
                   <button
                     onClick={() => setShowReschedule(true)}
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-outline"
                   >
                     <CalendarClock className="w-4 h-4 mr-2" />
@@ -909,7 +1109,7 @@ const OrderDetails: React.FC = () => {
                 {["IN_PROGRESS", "AWAITING_CLIENT_CONFIRMATION"].includes(order.status) && (
                   <button
                     onClick={() => setShowDispute(true)}
-                    disabled={actionLoading}
+                    disabled={!!actionLoading}
                     className="btn btn-outline text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <AlertTriangle className="w-4 h-4 mr-2" />
@@ -935,7 +1135,7 @@ const OrderDetails: React.FC = () => {
               }}
               professionalName={order.professional?.name}
               alreadyReviewed={reviewSubmitted || (order.reviews?.some((r: any) => r.authorId === user?.id) ?? false)}
-              loading={actionLoading}
+              loading={!!actionLoading}
             />
           )}
 
@@ -968,7 +1168,7 @@ const OrderDetails: React.FC = () => {
                 <button
                   onClick={async () => {
                     try {
-                      setActionLoading(true);
+                      setActionLoading("rehire");
                       const newOrder = await createOrder({
                         serviceListingId: order.serviceListingId!,
                         title: order.title,
@@ -978,10 +1178,10 @@ const OrderDetails: React.FC = () => {
                     } catch (err: any) {
                       toast.error("Erro", err?.response?.data?.message || "Erro ao recontratar");
                     } finally {
-                      setActionLoading(false);
+                      setActionLoading(null);
                     }
                   }}
-                  disabled={actionLoading}
+                  disabled={!!actionLoading}
                   className="btn btn-primary mt-4 w-full"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
@@ -1124,8 +1324,21 @@ const OrderDetails: React.FC = () => {
         message={confirmAction?.message || ""}
         confirmLabel={confirmAction?.confirmLabel || "Confirmar"}
         variant={confirmAction?.variant || "danger"}
-        loading={actionLoading}
+        loading={!!actionLoading}
       />
+
+      {/* Delay alert modal (client only) */}
+      {delayAlert && (
+        <DelayAlertModal
+          orderId={delayAlert.orderId}
+          orderTitle={delayAlert.orderTitle}
+          professionalName={delayAlert.professionalName}
+          onRespond={async (orderId, arrived, action) => {
+            await delayResponse(orderId, { arrived, action });
+          }}
+          onClose={() => setDelayAlert(null)}
+        />
+      )}
     </div>
   );
 };

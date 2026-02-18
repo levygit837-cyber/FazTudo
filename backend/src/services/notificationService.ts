@@ -2,6 +2,7 @@ import prisma from "../lib/prisma";
 import { NotificationStatus, NotificationType as PrismaNotificationType } from "@prisma/client";
 import { env } from "../config/env";
 import { sendEmail } from "./emailService";
+import { emitToUser } from "../lib/socket";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("notificationService");
@@ -47,6 +48,15 @@ export const createNotification = async (
       serviceOrderId: serviceOrderId || null,
       metadata: metadata ?? undefined,
     },
+  });
+
+  // Real-time Socket.io emission
+  emitToUser(userId, "notification:new", {
+    id: notification.id,
+    type,
+    title,
+    message,
+    serviceOrderId,
   });
 
   // TODO: Integrar com sistema de push notifications (Firebase, OneSignal, etc.)

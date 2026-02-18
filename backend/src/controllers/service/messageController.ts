@@ -3,6 +3,7 @@ import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { NotificationType } from "@prisma/client";
 import { filterChatContent, getBlockedContentMessage } from "../../middleware/chatFilter";
+import { emitToOrder } from "../../lib/socket";
 
 import { createLogger } from "../../lib/logger";
 
@@ -156,10 +157,20 @@ export const sendMessage = async (
     }
 
     // Payment gate: chat is only available after payment is approved
-    if (!isAdmin && serviceOrder.payments.length === 0) {
+    // Exception: DRAFT orders allow text-only messages (pre-payment negotiation)
+    const isDraft = serviceOrder.status === "DRAFT";
+    if (!isAdmin && !isDraft && serviceOrder.payments.length === 0) {
       res
         .status(403)
         .json(errorResponse("Chat is only available after payment is approved"));
+      return;
+    }
+
+    // DRAFT orders: only text messages allowed (no attachments or location)
+    if (isDraft && messageType !== "TEXT") {
+      res
+        .status(403)
+        .json(errorResponse("Only text messages are allowed for draft orders"));
       return;
     }
 
@@ -229,6 +240,16 @@ export const sendMessage = async (
       orderId,
       { senderId, senderName: req.user.name, messageId: message.id },
     );
+
+    // Real-time Socket.io emission
+    emitToOrder(orderId, "chat:message", {
+      id: message.id,
+      content: message.content,
+      type: message.type,
+      senderId: message.senderId,
+      sender: message.sender,
+      createdAt: message.createdAt,
+    });
 
     res
       .status(201)

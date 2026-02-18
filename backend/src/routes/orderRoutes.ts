@@ -7,7 +7,7 @@ import {
   authLogger,
 } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
-import { createOrderSchema } from "../middleware/validation";
+import { createOrderSchema, delayResponseSchema } from "../middleware/validation";
 
 const router = Router();
 
@@ -102,6 +102,41 @@ router.post(
   verifyToken,
   requireRole("CLIENT", "ADMIN"),
   serviceController.rejectReschedule,
+);
+
+// Criar pedido rascunho (DRAFT) para conversar antes de formalizar
+router.post(
+  "/orders/draft",
+  verifyToken,
+  requireRole("CLIENT"),
+  requireVerified,
+  serviceController.createDraftOrder,
+);
+
+// Converter DRAFT em pedido real (PENDING)
+router.post(
+  "/orders/:id/convert",
+  verifyToken,
+  requireVerified,
+  serviceController.convertDraftToOrder,
+);
+
+// Profissional marca que está a caminho
+router.post(
+  "/orders/:id/en-route",
+  verifyToken,
+  requireRole("PROFESSIONAL", "COMPANY"),
+  requireVerified,
+  serviceController.markEnRoute,
+);
+
+// Cliente responde sobre atraso do profissional
+router.post(
+  "/orders/:id/delay-response",
+  verifyToken,
+  requireVerified,
+  validateBody(delayResponseSchema),
+  serviceController.delayResponse,
 );
 
 export default router;

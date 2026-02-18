@@ -1,8 +1,10 @@
 import express from "express";
+import { createServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
 import path from "path";
 import { env } from "./config/env";
+import { initializeSocket } from "./lib/socket";
 import prisma from "./lib/prisma";
 import logger, { createLogger } from "./lib/logger";
 import { requestLogger } from "./middleware/requestLog";
@@ -36,6 +38,7 @@ import sessionRoutes from "./routes/sessionRoutes";
 import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
 
 const app = express();
+const httpServer = createServer(app);
 const log = createLogger("server");
 
 // ============================================
@@ -56,7 +59,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "ws:", "wss:"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -217,7 +220,10 @@ process.on("unhandledRejection", (reason, promise) => {
 
 const PORT = env.PORT;
 
-const server = app.listen(PORT, () => {
+// Initialize Socket.io before starting server
+initializeSocket(httpServer);
+
+const server = httpServer.listen(PORT, () => {
   log.info({ port: PORT, env: env.NODE_ENV }, "Server started");
   startScheduledTasks();
 });

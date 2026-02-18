@@ -15,6 +15,19 @@ vi.mock("../../src/services/escrowService", () => ({
   sendDeadlineWarnings: vi.fn().mockResolvedValue(0),
 }));
 
+// Mock socket
+vi.mock("../../src/lib/socket", () => ({
+  emitToUser: vi.fn(),
+}));
+
+// Mock prisma
+vi.mock("../../src/lib/prisma", () => ({
+  default: {
+    serviceOrder: { findMany: vi.fn().mockResolvedValue([]) },
+    notification: { create: vi.fn() },
+  },
+}));
+
 // Mock logger
 vi.mock("../../src/lib/logger", () => ({
   createLogger: () => ({
@@ -33,9 +46,9 @@ describe("Scheduler", () => {
     vi.clearAllMocks();
   });
 
-  it("should register 3 cron jobs when started", () => {
+  it("should register 4 cron jobs when started", () => {
     startScheduledTasks();
-    expect(cron.schedule).toHaveBeenCalledTimes(3);
+    expect(cron.schedule).toHaveBeenCalledTimes(4);
   });
 
   it("should schedule auto-release payments every hour", () => {
@@ -60,6 +73,13 @@ describe("Scheduler", () => {
     expect(typeof calls[2][1]).toBe("function");
   });
 
+  it("should schedule delay check every minute", () => {
+    startScheduledTasks();
+    const calls = (cron.schedule as any).mock.calls;
+    expect(calls[3][0]).toBe("* * * * *");
+    expect(typeof calls[3][1]).toBe("function");
+  });
+
   it("should stop all tasks when stopScheduledTasks is called", () => {
     const mockTask = { stop: vi.fn() };
     (cron.schedule as any).mockReturnValue(mockTask);
@@ -67,6 +87,6 @@ describe("Scheduler", () => {
     startScheduledTasks();
     stopScheduledTasks();
 
-    expect(mockTask.stop).toHaveBeenCalledTimes(3);
+    expect(mockTask.stop).toHaveBeenCalledTimes(4);
   });
 });

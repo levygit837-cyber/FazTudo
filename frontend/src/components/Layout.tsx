@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useSocket } from "../hooks/useSocket";
 import {
   Search,
   Briefcase,
@@ -92,9 +93,15 @@ const Layout: React.FC = () => {
     };
 
     fetchUnread();
-    const interval = setInterval(fetchUnread, 300000); // 5 minutes
+    const interval = setInterval(fetchUnread, 60000); // 1 minute (Socket.io handles real-time)
     return () => clearInterval(interval);
   }, [isAuthenticated]);
+
+  // Real-time notification count via Socket.io
+  const handleNewNotification = useCallback(() => {
+    setUnreadNotifications((prev) => prev + 1);
+  }, []);
+  useSocket("notification:new", handleNewNotification);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

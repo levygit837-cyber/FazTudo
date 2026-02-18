@@ -8,6 +8,7 @@ import { Skeleton } from "../components/common/Skeleton";
 import { formatRelativeTime } from "../utils/formatters";
 
 const statusLabels: Record<string, string> = {
+  DRAFT: "Duvidas",
   ACCEPTED: "Aceito",
   IN_PROGRESS: "Em andamento",
   AWAITING_CLIENT_CONFIRMATION: "Aguardando confirmação",

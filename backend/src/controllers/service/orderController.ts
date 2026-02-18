@@ -4,6 +4,7 @@ import { SAFE_USER_SELECT } from "../../lib/safeSelect";
 import type { AuthRequest } from "../../middleware/auth";
 import { env } from "../../config/env";
 import { NotificationType } from "@prisma/client";
+import { emitToUser, emitToOrder } from "../../lib/socket";
 
 import { createLogger } from "../../lib/logger";
 
@@ -33,7 +34,7 @@ const errorResponse = (message: string, statusCode: number = 400) => ({
   statusCode,
 });
 
-// Utilitário para criar notificações
+// Utilitário para criar notificações (+ emit via Socket)
 const createNotification = async (
   userId: number,
   type: NotificationType,
@@ -43,7 +44,7 @@ const createNotification = async (
   metadata?: any,
 ) => {
   try {
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId,
         type,
@@ -53,6 +54,17 @@ const createNotification = async (
         metadata,
       },
     });
+
+    // Emit real-time notification via Socket.io
+    emitToUser(userId, "notification:new", {
+      id: notification.id,
+      type,
+      title,
+      message,
+      serviceOrderId,
+    });
+
+    return notification;
   } catch (error) {
     log.error({ err: error }, "Failed to create notification");
   }
@@ -256,6 +268,7 @@ export const getUserServiceOrders = async (
     // Filtrar por status se fornecido
     if (status && status !== "all") {
       const validStatuses = [
+        "DRAFT",
         "PENDING",
         "ACCEPTED",
         "IN_PROGRESS",
@@ -328,6 +341,13 @@ export const getUserServiceOrders = async (
             select: {
               messages: true,
               reviews: true,
+            },
+          },
+          brief: {
+            select: {
+              id: true,
+              urgencyLevel: true,
+              notes: true,
             },
           },
         },
@@ -463,6 +483,16 @@ export const getServiceOrder = async (
             createdAt: "desc",
           },
         },
+        brief: {
+          include: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -581,6 +611,7 @@ export const acceptServiceOrder = async (
             email: true,
           },
         },
+        brief: true,
       },
     });
 
@@ -593,6 +624,17 @@ export const acceptServiceOrder = async (
       orderId,
       { professionalId: req.user.id, professionalName: req.user.name },
     );
+
+    // Real-time Socket.io emissions
+    emitToUser(serviceOrder.clientId, "order:accepted", {
+      orderId: serviceOrder.id,
+      title: serviceOrder.title,
+      professionalName: req.user.name,
+    });
+    emitToOrder(serviceOrder.id, "order:statusChanged", {
+      orderId: serviceOrder.id,
+      status: "ACCEPTED",
+    });
 
     res
       .status(200)
@@ -692,6 +734,12 @@ export const startServiceOrder = async (
       orderId,
       { professionalId: req.user.id, professionalName: req.user.name },
     );
+
+    // Real-time Socket.io emissions
+    emitToOrder(serviceOrder.id, "order:statusChanged", {
+      orderId: serviceOrder.id,
+      status: "IN_PROGRESS",
+    });
 
     res
       .status(200)
@@ -813,6 +861,12 @@ export const completeServiceOrder = async (
         { clientId: req.user.id, clientName: req.user.name },
       );
     }
+
+    // Real-time Socket.io emissions
+    emitToOrder(orderId, "order:statusChanged", {
+      orderId,
+      status: "AWAITING_PROFESSIONAL_CONFIRMATION",
+    });
 
     res
       .status(200)
@@ -1091,6 +1145,12 @@ export const confirmProfessionalCompletion = async (
       { professionalId: req.user.id, professionalName: req.user.name },
     );
 
+    // Real-time Socket.io emissions
+    emitToOrder(orderId, "order:statusChanged", {
+      orderId,
+      status: "COMPLETED",
+    });
+
     res.status(200).json(
       successResponse(
         { serviceOrder: updatedOrder },
@@ -1231,11 +1291,476 @@ export const cancelServiceOrder = async (
       { cancelledById: req.user.id, cancelledByName: actorName, reason },
     );
 
+    // Real-time Socket.io emissions
+    emitToOrder(orderId, "order:statusChanged", {
+      orderId,
+      status: "CANCELLED",
+    });
+
     res
       .status(200)
       .json(successResponse(null, "Service order cancelled successfully"));
   } catch (error) {
     log.error({ err: error }, "Cancel service order error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// Criar pedido rascunho (DRAFT) para conversar antes de formalizar
+export const createDraftOrder = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    if (req.user.role !== "CLIENT") {
+      res.status(403).json(errorResponse("Only clients can create draft orders"));
+      return;
+    }
+
+    const { serviceListingId, message } = req.body;
+
+    if (!serviceListingId) {
+      res.status(400).json(errorResponse("Service listing ID is required"));
+      return;
+    }
+
+    const serviceListing = await prisma.serviceListing.findUnique({
+      where: { id: serviceListingId },
+      include: {
+        professional: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    if (!serviceListing) {
+      res.status(404).json(errorResponse("Service listing not found"));
+      return;
+    }
+
+    if (!serviceListing.isAvailable) {
+      res.status(400).json(errorResponse("This service is not available"));
+      return;
+    }
+
+    // Verificar se já existe DRAFT ativo para este listing + cliente
+    const existingDraft = await prisma.serviceOrder.findFirst({
+      where: {
+        clientId: req.user.id,
+        serviceListingId,
+        status: "DRAFT",
+      },
+    });
+
+    if (existingDraft) {
+      // Retornar o draft existente em vez de criar novo
+      res.status(200).json(
+        successResponse(
+          { serviceOrder: existingDraft },
+          "Existing draft order found",
+        ),
+      );
+      return;
+    }
+
+    const draftOrder = await prisma.serviceOrder.create({
+      data: {
+        title: `Conversa sobre: ${serviceListing.title}`,
+        description: null,
+        price: serviceListing.price,
+        status: "DRAFT",
+        deadlineDays: env.DEFAULT_ESCROW_HOLD_DAYS,
+        deadlineDate: calculateDeadlineDate(env.DEFAULT_ESCROW_HOLD_DAYS),
+        clientId: req.user.id,
+        professionalId: serviceListing.professionalId,
+        serviceListingId,
+      },
+      include: {
+        client: {
+          select: { id: true, name: true, profileImage: true },
+        },
+        professional: {
+          select: { id: true, name: true, profileImage: true },
+        },
+        serviceListing: {
+          select: { id: true, title: true, price: true },
+        },
+      },
+    });
+
+    // Se o cliente enviou uma mensagem inicial, criar mensagem
+    if (message && message.trim().length > 0) {
+      await prisma.message.create({
+        data: {
+          content: message.trim(),
+          type: "TEXT",
+          senderId: req.user.id,
+          recipientId: serviceListing.professionalId,
+          serviceOrderId: draftOrder.id,
+        },
+      });
+    }
+
+    // Notificar profissional
+    await createNotification(
+      serviceListing.professionalId,
+      NotificationType.NEW_MESSAGE,
+      "Novo contato recebido",
+      `${req.user.name} quer conversar sobre "${serviceListing.title}"`,
+      draftOrder.id,
+      { clientId: req.user.id, clientName: req.user.name },
+    );
+
+    // Socket.io
+    emitToUser(serviceListing.professionalId, "order:draft", {
+      orderId: draftOrder.id,
+      clientName: req.user.name,
+      listingTitle: serviceListing.title,
+    });
+
+    res.status(201).json(
+      successResponse(
+        { serviceOrder: draftOrder },
+        "Draft order created successfully",
+      ),
+    );
+  } catch (error) {
+    log.error({ err: error }, "Create draft order error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// Converter DRAFT em pedido real (PENDING) — requer confirmação de ambas as partes
+export const convertDraftToOrder = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    const orderId = parseInt(String(req.params.id), 10);
+    if (isNaN(orderId)) {
+      res.status(400).json(errorResponse("Invalid order ID"));
+      return;
+    }
+
+    const { title, description, scheduledDate, price } = req.body;
+
+    const serviceOrder = await prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        serviceListing: {
+          select: { title: true, price: true },
+        },
+      },
+    });
+
+    if (!serviceOrder) {
+      res.status(404).json(errorResponse("Service order not found"));
+      return;
+    }
+
+    if (serviceOrder.status !== "DRAFT") {
+      res.status(400).json(errorResponse("Only draft orders can be converted"));
+      return;
+    }
+
+    // Verificar que o usuário é participante
+    const isClient = serviceOrder.clientId === req.user.id;
+    const isProfessional = serviceOrder.professionalId === req.user.id;
+
+    if (!isClient && !isProfessional) {
+      res.status(403).json(errorResponse("You are not part of this order"));
+      return;
+    }
+
+    // Converter scheduledDate
+    let scheduledDateObj: Date | undefined;
+    if (scheduledDate) {
+      scheduledDateObj = new Date(scheduledDate);
+      if (isNaN(scheduledDateObj.getTime())) {
+        res.status(400).json(errorResponse("Invalid scheduled date"));
+        return;
+      }
+    }
+
+    const updatedOrder = await prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: {
+        status: "PENDING",
+        title: title || serviceOrder.title,
+        description: description || serviceOrder.description,
+        price: price || serviceOrder.price,
+        scheduledDate: scheduledDateObj || serviceOrder.scheduledDate,
+      },
+      include: {
+        client: {
+          select: { id: true, name: true, profileImage: true },
+        },
+        professional: {
+          select: { id: true, name: true, profileImage: true },
+        },
+        serviceListing: {
+          select: { id: true, title: true, price: true },
+        },
+      },
+    });
+
+    // Notificar a outra parte
+    const notifyUserId = isClient
+      ? serviceOrder.professionalId!
+      : serviceOrder.clientId;
+    const actorLabel = isClient ? "cliente" : "profissional";
+
+    await createNotification(
+      notifyUserId,
+      NotificationType.ORDER_CREATED,
+      "Conversa convertida em pedido",
+      `O ${actorLabel} ${req.user.name} formalizou o pedido "${updatedOrder.title}"`,
+      orderId,
+      { convertedBy: req.user.id },
+    );
+
+    emitToOrder(orderId, "order:statusChanged", {
+      orderId,
+      status: "PENDING",
+    });
+
+    res.status(200).json(
+      successResponse(
+        { serviceOrder: updatedOrder },
+        "Draft converted to order successfully",
+      ),
+    );
+  } catch (error) {
+    log.error({ err: error }, "Convert draft to order error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// ============================================
+// EN-ROUTE & DELAY DETECTION
+// ============================================
+
+// Profissional marca que está a caminho
+export const markEnRoute = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    const orderId = parseInt(String(req.params.id), 10);
+    if (isNaN(orderId)) {
+      res.status(400).json(errorResponse("Invalid order ID"));
+      return;
+    }
+
+    const order = await prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        client: { select: SAFE_USER_SELECT },
+        professional: { select: SAFE_USER_SELECT },
+      },
+    });
+
+    if (!order) {
+      res.status(404).json(errorResponse("Service order not found"));
+      return;
+    }
+
+    if (order.professionalId !== req.user.id) {
+      res
+        .status(403)
+        .json(errorResponse("Only the assigned professional can mark en-route"));
+      return;
+    }
+
+    if (!["ACCEPTED", "IN_PROGRESS"].includes(order.status)) {
+      res
+        .status(400)
+        .json(errorResponse("Order must be ACCEPTED or IN_PROGRESS to mark en-route"));
+      return;
+    }
+
+    const updated = await prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: { enRouteAt: new Date() },
+    });
+
+    // Notify client
+    await createNotification(
+      order.clientId,
+      NotificationType.PROFESSIONAL_EN_ROUTE,
+      "Profissional a caminho!",
+      `${order.professional!.name} esta a caminho para realizar o servico "${order.title}"`,
+      orderId,
+    );
+
+    emitToUser(order.clientId, "order:enRoute", {
+      orderId,
+      professionalName: order.professional!.name,
+      enRouteAt: updated.enRouteAt,
+    });
+
+    log.info({ orderId, professionalId: req.user.id }, "Professional marked en-route");
+
+    res.status(200).json(
+      successResponse(
+        { serviceOrder: updated },
+        "En-route marked successfully",
+      ),
+    );
+  } catch (error) {
+    log.error({ err: error }, "Mark en-route error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// Cliente responde sobre atraso do profissional
+export const delayResponse = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    const orderId = parseInt(String(req.params.id), 10);
+    if (isNaN(orderId)) {
+      res.status(400).json(errorResponse("Invalid order ID"));
+      return;
+    }
+
+    const { arrived, action } = req.body;
+
+    const order = await prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        client: { select: SAFE_USER_SELECT },
+        professional: { select: SAFE_USER_SELECT },
+      },
+    });
+
+    if (!order) {
+      res.status(404).json(errorResponse("Service order not found"));
+      return;
+    }
+
+    if (order.clientId !== req.user.id && req.user.role !== "ADMIN") {
+      res.status(403).json(errorResponse("Only the client can respond to delay check"));
+      return;
+    }
+
+    if (arrived === true) {
+      // Professional arrived — no action needed
+      log.info({ orderId }, "Client confirmed professional arrived");
+      res.status(200).json(
+        successResponse(null, "Ok, bom servico!"),
+      );
+      return;
+    }
+
+    if (action === "message") {
+      // Send system message in chat + notify professional
+      await prisma.message.create({
+        data: {
+          content:
+            "⏰ O cliente reportou que o profissional nao chegou no horario agendado.",
+          type: "SYSTEM",
+          senderId: req.user.id,
+          recipientId: order.professionalId!,
+          serviceOrderId: orderId,
+        },
+      });
+
+      await createNotification(
+        order.professionalId!,
+        NotificationType.SYSTEM_ALERT,
+        "Cliente aguardando",
+        `O cliente reportou que voce nao chegou no horario agendado para "${order.title}"`,
+        orderId,
+      );
+
+      emitToOrder(orderId, "chat:message", {
+        type: "SYSTEM",
+        content: "⏰ Cliente reportou atraso do profissional.",
+      });
+
+      log.info({ orderId }, "Client sent delay message to professional");
+      res.status(200).json(
+        successResponse(null, "Mensagem enviada ao profissional"),
+      );
+    } else if (action === "dispute") {
+      // Create automatic dispute
+      const dispute = await prisma.dispute.create({
+        data: {
+          serviceOrderId: orderId,
+          initiatorId: req.user.id,
+          reason: "Profissional nao compareceu",
+          description: `O profissional nao chegou no horario agendado${order.scheduledDate ? ` (${order.scheduledDate.toISOString()})` : ""} e nao iniciou o trajeto apos 15 minutos.`,
+          status: "OPEN",
+        },
+      });
+
+      // Set order to DISPUTED
+      await prisma.serviceOrder.update({
+        where: { id: orderId },
+        data: { status: "DISPUTED" },
+      });
+
+      // System message in chat
+      await prisma.message.create({
+        data: {
+          content:
+            "⚠️ Uma disputa foi aberta: Profissional nao compareceu no horario agendado.",
+          type: "SYSTEM",
+          senderId: req.user.id,
+          recipientId: order.professionalId!,
+          serviceOrderId: orderId,
+        },
+      });
+
+      // Notify professional
+      await createNotification(
+        order.professionalId!,
+        NotificationType.SYSTEM_ALERT,
+        "Disputa aberta",
+        `Uma disputa foi aberta para "${order.title}": Profissional nao compareceu`,
+        orderId,
+      );
+
+      emitToUser(order.clientId, "notification:new", {
+        type: "SYSTEM_ALERT",
+        title: "Disputa registrada",
+      });
+      emitToOrder(orderId, "order:statusChanged", {
+        orderId,
+        status: "DISPUTED",
+      });
+
+      log.info({ orderId, disputeId: dispute.id }, "Dispute created for professional no-show");
+      res.status(200).json(
+        successResponse({ dispute }, "Disputa aberta com sucesso"),
+      );
+    } else {
+      res.status(400).json(errorResponse("Informe 'arrived' ou 'action'"));
+    }
+  } catch (error) {
+    log.error({ err: error }, "Delay response error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
