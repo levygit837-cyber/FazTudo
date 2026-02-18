@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import prisma from "../lib/prisma";
 import type { AuthRequest } from "../middleware/auth";
+import { checkIdempotencyKey } from "../lib/idempotency";
 
 import { createLogger } from "../lib/logger";
 
@@ -254,6 +255,19 @@ export const requestWithdrawal = async (
     if (!req.user) {
       res.status(401).json(errorResponse("Not authenticated"));
       return;
+    }
+
+    // Idempotency check: prevent duplicate withdrawal requests from network retries
+    const idempotencyKey = req.headers["idempotency-key"] as string | undefined;
+    if (idempotencyKey) {
+      const { isDuplicate } = await checkIdempotencyKey(idempotencyKey, req.user.id);
+      if (isDuplicate) {
+        res.status(409).json({
+          success: false,
+          message: "Duplicate request: this operation has already been processed",
+        });
+        return;
+      }
     }
 
     const { amount } = req.body;
