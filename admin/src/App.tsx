@@ -12,6 +12,7 @@ import VerificationsPage from "./pages/VerificationsPage";
 import TrafficPage from "./pages/TrafficPage";
 import DisputesPage from "./pages/DisputesPage";
 import SettingsPage from "./pages/SettingsPage";
+import CompaniesPage from "./pages/CompaniesPage";
 
 /** Redirect to / if already authenticated */
 const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -60,6 +61,7 @@ const App: React.FC = () => {
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserDetailPage />} />
             <Route path="verifications" element={<VerificationsPage />} />
+            <Route path="companies" element={<CompaniesPage />} />
             <Route path="traffic" element={<TrafficPage />} />
             <Route path="disputes" element={<DisputesPage />} />
             <Route path="settings" element={<SettingsPage />} />
