@@ -544,7 +544,9 @@ const DevicesSection: React.FC<{ stats: TrafficStats }> = ({ stats }) => {
 
 // ==================== Section: Retention ====================
 
-const RetentionSection: React.FC<{ stats: TrafficStats }> = ({ stats }) => (
+const RetentionSection: React.FC<{ stats: TrafficStats }> = ({ stats }) => {
+  const retention = stats.retention ?? [];
+  return (
   <div className="space-y-6 animate-fade-in">
     <div className="glass-card p-6">
       <div className="mb-6">
@@ -556,7 +558,7 @@ const RetentionSection: React.FC<{ stats: TrafficStats }> = ({ stats }) => (
         </p>
       </div>
 
-      {stats.retention.length === 0 ? (
+      {retention.length === 0 ? (
         <div className="py-12 flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4">
             <UserCheck size={28} className="text-amber-400" />
@@ -588,7 +590,7 @@ const RetentionSection: React.FC<{ stats: TrafficStats }> = ({ stats }) => (
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-              {stats.retention.map((row) => (
+              {retention.map((row) => (
                 <tr
                   key={row.cohort}
                   className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
@@ -639,7 +641,8 @@ const RetentionSection: React.FC<{ stats: TrafficStats }> = ({ stats }) => (
       </span>
     </div>
   </div>
-);
+  );
+};
 
 // ==================== Section: Chat ====================
 

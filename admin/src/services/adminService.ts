@@ -30,7 +30,7 @@ export interface TrafficStats {
     avgMessagesPerConversation: number;
     avgChatDurationSeconds: number;
   };
-  retention: Array<{ cohort: string; d1: number; d7: number; d14: number; d30: number }>;
+  retention?: Array<{ cohort: string; d1: number; d7: number; d14: number; d30: number }>;
 }
 
 export interface AdminStats {
