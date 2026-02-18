@@ -781,11 +781,19 @@ export const submitDocumentVerification = async (
       return;
     }
 
+    // SECURITY: Whitelist metadata fields to prevent prototype pollution / field injection
+    const safeMetadata = metadata
+      ? {
+          deviceInfo: typeof metadata.deviceInfo === "string" ? metadata.deviceInfo.slice(0, 200) : undefined,
+          submittedFrom: typeof metadata.submittedFrom === "string" ? metadata.submittedFrom.slice(0, 100) : undefined,
+        }
+      : {};
+
     const submissionMetadata = {
       documentType,
       documentNumber: documentNumber || null,
       documentImageUrl: documentImageUrl || null,
-      ...(metadata || {}),
+      ...safeMetadata,
     };
 
     const [submission] = await prisma.$transaction([
@@ -838,6 +846,14 @@ export const submitFacialVerification = async (
       return;
     }
 
+    // SECURITY: Whitelist metadata fields to prevent prototype pollution / field injection
+    const safeFacialMetadata = metadata
+      ? {
+          deviceInfo: typeof metadata.deviceInfo === "string" ? metadata.deviceInfo.slice(0, 200) : undefined,
+          submittedFrom: typeof metadata.submittedFrom === "string" ? metadata.submittedFrom.slice(0, 100) : undefined,
+        }
+      : {};
+
     const submission = await prisma.verificationSubmission.create({
       data: {
         userId: req.user.id,
@@ -846,7 +862,7 @@ export const submitFacialVerification = async (
         metadata: {
           selfieImageUrl: selfieImageUrl || null,
           livenessScore: livenessScore ?? null,
-          ...(metadata || {}),
+          ...safeFacialMetadata,
         },
       },
     });
