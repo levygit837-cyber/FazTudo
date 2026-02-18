@@ -34,7 +34,7 @@ const errorResponse = (message: string, statusCode: number = 400) => ({
   statusCode,
 });
 
-// Utilitário para criar notificações
+// Utilitário para criar notificações (+ emit via Socket)
 const createNotification = async (
   userId: number,
   type: NotificationType,
@@ -44,7 +44,7 @@ const createNotification = async (
   metadata?: any,
 ) => {
   try {
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId,
         type,
@@ -54,6 +54,17 @@ const createNotification = async (
         metadata,
       },
     });
+
+    // Emit real-time notification via Socket.io
+    emitToUser(userId, "notification:new", {
+      id: notification.id,
+      type,
+      title,
+      message,
+      serviceOrderId,
+    });
+
+    return notification;
   } catch (error) {
     log.error({ err: error }, "Failed to create notification");
   }
