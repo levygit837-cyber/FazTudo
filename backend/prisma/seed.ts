@@ -544,6 +544,25 @@ async function seedTestUsers() {
 
   const hashedPassword = await bcrypt.hash("Teste@123", 10);
 
+  // Admin de teste (para painel admin)
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@faztudo.com" },
+    update: {},
+    create: {
+      email: "admin@faztudo.com",
+      name: "Admin FazTudo",
+      phone: "(11) 90000-0000",
+      password: hashedPassword,
+      role: "ADMIN",
+      status: "ACTIVE",
+      isVerified: true,
+      emailVerified: true,
+      bio: "Administrador da plataforma FazTudo",
+    },
+  });
+
+  console.log(`  - Admin: ${admin.email} (id: ${admin.id}) — Senha: Teste@123`);
+
   // Cliente de teste
   const client = await prisma.user.upsert({
     where: { email: "cliente@teste.com" },
@@ -1140,6 +1159,7 @@ async function seedTestUsers() {
 
   console.log("Usuarios de teste criados com sucesso!");
   console.log("  (Consulte o seed.ts para credenciais de teste)");
+  console.log("  admin@faztudo.com / Teste@123 (ADMIN)");
   console.log("  empresa@teste.com / Teste@123 (COMPANY)");
 }
 
