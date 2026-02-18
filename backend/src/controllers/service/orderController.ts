@@ -5,6 +5,7 @@ import type { AuthRequest } from "../../middleware/auth";
 import { env } from "../../config/env";
 import { NotificationType } from "@prisma/client";
 import { emitToUser, emitToOrder } from "../../lib/socket";
+import { releasePaymentFromEscrow } from "../../services/escrowService";
 
 import { createLogger } from "../../lib/logger";
 
@@ -1073,68 +1074,30 @@ export const confirmProfessionalCompletion = async (
     const now = new Date();
     const activePayment = serviceOrder.payments.find((p) => p.status === "HELD");
 
-    // Calculate professional amount (deduct platform fee)
-    const platformFeePercentage = env.PLATFORM_FEE_PERCENTAGE;
-    const platformFee = activePayment
-      ? (activePayment.amount * platformFeePercentage) / 100
-      : 0;
-    const professionalAmount = activePayment
-      ? activePayment.amount - platformFee
-      : 0;
+    // Step 1: Update order status
+    const updatedOrder = await prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: {
+        status: "COMPLETED",
+        completedAt: now,
+        professionalConfirmedAt: now,
+      },
+      include: {
+        client: { select: { id: true, name: true, email: true } },
+        professional: { select: { id: true, name: true, email: true } },
+      },
+    });
 
-    const transactionOps: any[] = [
-      prisma.serviceOrder.update({
-        where: { id: orderId },
-        data: {
-          status: "COMPLETED",
-          completedAt: now,
-          professionalConfirmedAt: now,
-        },
-        include: {
-          client: { select: { id: true, name: true, email: true } },
-          professional: { select: { id: true, name: true, email: true } },
-        },
-      }),
-    ];
-
+    // Step 2: Release escrow via canonical function (prevents double-credit)
     if (activePayment) {
-      transactionOps.push(
-        prisma.payment.update({
-          where: { id: activePayment.id },
-          data: {
-            status: "RELEASED",
-            releasedAt: now,
-          },
-        }),
-      );
-      // Credit professional balance
-      transactionOps.push(
-        prisma.user.update({
-          where: { id: serviceOrder.professionalId! },
-          data: {
-            balance: {
-              increment: professionalAmount,
-            },
-          },
-        }),
-      );
-      // Create credit transaction
-      transactionOps.push(
-        prisma.transaction.create({
-          data: {
-            type: "PAYMENT",
-            amount: professionalAmount,
-            description: `Pagamento liberado para pedido #${orderId}`,
-            balanceBefore: 0,
-            balanceAfter: 0,
-            userId: serviceOrder.professionalId!,
-            paymentId: activePayment.id,
-          },
-        }),
-      );
+      const releaseResult = await releasePaymentFromEscrow(activePayment.id, true);
+      if (!releaseResult.success) {
+        log.warn(
+          { orderId, paymentId: activePayment.id, reason: releaseResult.error },
+          "Payment release failed during professional confirmation"
+        );
+      }
     }
-
-    const [updatedOrder] = await prisma.$transaction(transactionOps);
 
     await createNotification(
       serviceOrder.clientId,
