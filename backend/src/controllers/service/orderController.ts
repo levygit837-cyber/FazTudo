@@ -331,6 +331,13 @@ export const getUserServiceOrders = async (
               reviews: true,
             },
           },
+          brief: {
+            select: {
+              id: true,
+              urgencyLevel: true,
+              notes: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
@@ -464,6 +471,16 @@ export const getServiceOrder = async (
             createdAt: "desc",
           },
         },
+        brief: {
+          include: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -582,6 +599,7 @@ export const acceptServiceOrder = async (
             email: true,
           },
         },
+        brief: true,
       },
     });
 
