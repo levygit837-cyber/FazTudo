@@ -302,3 +302,17 @@ export const updatePlatformConfigSchema = z.object({
   maintenanceMode: z.boolean().optional(),
   maintenanceMessage: z.string().max(500).optional(),
 });
+
+export const createDisputeSchema = z.object({
+  reason: z.string().min(3).max(200),
+  description: z.string().min(10).max(5000),
+  attachments: z.array(z.string().url()).max(10).optional(),
+});
+
+export const createProposalSchema = z.object({
+  price: z.number().positive().max(1000000),
+  description: z.string().min(10).max(5000),
+  estimatedDays: z.number().int().min(0).max(365).optional(),
+  estimatedHours: z.number().int().min(0).max(24).optional(),
+  guaranteeDays: z.number().int().min(0).max(365).optional(),
+});
