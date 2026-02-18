@@ -10,17 +10,28 @@ import app from "../../src/index";
  */
 
 let clientToken: string | null = null;
+let professionalToken: string | null = null;
 
 beforeAll(async () => {
   try {
-    const res = await request(app)
+    const clientRes = await request(app)
       .post("/api/auth/login")
       .send({ email: "cliente@teste.com", password: "Teste@123" });
 
-    if (res.status === 200 && res.body.data?.token) {
-      clientToken = res.body.data.token;
-    } else if (res.status === 200 && res.body.token) {
-      clientToken = res.body.token;
+    if (clientRes.status === 200 && clientRes.body.data?.token) {
+      clientToken = clientRes.body.data.token;
+    } else if (clientRes.status === 200 && clientRes.body.token) {
+      clientToken = clientRes.body.token;
+    }
+
+    const proRes = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "profissional@teste.com", password: "Teste@123" });
+
+    if (proRes.status === 200 && proRes.body.data?.token) {
+      professionalToken = proRes.body.data.token;
+    } else if (proRes.status === 200 && proRes.body.token) {
+      professionalToken = proRes.body.token;
     }
   } catch {
     // Seed data may not be present; tests that need token will skip gracefully
@@ -116,5 +127,17 @@ describe("Security: Auth Bypass — Role-Based Access Control", () => {
 
     // 403 = forbidden, 500 = route exists but crashes without admin context
     expect([403, 500]).toContain(res.status);
+  });
+
+  it("professional should NOT release payment (only CLIENT or ADMIN)", async () => {
+    if (!professionalToken) return;
+
+    const res = await request(app)
+      .post("/api/services/orders/99999/payments/release")
+      .set("Authorization", `Bearer ${professionalToken}`);
+
+    // Should be 403 (role restricted) or 404 (order not found)
+    // Must NOT be 200 (success)
+    expect([403, 404]).toContain(res.status);
   });
 });
