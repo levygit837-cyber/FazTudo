@@ -87,6 +87,13 @@
     @apply scroll-smooth;
   }
 
+  /* Tailwind v4 breaking change: o preflight v4 não define cursor padrão no body/html.
+     O browser usa cursor:auto que resolve para cursor:text em elementos com texto.
+     Esta regra restaura cursor:default (seta) como comportamento base. */
+  html {
+    cursor: default;
+  }
+
   body {
     @apply bg-slate-50 text-slate-900 antialiased font-sans;
     line-height: 1.5;
