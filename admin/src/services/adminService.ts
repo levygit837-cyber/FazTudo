@@ -219,7 +219,7 @@ export async function resolveDispute(
   resolution: string,
   action: string
 ) {
-  const res = await api.post<ApiResponse<Dispute>>(
+  const res = await api.put<ApiResponse<Dispute>>(
     `/admin/disputes/${id}/resolve`,
     { resolution, action }
   );
@@ -234,7 +234,7 @@ export async function getPlatformConfig() {
 }
 
 export async function updatePlatformConfig(data: Partial<PlatformConfig>) {
-  const res = await api.patch<ApiResponse<PlatformConfig>>(
+  const res = await api.put<ApiResponse<PlatformConfig>>(
     "/admin/config",
     data
   );
