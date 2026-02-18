@@ -5,6 +5,7 @@ import {
   requireVerified,
   authLogger,
 } from "../middleware/auth";
+import { requireOrderParticipant } from "../middleware/uploadAuthCheck";
 import { validateBody } from "../middleware/validate";
 import { sendMessageSchema } from "../middleware/validation";
 
@@ -38,6 +39,7 @@ router.post(
   "/orders/:orderId/messages/upload",
   verifyToken,
   requireVerified,
+  requireOrderParticipant,           // auth check BEFORE multer writes to disk
   serviceController.chatUpload.single("file"),
   serviceController.uploadChatFile,
 );
