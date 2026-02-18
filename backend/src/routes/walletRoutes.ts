@@ -11,7 +11,7 @@ const router = Router();
 router.get("/balance", verifyToken, walletController.getBalance);
 router.get("/transactions", verifyToken, walletController.getTransactions);
 router.get("/summary", verifyToken, walletController.getSummary);
-router.get("/professional/overview", verifyToken, walletController.getProfessionalFinancialOverview);
+router.get("/professional/overview", verifyToken, requireRole("PROFESSIONAL", "ADMIN"), walletController.getProfessionalFinancialOverview);
 router.post(
   "/withdraw",
   verifyToken,
