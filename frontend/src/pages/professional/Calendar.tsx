@@ -8,7 +8,7 @@ import {
   MapPin,
   XCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { SkeletonDashboard } from "../../components/common/Skeleton";
 import {
   getCalendarOverview,

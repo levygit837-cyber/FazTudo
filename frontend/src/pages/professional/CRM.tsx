@@ -7,7 +7,7 @@ import {
   ArrowRight,
   TrendingUp,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { StatsCard } from "../../components/dashboard/StatsCard";
 import { OrderCard } from "../../components/orders/OrderCard";
 import { SkeletonDashboard } from "../../components/common/Skeleton";

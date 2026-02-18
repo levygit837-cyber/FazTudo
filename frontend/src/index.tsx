@@ -30,8 +30,9 @@ class ErrorBoundary extends React.Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Erro capturado no ErrorBoundary:', error, errorInfo);
+  componentDidCatch(_error: Error, _errorInfo: React.ErrorInfo) {
+    // React 19 automatically reports errors to the console in development.
+    // Add external error tracking here (e.g. Sentry) if needed.
   }
 
   render() {

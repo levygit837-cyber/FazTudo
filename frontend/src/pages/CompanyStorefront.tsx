@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { Building2, Globe, Phone, Star } from "lucide-react";
 import api from "../services/api";
 import { CompanyProfile } from "../types";

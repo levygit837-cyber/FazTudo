@@ -1,10 +1,48 @@
 # CLAUDE.md - FazTudo Marketplace
 
 > **Projeto**: FazTudo - Marketplace de Servicos
-> **Stack**: Express 5 + React 18 + TypeScript + Prisma + SQLite
+> **Stack**: Express 5 + React 19 + TypeScript + Prisma + SQLite
 > **Repo**: git@github.com:levygamer200-ux/faztudo.git
 > **Branch principal**: main
-> **Ultima atualizacao**: 2026-02-16
+> **Ultima atualizacao**: 2026-02-18
+
+---
+
+## Versoes das Dependencias (2026-02-18)
+
+### Versoes Atuais Pos-Upgrade
+
+| Workspace | Pacote | Versao |
+|-----------|--------|--------|
+| **Backend** | typescript | 5.9.3 |
+| Backend | zod | 4.3.6 |
+| Backend | prisma / @prisma/client | 7.4.0 |
+| Backend | pino | 10.3.1 |
+| Backend | vitest | 4.0.18 |
+| **Frontend** | react / react-dom | 19.2.4 |
+| Frontend | react-router | 7.13.0 (era `react-router-dom@6`) |
+| Frontend | vite | 7.3.1 |
+| Frontend | tailwindcss | 4.1.18 (CSS-first, sem tailwind.config.js) |
+| Frontend | typescript | 5.9.3 |
+| Frontend | lucide-react | 0.574.0 |
+| Frontend | axios | 1.13.5 |
+| **Admin** | react / react-dom | 19.2.4 |
+| Admin | react-router | 7.13.0 |
+| Admin | vite | 7.3.1 |
+| Admin | tailwindcss | 4.1.18 |
+| Admin | recharts | 3.7.0 |
+| Admin | typescript | 5.9.3 |
+
+### Mudancas Arquiteturais do Upgrade
+
+- **Tailwind v4**: `tailwind.config.js` e `postcss.config.cjs` **deletados** em frontend e admin.
+  Configuracao agora e CSS-first em `src/index.css` via `@theme { }` e `@variant dark`.
+  Plugin: `@tailwindcss/vite` (sem PostCSS intermediario).
+
+- **React Router v7**: Pacote `react-router-dom` **removido**. Todos os imports agora sao `from "react-router"`.
+  `BrowserRouter`, `Routes`, `Route`, `Link`, `useNavigate`, `useParams` etc. continuam com o mesmo nome.
+
+- **Zod v4 typings**: `validate.ts` agora usa generics `<T>` em vez de `any` para os tres middlewares.
 
 ---
 
@@ -339,7 +377,7 @@ git push origin feat/nome-da-feature
    - Gerar tipos do Prisma para o frontend
    - Ou manter um pacote `@faztudo/types` compartilhado
 
-4. **Sem tratamento de erros padronizado no frontend**: Cada pagina trata erros de forma diferente. Criar um hook `useApiCall` ou similar.
+4. **Sem tratamento de erros padronizado no frontend**: ~~Cada pagina trata erros de forma diferente~~ → **RESOLVIDO**: Hook `useApiCall` criado em `frontend/src/hooks/useApiCall.ts` com estado padronizado (data/loading/error/execute/reset).
 
 5. **Sem logging estruturado**: ~~Backend usa `console.log/error`~~ → **RESOLVIDO**: Migrado para Pino em todos os 27 arquivos.
 

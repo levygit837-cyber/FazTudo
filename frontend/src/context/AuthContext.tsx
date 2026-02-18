@@ -7,7 +7,7 @@ import React, {
   useCallback,
 } from "react";
 import { AxiosError } from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import api from "../services/api";
 
 // Types

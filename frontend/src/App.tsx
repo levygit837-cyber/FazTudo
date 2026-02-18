@@ -4,7 +4,7 @@ import {
   Navigate,
   Route,
   Routes,
-} from "react-router-dom";
+} from "react-router";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";

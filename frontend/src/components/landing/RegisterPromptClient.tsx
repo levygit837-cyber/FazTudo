@@ -10,7 +10,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useAuth } from "../../context/AuthContext";
 import ModalPortal from "../common/ModalPortal";
 

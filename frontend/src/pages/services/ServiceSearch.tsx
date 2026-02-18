@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import axios from "axios";
 import { Filter, Grid, List, ChevronDown, ChevronLeft, X, Pause, Play, Edit3, Trash2, Sparkles } from "lucide-react";
 import { ServiceCard } from "../../components/services/ServiceCard";

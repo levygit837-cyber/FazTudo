@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { OrderCard } from "./OrderCard";
 import { SkeletonOrderCard } from "../common/Skeleton";
 import { EmptyState } from "../common/EmptyState";
