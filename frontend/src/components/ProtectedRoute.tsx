@@ -143,6 +143,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     isProfessional,
     isClient,
     isAdmin,
+    isCompany,
   } = useAuth();
 
   // Se estiver carregando, mostrar loading
@@ -187,6 +188,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           return isClient;
         case UserRole.ADMIN:
           return isAdmin;
+        case UserRole.COMPANY:
+          return isCompany;
         default:
           return false;
       }
@@ -202,6 +205,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         dashboardPath = "/client/dashboard";
       } else if (isAdmin) {
         dashboardPath = "/admin/dashboard";
+      } else if (isCompany) {
+        dashboardPath = "/company/dashboard";
       }
 
       return <Navigate to={dashboardPath} replace />;
@@ -219,7 +224,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
 // Helper hook para verificar permissões
 export const useRoleCheck = () => {
-  const { isProfessional, isClient, isAdmin, user } = useAuth();
+  const { isProfessional, isClient, isAdmin, isCompany, user } = useAuth();
 
   const hasRole = (roles: UserRole[]): boolean => {
     if (!user) return false;
@@ -232,6 +237,8 @@ export const useRoleCheck = () => {
           return isClient;
         case UserRole.ADMIN:
           return isAdmin;
+        case UserRole.COMPANY:
+          return isCompany;
         default:
           return false;
       }
@@ -239,7 +246,7 @@ export const useRoleCheck = () => {
   };
 
   const hasAnyRole = (): boolean => {
-    return isProfessional || isClient || isAdmin;
+    return isProfessional || isClient || isAdmin || isCompany;
   };
 
   const requireVerified = (): boolean => {
@@ -253,6 +260,7 @@ export const useRoleCheck = () => {
     isProfessional,
     isClient,
     isAdmin,
+    isCompany,
     user,
   };
 };
