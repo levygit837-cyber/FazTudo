@@ -1534,3 +1534,222 @@ export const convertDraftToOrder = async (
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
+
+// ============================================
+// EN-ROUTE & DELAY DETECTION
+// ============================================
+
+// Profissional marca que está a caminho
+export const markEnRoute = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    const orderId = parseInt(String(req.params.id), 10);
+    if (isNaN(orderId)) {
+      res.status(400).json(errorResponse("Invalid order ID"));
+      return;
+    }
+
+    const order = await prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        client: { select: SAFE_USER_SELECT },
+        professional: { select: SAFE_USER_SELECT },
+      },
+    });
+
+    if (!order) {
+      res.status(404).json(errorResponse("Service order not found"));
+      return;
+    }
+
+    if (order.professionalId !== req.user.id) {
+      res
+        .status(403)
+        .json(errorResponse("Only the assigned professional can mark en-route"));
+      return;
+    }
+
+    if (!["ACCEPTED", "IN_PROGRESS"].includes(order.status)) {
+      res
+        .status(400)
+        .json(errorResponse("Order must be ACCEPTED or IN_PROGRESS to mark en-route"));
+      return;
+    }
+
+    const updated = await prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: { enRouteAt: new Date() },
+    });
+
+    // Notify client
+    await createNotification(
+      order.clientId,
+      NotificationType.PROFESSIONAL_EN_ROUTE,
+      "Profissional a caminho!",
+      `${order.professional!.name} esta a caminho para realizar o servico "${order.title}"`,
+      orderId,
+    );
+
+    emitToUser(order.clientId, "order:enRoute", {
+      orderId,
+      professionalName: order.professional!.name,
+      enRouteAt: updated.enRouteAt,
+    });
+
+    log.info({ orderId, professionalId: req.user.id }, "Professional marked en-route");
+
+    res.status(200).json(
+      successResponse(
+        { serviceOrder: updated },
+        "En-route marked successfully",
+      ),
+    );
+  } catch (error) {
+    log.error({ err: error }, "Mark en-route error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};
+
+// Cliente responde sobre atraso do profissional
+export const delayResponse = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json(errorResponse("Not authenticated"));
+      return;
+    }
+
+    const orderId = parseInt(String(req.params.id), 10);
+    if (isNaN(orderId)) {
+      res.status(400).json(errorResponse("Invalid order ID"));
+      return;
+    }
+
+    const { arrived, action } = req.body;
+
+    const order = await prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        client: { select: SAFE_USER_SELECT },
+        professional: { select: SAFE_USER_SELECT },
+      },
+    });
+
+    if (!order) {
+      res.status(404).json(errorResponse("Service order not found"));
+      return;
+    }
+
+    if (order.clientId !== req.user.id && req.user.role !== "ADMIN") {
+      res.status(403).json(errorResponse("Only the client can respond to delay check"));
+      return;
+    }
+
+    if (arrived === true) {
+      // Professional arrived — no action needed
+      log.info({ orderId }, "Client confirmed professional arrived");
+      res.status(200).json(
+        successResponse(null, "Ok, bom servico!"),
+      );
+      return;
+    }
+
+    if (action === "message") {
+      // Send system message in chat + notify professional
+      await prisma.message.create({
+        data: {
+          content:
+            "⏰ O cliente reportou que o profissional nao chegou no horario agendado.",
+          type: "SYSTEM",
+          senderId: req.user.id,
+          recipientId: order.professionalId!,
+          serviceOrderId: orderId,
+        },
+      });
+
+      await createNotification(
+        order.professionalId!,
+        NotificationType.SYSTEM_ALERT,
+        "Cliente aguardando",
+        `O cliente reportou que voce nao chegou no horario agendado para "${order.title}"`,
+        orderId,
+      );
+
+      emitToOrder(orderId, "chat:message", {
+        type: "SYSTEM",
+        content: "⏰ Cliente reportou atraso do profissional.",
+      });
+
+      log.info({ orderId }, "Client sent delay message to professional");
+      res.status(200).json(
+        successResponse(null, "Mensagem enviada ao profissional"),
+      );
+    } else if (action === "dispute") {
+      // Create automatic dispute
+      const dispute = await prisma.dispute.create({
+        data: {
+          serviceOrderId: orderId,
+          initiatorId: req.user.id,
+          reason: "Profissional nao compareceu",
+          description: `O profissional nao chegou no horario agendado${order.scheduledDate ? ` (${order.scheduledDate.toISOString()})` : ""} e nao iniciou o trajeto apos 15 minutos.`,
+          status: "OPEN",
+        },
+      });
+
+      // Set order to DISPUTED
+      await prisma.serviceOrder.update({
+        where: { id: orderId },
+        data: { status: "DISPUTED" },
+      });
+
+      // System message in chat
+      await prisma.message.create({
+        data: {
+          content:
+            "⚠️ Uma disputa foi aberta: Profissional nao compareceu no horario agendado.",
+          type: "SYSTEM",
+          senderId: req.user.id,
+          recipientId: order.professionalId!,
+          serviceOrderId: orderId,
+        },
+      });
+
+      // Notify professional
+      await createNotification(
+        order.professionalId!,
+        NotificationType.SYSTEM_ALERT,
+        "Disputa aberta",
+        `Uma disputa foi aberta para "${order.title}": Profissional nao compareceu`,
+        orderId,
+      );
+
+      emitToUser(order.clientId, "notification:new", {
+        type: "SYSTEM_ALERT",
+        title: "Disputa registrada",
+      });
+      emitToOrder(orderId, "order:statusChanged", {
+        orderId,
+        status: "DISPUTED",
+      });
+
+      log.info({ orderId, disputeId: dispute.id }, "Dispute created for professional no-show");
+      res.status(200).json(
+        successResponse({ dispute }, "Disputa aberta com sucesso"),
+      );
+    } else {
+      res.status(400).json(errorResponse("Informe 'arrived' ou 'action'"));
+    }
+  } catch (error) {
+    log.error({ err: error }, "Delay response error");
+    res.status(500).json(errorResponse("Internal server error", 500));
+  }
+};

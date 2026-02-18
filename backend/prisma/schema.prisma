@@ -227,6 +227,13 @@ model ServiceOrder {
   clientConfirmedAt       DateTime?
   professionalConfirmedAt DateTime?
 
+  // DRAFT conversion flow
+  convertProposedBy Int?    // userId who proposed converting DRAFT to order
+  convertStatus     String? // "PROPOSED", "ACCEPTED", "REJECTED"
+
+  // Professional en-route tracking
+  enRouteAt DateTime?
+
   // Localização do serviço
   addressId    Int?
   addressNotes String? // Informações adicionais sobre localização
