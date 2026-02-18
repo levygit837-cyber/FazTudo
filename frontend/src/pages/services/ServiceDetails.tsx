@@ -16,12 +16,14 @@ import {
   Award,
   Briefcase,
   MapPin,
+  Loader2,
 } from "lucide-react";
 import { Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
 import ModalPortal from "../../components/common/ModalPortal";
 import {
   createOrder,
+  createDraftOrder,
   getServiceById,
   ServiceListingWithProfessional,
 } from "../../services/serviceService";
@@ -46,6 +48,8 @@ const ServiceDetails: React.FC = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [hiring, setHiring] = useState(false);
   const [hireError, setHireError] = useState<string | null>(null);
+  const [contactMessage, setContactMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
   const toast = useToast();
 
   // Share handler
@@ -794,7 +798,7 @@ const ServiceDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal de contato */}
+      {/* Modal de contato — cria DRAFT order */}
       {showContactModal && (
         <ModalPortal>
           <div className="fixed inset-0 z-[120] flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Enviar mensagem">
@@ -807,20 +811,51 @@ const ServiceDetails: React.FC = () => {
               <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Enviar mensagem para {service.professional.name}
               </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+                Tire suas duvidas antes de contratar. Uma conversa sera criada entre voce e o profissional.
+              </p>
               <textarea
                 placeholder="Escreva sua mensagem..."
                 rows={4}
+                value={contactMessage}
+                onChange={(e) => setContactMessage(e.target.value)}
                 className="w-full resize-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-slate-100 px-4 py-3 focus:ring-2 focus:ring-primary-500"
               />
               <div className="mt-4 flex gap-3">
                 <button
-                  onClick={() => setShowContactModal(false)}
+                  onClick={() => {
+                    setShowContactModal(false);
+                    setContactMessage("");
+                  }}
                   className="btn btn-outline flex-1"
                 >
                   Cancelar
                 </button>
-                <button className="btn btn-primary flex-1">
-                  Enviar
+                <button
+                  onClick={async () => {
+                    if (!contactMessage.trim()) return;
+                    setSendingMessage(true);
+                    try {
+                      const draft = await createDraftOrder(service.id, contactMessage.trim());
+                      setShowContactModal(false);
+                      setContactMessage("");
+                      toast.success("Mensagem enviada! Redirecionando para o chat...");
+                      const basePath = user?.role === "CLIENT" ? "/client/orders" : "/professional/services";
+                      navigate(`${basePath}/${draft.id}/chat`);
+                    } catch (err: any) {
+                      toast.error(err?.response?.data?.message || "Erro ao enviar mensagem");
+                    } finally {
+                      setSendingMessage(false);
+                    }
+                  }}
+                  disabled={!contactMessage.trim() || sendingMessage}
+                  className="btn btn-primary flex-1 disabled:opacity-50"
+                >
+                  {sendingMessage ? (
+                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                  ) : (
+                    "Enviar"
+                  )}
                 </button>
               </div>
             </div>

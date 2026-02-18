@@ -8,6 +8,7 @@ import {
   XCircle,
   Star,
   MapPin,
+  MessageCircle,
 } from "lucide-react";
 import { ServiceOrderStatus } from "../../types";
 import {
@@ -50,6 +51,7 @@ interface OrderCardProps {
 }
 
 const statusBorderColors: Record<string, string> = {
+  [ServiceOrderStatus.DRAFT]: "border-l-slate-400",
   [ServiceOrderStatus.PENDING]: "border-l-amber-400",
   [ServiceOrderStatus.ACCEPTED]: "border-l-emerald-400",
   [ServiceOrderStatus.IN_PROGRESS]: "border-l-blue-400",
@@ -65,6 +67,11 @@ const statusConfig: Record<
   ServiceOrderStatus,
   { color: string; icon: React.ReactNode; bgColor: string }
 > = {
+  [ServiceOrderStatus.DRAFT]: {
+    color: "text-slate-600 dark:text-slate-400",
+    bgColor: "bg-slate-100 dark:bg-slate-900/30",
+    icon: <MessageCircle className="w-3.5 h-3.5" />,
+  },
   [ServiceOrderStatus.PENDING]: {
     color: "text-amber-600 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-900/30",

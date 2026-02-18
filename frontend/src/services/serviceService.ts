@@ -705,6 +705,62 @@ export const clearProfessionalLocation = async (
   return extractData(response);
 };
 
+// ==================== SERVIÇOS - DRAFT ORDERS ====================
+
+/**
+ * Cria um pedido rascunho (DRAFT) para conversar antes de formalizar
+ */
+export const createDraftOrder = async (
+  serviceListingId: number,
+  message: string,
+): Promise<ServiceOrder> => {
+  const response = await api.post<ApiResponse<any>>("/services/orders/draft", {
+    serviceListingId,
+    message,
+  });
+  return extractData(response);
+};
+
+/**
+ * Converte DRAFT em pedido real (propose/accept/reject)
+ */
+export const convertDraftOrder = async (
+  orderId: number,
+  action: "propose" | "accept" | "reject",
+): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/convert`,
+    { action },
+  );
+  return extractData(response);
+};
+
+// ==================== SERVIÇOS - EN-ROUTE & DELAY ====================
+
+/**
+ * Profissional marca que está a caminho
+ */
+export const markEnRoute = async (orderId: number): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/en-route`,
+  );
+  return extractData(response);
+};
+
+/**
+ * Cliente responde sobre atraso do profissional
+ */
+export const delayResponse = async (
+  orderId: number,
+  data: { arrived?: boolean; action?: "message" | "dispute" },
+): Promise<any> => {
+  const response = await api.post<ApiResponse<any>>(
+    `/services/orders/${orderId}/delay-response`,
+    data,
+  );
+  return extractData(response);
+};
+
 export default {
   // Listings
   listServices,
@@ -753,4 +809,10 @@ export default {
   rescheduleOrder,
   acceptReschedule,
   rejectReschedule,
+  // Draft Orders
+  createDraftOrder,
+  convertDraftOrder,
+  // En-Route & Delay
+  markEnRoute,
+  delayResponse,
 };

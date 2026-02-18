@@ -17,6 +17,7 @@ export enum UserStatus {
 }
 
 export enum ServiceOrderStatus {
+  DRAFT = "DRAFT",
   PENDING = "PENDING",
   ACCEPTED = "ACCEPTED",
   IN_PROGRESS = "IN_PROGRESS",
