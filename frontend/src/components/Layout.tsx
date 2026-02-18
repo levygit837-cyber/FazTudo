@@ -514,11 +514,11 @@ const Layout: React.FC = () => {
             role="navigation"
             aria-label="Menu de navegacao mobile"
             className={clsx(
-              "md:hidden border-t border-slate-200 dark:border-slate-800/50 overflow-hidden transition-all duration-300 ease-in-out",
+              "md:hidden border-t border-slate-200 dark:border-slate-800/50 overflow-hidden transition-all duration-300 ease-in-out will-change-[max-height]",
               isMobileMenuOpen ? "max-h-[80vh] py-4 opacity-100" : "max-h-0 py-0 opacity-0",
             )}
           >
-              <div className="flex flex-col space-y-2">
+              <div className="flex flex-col space-y-2 overflow-y-hidden">
                 {navLinks.map((link) => (
                   <Link
                     key={link.path}
