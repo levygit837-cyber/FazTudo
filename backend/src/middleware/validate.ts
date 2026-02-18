@@ -8,7 +8,7 @@ const log = createLogger('validate');
  * Extract structured errors from a Zod v4 error.
  */
 function extractErrors(error: z.ZodError): { field: string; message: string }[] {
-  return error.issues.map((issue: any) => ({
+  return error.issues.map((issue) => ({
     field: issue.path.join('.'),
     message: issue.message,
   }));
@@ -19,7 +19,7 @@ function extractErrors(error: z.ZodError): { field: string; message: string }[] 
  * On success, replaces req.body with the parsed (sanitized) data.
  * On failure, returns 400 with structured error messages.
  */
-export function validateBody(schema: z.ZodType<any>) {
+export function validateBody<T>(schema: z.ZodType<T>) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.body);
     if (result.success) {
@@ -42,7 +42,7 @@ export function validateBody(schema: z.ZodType<any>) {
  * Express middleware factory that validates req.query against a Zod schema.
  * On success, attaches validated data to req.validatedQuery.
  */
-export function validateQuery(schema: z.ZodType<any>) {
+export function validateQuery<T>(schema: z.ZodType<T>) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.query);
     if (result.success) {
@@ -63,7 +63,7 @@ export function validateQuery(schema: z.ZodType<any>) {
 /**
  * Express middleware factory that validates req.params against a Zod schema.
  */
-export function validateParams(schema: z.ZodType<any>) {
+export function validateParams<T extends Record<string, string>>(schema: z.ZodType<T>) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.params);
     if (result.success) {
