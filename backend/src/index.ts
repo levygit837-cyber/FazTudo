@@ -8,6 +8,7 @@ import logger, { createLogger } from "./lib/logger";
 import { requestLogger } from "./middleware/requestLog";
 import { errorHandler, notFoundHandler } from "./middleware/error";
 import { generalLimiter } from "./middleware/rateLimiter";
+import { verifyToken } from "./middleware/auth";
 import { xssSanitizer } from "./middleware/sanitize";
 import authRoutes from "./routes/authRoutes";
 import serviceRoutes from "./routes/serviceRoutes";
@@ -80,6 +81,9 @@ app.use(helmet({
 app.set('trust proxy', 1);
 
 // Serve uploaded files BEFORE rate limiter (static files should not count)
+// Chat uploads require authentication (may contain sensitive documents)
+app.use("/uploads/chat", verifyToken, express.static(path.join(process.cwd(), "uploads", "chat")));
+// Non-chat uploads remain publicly accessible
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // General rate limiter for all routes (after static)
