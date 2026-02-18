@@ -370,7 +370,7 @@ export const inviteMemberSchema = z.object({
 
 export const createRoleSchema = z.object({
   name: z.string().min(2).max(100),
-  permissions: z.array(z.string().max(100)).min(1).max(50),
+  permissions: z.record(z.string(), z.any()),
   level: z.number().int().min(0).max(100).optional(),
   color: z.string().max(20).optional(),
 });
