@@ -45,7 +45,7 @@ interface DashboardData {
     usersWithOrders: number;
     usersWithCompletedOrders: number;
   };
-  topCategories: Array<{ id: number; name: string; count?: number }>;
+  topCategories: Array<{ id: number; name: string; count: number }>;
   rates: {
     cancellationRate: number;
     disputeRate: number;
@@ -388,7 +388,7 @@ const DashboardPage: React.FC = () => {
       ]
     : [];
 
-  const topCategories: Array<{ id: number; name: string; count?: number }> =
+  const topCategories: Array<{ id: number; name: string; count: number }> =
     d?.topCategories ?? [];
   const maxCatCount =
     topCategories.length > 0
