@@ -35,9 +35,9 @@ const AdminLayout: React.FC = () => {
   };
 
   const linkClasses = (isActive: boolean) =>
-    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+    `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
       isActive
-        ? "bg-primary-600 text-white shadow-glow-blue"
+        ? "bg-primary-600/90 text-white shadow-glow-blue ring-1 ring-primary-500/30"
         : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
     }`;
 
@@ -45,13 +45,18 @@ const AdminLayout: React.FC = () => {
     <>
       {/* Logo / Brand */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-800/50">
-        <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold text-sm">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-sm shadow-glow-blue shrink-0">
           FT
         </div>
         {!sidebarCollapsed && (
-          <span className="text-lg font-bold text-slate-100 tracking-tight">
-            FazTudo Admin
-          </span>
+          <div>
+            <span className="text-sm font-bold text-slate-100 tracking-tight font-display">
+              FazTudo
+            </span>
+            <span className="ml-1.5 text-xs text-primary-400 font-semibold bg-primary-500/15 px-1.5 py-0.5 rounded-md">
+              Admin
+            </span>
+          </div>
         )}
       </div>
 

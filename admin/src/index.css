@@ -159,6 +159,15 @@
     @apply bg-slate-900/60 border-slate-800/50 shadow-lg shadow-black/20 backdrop-blur-xl;
   }
 
+  /* Premium glass card — dark-first, used in admin panel */
+  .glass-card {
+    @apply bg-white border border-slate-200/80 rounded-2xl shadow-sm;
+  }
+
+  html.dark .glass-card {
+    @apply bg-slate-900/70 border-slate-800/60 shadow-lg shadow-black/30 backdrop-blur-xl;
+  }
+
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
