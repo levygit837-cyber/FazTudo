@@ -324,3 +324,53 @@ export const updateScheduleSchema = z.object({
     endTime: z.string().min(1).max(10),
   })).max(50),
 });
+
+// ============================================
+// COMPANY SCHEMAS
+// ============================================
+
+export const updateCompanyProfileSchema = z.object({
+  companyName: z.string().min(2).max(200).optional(),
+  description: z.string().max(5000).optional(),
+  phone: z.string().max(20).optional(),
+  website: z.string().url().max(500).optional().or(z.literal("")),
+  industry: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+});
+
+export const createChannelSchema = z.object({
+  name: z.string().min(2).max(100),
+  description: z.string().max(500).optional(),
+});
+
+export const updateChannelSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  description: z.string().max(500).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const createSalaryRuleSchema = z.object({
+  roleId: z.number().int().positive().optional(),
+  memberId: z.number().int().positive().optional(),
+  amount: z.number().positive().max(1000000),
+  dayOfMonth: z.number().int().min(1).max(31).optional(),
+  description: z.string().max(500).optional(),
+});
+
+export const transferSalarySchema = z.object({
+  memberId: z.number().int().positive(),
+  amount: z.number().positive().max(1000000),
+  note: z.string().max(500).optional(),
+});
+
+export const inviteMemberSchema = z.object({
+  email: z.string().email(),
+  roleId: z.number().int().positive(),
+});
+
+export const createRoleSchema = z.object({
+  name: z.string().min(2).max(100),
+  permissions: z.array(z.string().max(100)).min(1).max(50),
+  level: z.number().int().min(0).max(100).optional(),
+  color: z.string().max(20).optional(),
+});

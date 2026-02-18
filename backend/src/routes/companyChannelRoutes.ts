@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { verifyToken } from "../middleware/auth";
 import { requireCompanyPermission } from "../middleware/companyPermission";
+import { validateBody } from "../middleware/validate";
+import { createChannelSchema, updateChannelSchema } from "../middleware/validation";
 import {
   getChannels,
   createChannel,
@@ -17,8 +19,8 @@ router.use(verifyToken);
 router.get("/my", getMyChannels);
 
 router.get("/", requireCompanyPermission("chat.manage"), getChannels);
-router.post("/", requireCompanyPermission("chat.manage"), createChannel);
-router.put("/:channelId", requireCompanyPermission("chat.manage"), updateChannel);
+router.post("/", requireCompanyPermission("chat.manage"), validateBody(createChannelSchema), createChannel);
+router.put("/:channelId", requireCompanyPermission("chat.manage"), validateBody(updateChannelSchema), updateChannel);
 router.delete("/:channelId", requireCompanyPermission("chat.manage"), deleteChannel);
 
 router.post("/:channelId/members", requireCompanyPermission("chat.manage"), addMemberToChannel);
