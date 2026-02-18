@@ -123,7 +123,23 @@ export interface ServiceOrder {
   notifications?: Notification[];
   messages?: Message[];
   files?: File[];
+  brief?: OrderBrief;
 
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderBrief {
+  id: number;
+  serviceOrderId: number;
+  categoryId?: number;
+  urgencyLevel: string;
+  priceRangeMin?: number;
+  priceRangeMax?: number;
+  briefData: Record<string, any>;
+  mediaUrls?: string[];
+  notes?: string;
+  category?: ServiceCategory;
   createdAt: string;
   updatedAt: string;
 }

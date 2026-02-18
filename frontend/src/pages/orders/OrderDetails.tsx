@@ -470,6 +470,54 @@ const OrderDetails: React.FC = () => {
             </div>
           </div>
 
+          {/* Order Brief — instructions for professional */}
+          {order.brief && isOrderProfessional && (
+            <div className="card border-l-4 border-l-blue-400">
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-blue-500" />
+                Instruções do Cliente
+              </h2>
+              {order.brief.notes && (
+                <p className="text-slate-600 dark:text-slate-400 mb-3">{order.brief.notes}</p>
+              )}
+              {order.brief.urgencyLevel && order.brief.urgencyLevel !== "NORMAL" && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Urgência:</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    order.brief.urgencyLevel === "URGENT"
+                      ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                      : order.brief.urgencyLevel === "HIGH"
+                      ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                      : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                  }`}>
+                    {order.brief.urgencyLevel === "URGENT" ? "Urgente" :
+                     order.brief.urgencyLevel === "HIGH" ? "Alta" :
+                     order.brief.urgencyLevel === "LOW" ? "Baixa" : order.brief.urgencyLevel}
+                  </span>
+                </div>
+              )}
+              {order.brief.briefData && Object.keys(order.brief.briefData).length > 0 && (
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 space-y-2">
+                  {Object.entries(order.brief.briefData).map(([key, value]) => (
+                    <div key={key} className="flex justify-between text-sm">
+                      <span className="text-slate-500 dark:text-slate-400 capitalize">
+                        {key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}
+                      </span>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                        {String(value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {order.brief.category && (
+                <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                  Categoria: {order.brief.category.name}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* CHECKOUT: Pagamento (apenas se esta na fase de checkout) */}
           {isCheckoutPhase && isOrderClient && (
             <div className="card">
