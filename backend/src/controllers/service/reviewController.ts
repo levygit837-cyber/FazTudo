@@ -2,6 +2,7 @@ import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { NotificationType } from "@prisma/client";
+import { SAFE_USER_SELECT } from "../../lib/safeSelect";
 
 import { createLogger } from "../../lib/logger";
 
@@ -85,8 +86,8 @@ export const createReview = async (
     const serviceOrder = await prisma.serviceOrder.findUnique({
       where: { id: orderId },
       include: {
-        client: true,
-        professional: true,
+        client: { select: SAFE_USER_SELECT },
+        professional: { select: SAFE_USER_SELECT },
         reviews: true,
       },
     });

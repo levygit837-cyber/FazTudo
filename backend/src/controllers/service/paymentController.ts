@@ -3,6 +3,7 @@ import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { env } from "../../config/env";
 import { NotificationType } from "@prisma/client";
+import { SAFE_USER_SELECT } from "../../lib/safeSelect";
 import {
   createPaymentPreference,
   getMPPaymentStatus,
@@ -140,8 +141,8 @@ export const createPayment = async (
     const serviceOrder = await prisma.serviceOrder.findUnique({
       where: { id: orderId },
       include: {
-        professional: true,
-        client: true,
+        professional: { select: SAFE_USER_SELECT },
+        client: { select: SAFE_USER_SELECT },
         serviceListing: true,
         payments: {
           where: {
