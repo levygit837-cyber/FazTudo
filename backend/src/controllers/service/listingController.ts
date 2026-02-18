@@ -225,8 +225,8 @@ export const getService = async (
                 city: true,
                 neighborhood: true,
                 state: true,
-                latitude: true,
-                longitude: true,
+                // latitude and longitude removed — precise geolocation
+                // should only be shared after order is accepted
               },
             },
           },
