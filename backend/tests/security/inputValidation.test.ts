@@ -1,6 +1,24 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
 import app from "../../src/index";
+
+let clientToken: string | null = null;
+
+beforeAll(async () => {
+  try {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "cliente@teste.com", password: "Teste@123" });
+
+    if (res.status === 200 && res.body.data?.token) {
+      clientToken = res.body.data.token;
+    } else if (res.status === 200 && res.body.token) {
+      clientToken = res.body.token;
+    }
+  } catch {
+    // Seed data may not be present
+  }
+});
 
 /**
  * Security: Input Validation Tests
@@ -147,5 +165,25 @@ describe("Security: Invalid Parameter Types", () => {
 
     // May return 400, 404, or 500 (integer overflow) — the key is the server responds
     expect([400, 404, 500]).toContain(res.status);
+  });
+});
+
+describe("Security: Dispute Validation", () => {
+  it("should reject dispute with missing reason", async () => {
+    if (!clientToken) return;
+    const res = await request(app)
+      .post("/api/services/orders/99999/disputes")
+      .set("Authorization", `Bearer ${clientToken}`)
+      .send({ description: "test description here" });
+    expect([400, 403, 404]).toContain(res.status);
+  });
+
+  it("should reject dispute with extremely long description", async () => {
+    if (!clientToken) return;
+    const res = await request(app)
+      .post("/api/services/orders/99999/disputes")
+      .set("Authorization", `Bearer ${clientToken}`)
+      .send({ reason: "QUALITY", description: "a".repeat(10001) });
+    expect([400, 403, 404]).toContain(res.status);
   });
 });

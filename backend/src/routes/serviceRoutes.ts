@@ -6,6 +6,8 @@ import {
   requireVerified,
   authLogger,
 } from "../middleware/auth";
+import { validateBody } from "../middleware/validate";
+import { createServiceSchema, updateServiceSchema } from "../middleware/validation";
 
 const router = Router();
 
@@ -35,6 +37,7 @@ router.post(
   verifyToken,
   requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
   requireVerified,
+  validateBody(createServiceSchema),
   serviceController.createServiceListing,
 );
 
@@ -75,6 +78,7 @@ router.put(
   verifyToken,
   requireRole("PROFESSIONAL", "ADMIN"),
   requireVerified,
+  validateBody(updateServiceSchema),
   serviceController.updateServiceListing,
 );
 

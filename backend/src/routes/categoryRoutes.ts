@@ -12,6 +12,8 @@ import {
   getPopularCategories,
 } from "../controllers/categoryController";
 import { verifyToken, requireRole } from "../middleware/auth";
+import { validateBody } from "../middleware/validate";
+import { createCategorySchema, updateCategorySchema } from "../middleware/validation";
 
 const router = Router();
 
@@ -33,10 +35,10 @@ router.get("/:id", getCategoryById);
 // ==================== ADMIN ROUTES ====================
 
 // Criar categoria (Admin only)
-router.post("/", verifyToken, requireRole("ADMIN"), createCategory);
+router.post("/", verifyToken, requireRole("ADMIN"), validateBody(createCategorySchema), createCategory);
 
 // Atualizar categoria (Admin only)
-router.put("/:id", verifyToken, requireRole("ADMIN"), updateCategory);
+router.put("/:id", verifyToken, requireRole("ADMIN"), validateBody(updateCategorySchema), updateCategory);
 
 // Deletar categoria (Admin only)
 router.delete("/:id", verifyToken, requireRole("ADMIN"), deleteCategory);

@@ -6,6 +6,8 @@ import {
   requireVerified,
   authLogger,
 } from "../middleware/auth";
+import { validateBody } from "../middleware/validate";
+import { createProposalSchema } from "../middleware/validation";
 
 const router = Router();
 
@@ -22,6 +24,7 @@ router.post(
   verifyToken,
   requireRole("PROFESSIONAL"),
   requireVerified,
+  validateBody(createProposalSchema),
   serviceController.createProposal,
 );
 

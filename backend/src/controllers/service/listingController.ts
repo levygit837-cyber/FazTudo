@@ -67,8 +67,8 @@ export const listServices = async (
       limit = 20,
     } = req.query;
 
-    const pageNum = parseInt(page as string, 10);
-    const limitNum = parseInt(limit as string, 10);
+    const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 20, 1), 100);
     const skip = (pageNum - 1) * limitNum;
 
     // Construir filtros

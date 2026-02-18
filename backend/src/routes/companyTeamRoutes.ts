@@ -8,6 +8,6 @@ router.use(verifyToken);
 
 router.post("/", requireCompanyPermission("orders.assign"), createTeam);
 router.get("/order/:orderId", requireCompanyPermission("orders.view"), getTeamByOrder);
-router.post("/:teamId/complete", confirmTeamCompletion);
+router.post("/:teamId/complete", requireCompanyPermission("orders.assign"), confirmTeamCompletion);
 
 export default router;

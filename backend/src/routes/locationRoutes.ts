@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { verifyToken, requireRole, requireVerified } from "../middleware/auth";
+import { validateBody } from "../middleware/validate";
+import { updateLocationSchema } from "../middleware/validation";
 import {
   updateLocation,
   getLocation,
@@ -23,6 +25,7 @@ router.post(
   verifyToken,
   requireRole("PROFESSIONAL", "ADMIN"),
   requireVerified,
+  validateBody(updateLocationSchema),
   updateLocation
 );
 

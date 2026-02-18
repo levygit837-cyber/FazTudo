@@ -302,3 +302,107 @@ export const updatePlatformConfigSchema = z.object({
   maintenanceMode: z.boolean().optional(),
   maintenanceMessage: z.string().max(500).optional(),
 });
+
+export const createDisputeSchema = z.object({
+  reason: z.string().min(3).max(200),
+  description: z.string().min(10).max(5000),
+  attachments: z.array(z.string().url()).max(10).optional(),
+});
+
+export const createProposalSchema = z.object({
+  price: z.number().positive().max(1000000),
+  description: z.string().min(10).max(5000),
+  estimatedDays: z.number().int().min(0).max(365).optional(),
+  estimatedHours: z.number().int().min(0).max(24).optional(),
+  guaranteeDays: z.number().int().min(0).max(365).optional(),
+});
+
+export const updateScheduleSchema = z.object({
+  schedule: z.array(z.object({
+    dayOfWeek: z.number().int().min(0).max(6),
+    startTime: z.string().min(1).max(10),
+    endTime: z.string().min(1).max(10),
+  })).max(50),
+});
+
+// ============================================
+// COMPANY SCHEMAS
+// ============================================
+
+export const updateCompanyProfileSchema = z.object({
+  companyName: z.string().min(2).max(200).optional(),
+  description: z.string().max(5000).optional(),
+  phone: z.string().max(20).optional(),
+  website: z.string().url().max(500).optional().or(z.literal("")),
+  industry: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+});
+
+export const createChannelSchema = z.object({
+  name: z.string().min(2).max(100),
+  description: z.string().max(500).optional(),
+});
+
+export const updateChannelSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  description: z.string().max(500).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const createSalaryRuleSchema = z.object({
+  roleId: z.number().int().positive().optional(),
+  memberId: z.number().int().positive().optional(),
+  amount: z.number().positive().max(1000000),
+  dayOfMonth: z.number().int().min(1).max(31).optional(),
+  description: z.string().max(500).optional(),
+});
+
+export const transferSalarySchema = z.object({
+  memberId: z.number().int().positive(),
+  amount: z.number().positive().max(1000000),
+  note: z.string().max(500).optional(),
+});
+
+export const inviteMemberSchema = z.object({
+  email: z.string().email(),
+  roleId: z.number().int().positive(),
+});
+
+export const createRoleSchema = z.object({
+  name: z.string().min(2).max(100),
+  permissions: z.record(z.string(), z.any()),
+  level: z.number().int().min(0).max(100).optional(),
+  color: z.string().max(20).optional(),
+});
+
+// ============================================
+// LOCATION SCHEMAS
+// ============================================
+
+export const updateLocationSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+// ============================================
+// CATEGORY SCHEMAS
+// ============================================
+
+export const createCategorySchema = z.object({
+  name: z.string().min(2).max(100),
+  description: z.string().max(500).optional(),
+  icon: z.string().max(50).optional(),
+  type: z.string().max(50).optional(),
+  parentCategoryId: z.number().int().positive().optional(),
+});
+
+export const updateCategorySchema = createCategorySchema.partial();
+
+// ============================================
+// ADMIN VERIFY COMPANY SCHEMA
+// ============================================
+
+export const verifyCompanySchema = z.object({
+  approved: z.boolean(),
+  reason: z.string().max(500).optional(),
+});

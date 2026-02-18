@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { verifyToken } from "../middleware/auth";
 import { requireCompanyOwner, requireCompanyPermission } from "../middleware/companyPermission";
+import { validateBody } from "../middleware/validate";
+import { updateCompanyProfileSchema } from "../middleware/validation";
 import { getCompanyProfile, updateCompanyProfile, getCompanyStorefront, getCompanyDashboard } from "../controllers/companyController";
 
 import {
@@ -19,7 +21,7 @@ router.get("/storefront/:companyId", getCompanyStorefront);
 router.use(verifyToken);
 
 router.get("/profile", requireCompanyOwner, getCompanyProfile);
-router.put("/profile", requireCompanyPermission("company.settings"), updateCompanyProfile);
+router.put("/profile", requireCompanyPermission("company.settings"), validateBody(updateCompanyProfileSchema), updateCompanyProfile);
 router.get("/dashboard", requireCompanyOwner, getCompanyDashboard);
 
 

@@ -3,18 +3,45 @@ import request from "supertest";
 import app from "../src/index";
 import prisma from "../src/lib/prisma";
 
+const TEST_EMAIL = "empresa-channels@faztudo.com";
+const TEST_CNPJ = "88888888000188";
+
+async function cleanup() {
+  const existing = await prisma.companyProfile.findFirst({ where: { cnpj: TEST_CNPJ } });
+  if (existing) {
+    await prisma.companyChannelMember.deleteMany({ where: { channel: { companyId: existing.id } } }).catch(() => {});
+    await prisma.companyChannel.deleteMany({ where: { companyId: existing.id } }).catch(() => {});
+    await prisma.companyMember.deleteMany({ where: { companyId: existing.id } }).catch(() => {});
+    await prisma.companyRole.deleteMany({ where: { companyId: existing.id } }).catch(() => {});
+    await prisma.companyProfile.delete({ where: { id: existing.id } }).catch(() => {});
+  }
+  await prisma.user.deleteMany({ where: { email: TEST_EMAIL } });
+}
+
 describe("Company Channels", () => {
   let companyToken: string;
   let channelId: number;
 
   beforeAll(async () => {
+    await cleanup();
+
+    // Register a company user
+    await request(app).post("/api/auth/register").send({
+      name: "Empresa Channels Test",
+      email: TEST_EMAIL,
+      password: "Teste@123",
+      role: "COMPANY",
+      cnpj: TEST_CNPJ,
+    });
+
+    // Activate directly in DB
     await prisma.user.update({
-      where: { email: "empresa@teste.com" },
+      where: { email: TEST_EMAIL },
       data: { status: "ACTIVE", emailVerified: true },
-    }).catch(() => {});
+    });
 
     const res = await request(app).post("/api/auth/login").send({
-      email: "empresa@teste.com",
+      email: TEST_EMAIL,
       password: "Teste@123",
     });
     companyToken = res.body.data?.token;
@@ -61,9 +88,6 @@ describe("Company Channels", () => {
   });
 
   afterAll(async () => {
-    if (channelId) {
-      await prisma.companyChannelMember.deleteMany({ where: { channelId } }).catch(() => {});
-      await prisma.companyChannel.delete({ where: { id: channelId } }).catch(() => {});
-    }
+    await cleanup();
   });
 });

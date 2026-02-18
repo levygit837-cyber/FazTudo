@@ -5,6 +5,8 @@ import {
   requireVerified,
   authLogger,
 } from "../middleware/auth";
+import { validateBody } from "../middleware/validate";
+import { createDisputeSchema } from "../middleware/validation";
 
 const router = Router();
 
@@ -20,6 +22,7 @@ router.post(
   "/orders/:orderId/disputes",
   verifyToken,
   requireVerified,
+  validateBody(createDisputeSchema),
   serviceController.createDispute,
 );
 

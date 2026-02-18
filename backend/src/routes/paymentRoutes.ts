@@ -46,6 +46,8 @@ router.post(
 router.post(
   "/orders/:orderId/payments/release",
   verifyToken,
+  requireRole("CLIENT", "ADMIN"),
+  requireVerified,
   financialLimiter,
   serviceController.releasePayment,
 );

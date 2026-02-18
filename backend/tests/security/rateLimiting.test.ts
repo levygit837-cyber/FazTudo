@@ -63,6 +63,24 @@ describe("Security: Rate Limit Headers", () => {
   });
 });
 
+describe("Security: Sensitive Endpoint Rate Limiting", () => {
+  it("refresh endpoint should have rate limiting headers", async () => {
+    const res = await request(app).post("/api/auth/refresh").send({});
+    const hasHeaders =
+      res.headers["ratelimit-limit"] !== undefined ||
+      res.headers["x-ratelimit-limit"] !== undefined;
+    expect(hasHeaders).toBe(true);
+  });
+
+  it("verify-email endpoint should have rate limiting headers", async () => {
+    const res = await request(app).post("/api/auth/verify-email").send({});
+    const hasHeaders =
+      res.headers["ratelimit-limit"] !== undefined ||
+      res.headers["x-ratelimit-limit"] !== undefined;
+    expect(hasHeaders).toBe(true);
+  });
+});
+
 describe("Security: Auth Rate Limiting — Brute Force Protection", () => {
   it("multiple rapid failed login attempts should eventually get 429 (soft)", async () => {
     // Auth rate limiter allows AUTH_RATE_LIMIT_MAX_REQUESTS (default: 10) per window.

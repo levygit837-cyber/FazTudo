@@ -5,9 +5,12 @@ import prisma from "../src/lib/prisma";
 
 // Helper: remove all test data tied to the test CNPJ / email
 async function cleanup() {
-  await prisma.companyMember.deleteMany({ where: { company: { cnpj: "99999999000199" } } });
-  await prisma.companyRole.deleteMany({ where: { company: { cnpj: "99999999000199" } } });
-  await prisma.companyProfile.deleteMany({ where: { cnpj: "99999999000199" } });
+  const existing = await prisma.companyProfile.findFirst({ where: { cnpj: "99999999000199" } });
+  if (existing) {
+    await prisma.companyMember.deleteMany({ where: { companyId: existing.id } });
+    await prisma.companyRole.deleteMany({ where: { companyId: existing.id } });
+    await prisma.companyProfile.delete({ where: { id: existing.id } });
+  }
   await prisma.user.deleteMany({ where: { email: "empresa-flow@faztudo.com" } });
 }
 

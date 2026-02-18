@@ -263,7 +263,7 @@ export const getMainCategories = async (
         },
         { name: "asc" },
       ],
-      take: parseInt(limit as string),
+      take: Math.min(Math.max(parseInt(limit as string) || 12, 1), 50),
     });
 
     res.status(200).json(
@@ -731,7 +731,7 @@ export const getPopularCategories = async (
           },
         },
       ],
-      take: parseInt(limit as string),
+      take: Math.min(Math.max(parseInt(limit as string) || 12, 1), 50),
     });
 
     res.status(200).json(
