@@ -188,7 +188,6 @@ export const listUsers = async (
           profileImage: true,
           ratingAverage: true,
           totalReviews: true,
-          balance: true,
           createdAt: true,
           updatedAt: true,
           _count: {
