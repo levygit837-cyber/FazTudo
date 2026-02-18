@@ -2,69 +2,124 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
 @import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800,900&f[]=satoshi@400,500,700,900&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4 CSS-first */
+@import "tailwindcss";
+
+/* Dark mode via .dark class on <html> */
+@variant dark (&:where(.dark, .dark *));
+
+/* ============================================
+   Theme — migrated from tailwind.config.js
+   ============================================ */
+@theme {
+  /* Fonts */
+  --font-family-sans: "Satoshi", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-display: "Cabinet Grotesk", "Satoshi", sans-serif;
+  --font-family-mono: "DM Mono", "JetBrains Mono", "Fira Code", monospace;
+
+  /* Primary colors (blue) */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-primary-950: #172554;
+
+  /* Secondary colors (green) */
+  --color-secondary-50: #f0fdf4;
+  --color-secondary-100: #dcfce7;
+  --color-secondary-200: #bbf7d0;
+  --color-secondary-300: #86efac;
+  --color-secondary-400: #4ade80;
+  --color-secondary-500: #22c55e;
+  --color-secondary-600: #16a34a;
+  --color-secondary-700: #15803d;
+  --color-secondary-800: #166534;
+  --color-secondary-900: #14532d;
+
+  /* Slate extra */
+  --color-slate-950: #020617;
+
+  /* Semantic colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Border radius */
+  --radius-4xl: 2rem;
+
+  /* Custom box shadows */
+  --shadow-glow-blue: 0 0 20px rgba(37, 99, 235, 0.15);
+  --shadow-glow-blue-md: 0 0 30px rgba(37, 99, 235, 0.2);
+  --shadow-glow-blue-lg: 0 0 40px rgba(37, 99, 235, 0.3);
+  --shadow-glow-green: 0 0 20px rgba(16, 185, 129, 0.15);
+  --shadow-glow-amber: 0 0 20px rgba(245, 158, 11, 0.15);
+
+  /* Backdrop blur extras */
+  --blur-xs: 2px;
+  --blur-2xl: 40px;
+  --blur-3xl: 64px;
+
+  /* Animations */
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-count-up: count-up 0.8s ease-out;
+  --animate-draw-in: draw-in 1.2s ease-out forwards;
+  --animate-ring-fill: ring-fill 1s ease-out forwards;
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+  --animate-slide-in-right: slide-in-right 0.3s ease-out;
+  --animate-slide-in-left: slide-in-left 0.35s ease-out;
+  --animate-step-complete: step-complete 0.4s ease-out;
+}
+
+/* ============================================
+   Keyframes — all from tailwind.config.js
+   ============================================ */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(37, 99, 235, 0.15); }
+  50% { box-shadow: 0 0 30px rgba(37, 99, 235, 0.3); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes draw-in {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ring-fill {
+  from { stroke-dashoffset: 251.2; }
+  to { stroke-dashoffset: var(--ring-target); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes step-complete {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
 
 @layer base {
-  :root {
-    /* Cores principais do FazTudo */
-    --color-primary-50: #eff6ff;
-    --color-primary-100: #dbeafe;
-    --color-primary-200: #bfdbfe;
-    --color-primary-300: #93c5fd;
-    --color-primary-400: #60a5fa;
-    --color-primary-500: #3b82f6;
-    --color-primary-600: #2563eb;
-    --color-primary-700: #1d4ed8;
-    --color-primary-800: #1e40af;
-    --color-primary-900: #1e3a8a;
-
-    /* Cores secundarias (verde para sucesso/profissionais) */
-    --color-secondary-50: #f0fdf4;
-    --color-secondary-100: #dcfce7;
-    --color-secondary-200: #bbf7d0;
-    --color-secondary-300: #86efac;
-    --color-secondary-400: #4ade80;
-    --color-secondary-500: #22c55e;
-    --color-secondary-600: #16a34a;
-    --color-secondary-700: #15803d;
-    --color-secondary-800: #166534;
-    --color-secondary-900: #14532d;
-
-    /* Cores neutras (slate) */
-    --color-slate-50: #f8fafc;
-    --color-slate-100: #f1f5f9;
-    --color-slate-200: #e2e8f0;
-    --color-slate-300: #cbd5e1;
-    --color-slate-400: #94a3b8;
-    --color-slate-500: #64748b;
-    --color-slate-600: #475569;
-    --color-slate-700: #334155;
-    --color-slate-800: #1e293b;
-    --color-slate-900: #0f172a;
-    --color-slate-950: #020617;
-
-    /* Cores de feedback */
-    --color-success: #10b981;
-    --color-warning: #f59e0b;
-    --color-error: #ef4444;
-    --color-info: #3b82f6;
-
-    /* Espacamentos e tipografia */
-    --radius-sm: 0.25rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
-    --radius-xl: 1rem;
-    --radius-2xl: 1.5rem;
-    --radius-full: 9999px;
-
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-  }
-
   * {
     @apply border-slate-200;
   }
@@ -401,11 +456,11 @@
 
   /* Status de pedidos */
   .status-badge {
-    @apply badge px-3 py-1 text-sm font-semibold;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold;
   }
 
   .status-pending {
-    @apply status-badge bg-yellow-100 text-yellow-800;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800;
   }
 
   html.dark .status-pending {
@@ -413,7 +468,7 @@
   }
 
   .status-accepted {
-    @apply status-badge bg-blue-100 text-blue-800;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800;
   }
 
   html.dark .status-accepted {
@@ -421,7 +476,7 @@
   }
 
   .status-in-progress {
-    @apply status-badge bg-purple-100 text-purple-800;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800;
   }
 
   html.dark .status-in-progress {
@@ -429,7 +484,7 @@
   }
 
   .status-completed {
-    @apply status-badge bg-green-100 text-green-800;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800;
   }
 
   html.dark .status-completed {
@@ -437,7 +492,7 @@
   }
 
   .status-cancelled {
-    @apply status-badge bg-red-100 text-red-800;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800;
   }
 
   html.dark .status-cancelled {
@@ -445,7 +500,7 @@
   }
 
   .status-expired {
-    @apply status-badge bg-slate-100 text-slate-800;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-800;
   }
 
   html.dark .status-expired {
@@ -496,11 +551,11 @@
   }
 
   .message-sent {
-    @apply message-bubble bg-primary-600 text-white rounded-br-none;
+    @apply max-w-xs md:max-w-md rounded-2xl px-4 py-2 bg-primary-600 text-white rounded-br-none;
   }
 
   .message-received {
-    @apply message-bubble bg-slate-100 text-slate-900 rounded-bl-none;
+    @apply max-w-xs md:max-w-md rounded-2xl px-4 py-2 bg-slate-100 text-slate-900 rounded-bl-none;
   }
 
   html.dark .message-received {
@@ -543,11 +598,11 @@
 
   /* Modal */
   .modal-overlay {
-    @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50;
+    @apply fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50;
   }
 
   html.dark .modal-overlay {
-    @apply bg-opacity-70;
+    @apply bg-black/70;
   }
 
   .modal-content {
