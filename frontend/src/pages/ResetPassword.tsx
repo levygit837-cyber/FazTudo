@@ -1,5 +1,5 @@
 import { useState, FormEvent } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router";
 import api from "../services/api";
 
 export default function ResetPassword() {

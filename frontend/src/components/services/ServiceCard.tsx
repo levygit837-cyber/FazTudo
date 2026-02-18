@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Star, Clock, Heart, BadgeCheck, Briefcase, TrendingUp, Zap } from "lucide-react";
 import { formatCurrency, formatRating } from "../../utils/formatters";
 import { useFavorites } from "../../hooks/useFavorites";

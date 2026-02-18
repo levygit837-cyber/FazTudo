@@ -1,6 +1,6 @@
 import { CheckCircle, Clock, AlertCircle, XCircle, ArrowLeft } from "lucide-react";
 import clsx from "clsx";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 interface Props {
   status: "approved" | "pending" | "in_process" | "rejected" | "cancelled" | string;

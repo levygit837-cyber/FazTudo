@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, UserPlus, X } from "lucide-react";
 import api from "../../services/api";
 import { CompanyChannel, CompanyMember } from "../../types";

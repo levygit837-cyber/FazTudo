@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Navigate, useLocation, useNavigate, Outlet } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, Outlet } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { UserRole } from "../types";
 import api from "../services/api";

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import api from "../services/api";
 
 const HEARTBEAT_INTERVAL_MS = 60_000; // 1 minute

@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { MessageSquare, Users, ChevronRight, Power } from "lucide-react";
 import { CompanyChannel } from "../../types";
 import clsx from "clsx";

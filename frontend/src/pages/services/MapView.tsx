@@ -1,7 +1,7 @@
 // frontend/src/pages/services/MapView.tsx
 import React, { useState } from "react";
 import { Map as MapIcon, ArrowLeft, Info } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { InteractiveMap, RouteTracker } from "../../components/map";
 import type { MapMarker, RouteInfo } from "../../types";
 

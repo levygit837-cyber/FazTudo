@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Save } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { CategoryWithCounts, getMainCategories } from "../../services/categoryService";
