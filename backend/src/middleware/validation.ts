@@ -374,3 +374,35 @@ export const createRoleSchema = z.object({
   level: z.number().int().min(0).max(100).optional(),
   color: z.string().max(20).optional(),
 });
+
+// ============================================
+// LOCATION SCHEMAS
+// ============================================
+
+export const updateLocationSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+// ============================================
+// CATEGORY SCHEMAS
+// ============================================
+
+export const createCategorySchema = z.object({
+  name: z.string().min(2).max(100),
+  description: z.string().max(500).optional(),
+  icon: z.string().max(50).optional(),
+  type: z.string().max(50).optional(),
+  parentCategoryId: z.number().int().positive().optional(),
+});
+
+export const updateCategorySchema = createCategorySchema.partial();
+
+// ============================================
+// ADMIN VERIFY COMPANY SCHEMA
+// ============================================
+
+export const verifyCompanySchema = z.object({
+  approved: z.boolean(),
+  reason: z.string().max(500).optional(),
+});

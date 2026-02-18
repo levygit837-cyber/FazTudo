@@ -10,6 +10,7 @@ import {
   adminLoginSchema,
   resolveDisputeSchema,
   updatePlatformConfigSchema,
+  verifyCompanySchema,
 } from "../middleware/validation";
 import { auditLog } from "../middleware/auditLog";
 
@@ -48,6 +49,6 @@ router.put("/config", auditLog("ADMIN_UPDATE_CONFIG"), validateBody(updatePlatfo
 // IMPORTANT: /companies/pending must come BEFORE /companies/:companyId routes
 router.get("/companies/pending", getPendingCompanies);
 router.get("/companies", getAllCompanies);
-router.post("/companies/:companyId/verify", verifyCompany);
+router.post("/companies/:companyId/verify", validateBody(verifyCompanySchema), verifyCompany);
 
 export default router;
