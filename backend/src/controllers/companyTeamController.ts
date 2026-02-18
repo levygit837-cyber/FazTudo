@@ -1,6 +1,7 @@
 import { Response } from "express";
 import prisma from "../lib/prisma";
 import { AuthRequest } from "../middleware/auth";
+import { SAFE_USER_SELECT } from "../lib/safeSelect";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("companyTeamController");
@@ -35,7 +36,7 @@ export async function createTeam(req: AuthRequest, res: Response) {
             create: (memberIds as number[]).map((id) => ({ memberId: id })),
           },
         },
-        include: { members: { include: { member: { include: { user: true } } } }, leader: { include: { user: true } } },
+        include: { members: { include: { member: { include: { user: { select: SAFE_USER_SELECT } } } } }, leader: { include: { user: { select: SAFE_USER_SELECT } } } },
       });
 
       const memberNames = newTeam.members.map((m) => m.member.user.name).join(", ");

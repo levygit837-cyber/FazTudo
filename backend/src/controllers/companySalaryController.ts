@@ -1,6 +1,7 @@
 import { Response } from "express";
 import prisma from "../lib/prisma";
 import { AuthRequest } from "../middleware/auth";
+import { SAFE_USER_SELECT_MINIMAL } from "../lib/safeSelect";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("companySalaryController");
@@ -83,7 +84,7 @@ export async function transferSalary(req: AuthRequest, res: Response) {
     const { memberId, amount, note } = req.body;
     const member = await prisma.companyMember.findUnique({
       where: { id: Number(memberId), companyId: req.companyId! },
-      include: { user: true },
+      include: { user: { select: { ...SAFE_USER_SELECT_MINIMAL, balance: true } } },
     });
     if (!member) return res.status(404).json({ success: false, message: "Membro não encontrado" });
 
