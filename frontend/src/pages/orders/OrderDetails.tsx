@@ -24,6 +24,7 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 import RescheduleModal from "../../components/orders/RescheduleModal";
 import DisputeModal from "../../components/orders/DisputeModal";
 import RescheduleApprovalBanner from "../../components/orders/RescheduleApprovalBanner";
+import DelayAlertModal from "../../components/orders/DelayAlertModal";
 import { WazeMap } from "../../components/map";
 import ProposalComparator from "../../components/orders/ProposalComparator";
 import ReviewCTA from "../../components/orders/ReviewCTA";
@@ -38,6 +39,8 @@ import {
   releasePayment,
   createReview,
   createOrder,
+  markEnRoute,
+  delayResponse,
 } from "../../services/serviceService";
 import { ServiceOrder } from "../../types";
 import {
@@ -242,6 +245,13 @@ const OrderDetails: React.FC = () => {
   // Dispute state
   const [showDispute, setShowDispute] = useState(false);
 
+  // Delay alert state
+  const [delayAlert, setDelayAlert] = useState<{
+    orderId: number;
+    orderTitle: string;
+    professionalName: string;
+  } | null>(null);
+
   const isOrderClient = order?.clientId === user?.id;
   const isOrderProfessional = order?.professionalId === user?.id;
   const chatRoute = isOrderProfessional
@@ -260,6 +270,29 @@ const OrderDetails: React.FC = () => {
     [order?.id],
   );
   useSocket("order:statusChanged", handleStatusChanged);
+
+  // Socket.io: listen for delay alerts (client only)
+  const handleDelayAlert = useCallback(
+    (data: { orderId: number; orderTitle: string; professionalName: string }) => {
+      if (order && data.orderId === order.id) {
+        setDelayAlert(data);
+      }
+    },
+    [order?.id],
+  );
+  useSocket("order:delayAlert", handleDelayAlert);
+
+  // Socket.io: listen for en-route notification (client only)
+  const handleEnRoute = useCallback(
+    (data: { orderId: number; professionalName: string; enRouteAt: string }) => {
+      if (order && data.orderId === order.id) {
+        setOrder((prev) => (prev ? { ...prev, enRouteAt: data.enRouteAt } : prev));
+        toast.success(`${data.professionalName} esta a caminho!`);
+      }
+    },
+    [order?.id, toast],
+  );
+  useSocket("order:enRoute", handleEnRoute);
 
   const loadOrder = async (showSpinner = true) => {
     if (!id) return;
@@ -405,6 +438,55 @@ const OrderDetails: React.FC = () => {
           onResolved={loadOrder}
         />
       )}
+
+      {/* Countdown banner — time until scheduled date */}
+      {order.scheduledDate && ["ACCEPTED", "IN_PROGRESS"].includes(order.status) && (() => {
+        const now = new Date();
+        const scheduled = new Date(order.scheduledDate!);
+        const diffMs = scheduled.getTime() - now.getTime();
+        const isLate = diffMs < 0;
+        const absDiff = Math.abs(diffMs);
+        const hours = Math.floor(absDiff / (1000 * 60 * 60));
+        const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const days = Math.floor(hours / 24);
+        const remainingHours = hours % 24;
+
+        let timeLabel: string;
+        if (days > 0) {
+          timeLabel = `${days}d ${remainingHours}h`;
+        } else if (hours > 0) {
+          timeLabel = `${hours}h ${minutes}min`;
+        } else {
+          timeLabel = `${minutes}min`;
+        }
+
+        return (
+          <div
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+              isLate
+                ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+            }`}
+          >
+            <Clock
+              className={`w-5 h-5 flex-shrink-0 ${
+                isLate ? "text-red-500" : "text-blue-500"
+              }`}
+            />
+            <p
+              className={`text-sm font-medium ${
+                isLate
+                  ? "text-red-700 dark:text-red-400"
+                  : "text-blue-700 dark:text-blue-400"
+              }`}
+            >
+              {isLate
+                ? `Atrasado por ${timeLabel} — o horario agendado ja passou`
+                : `Faltam ${timeLabel} para o horario agendado`}
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Cancelled order banner */}
       {order.status === "CANCELLED" && (
@@ -766,6 +848,47 @@ const OrderDetails: React.FC = () => {
                       }}
                       orderStatus={order.status}
                     />
+                  )}
+
+                  {/* En-route button (professional, before starting service) */}
+                  {paymentApproved && !order.enRouteAt && (
+                    <button
+                      onClick={async () => {
+                        setActionLoading("enroute");
+                        try {
+                          await markEnRoute(order.id);
+                          setOrder((prev) =>
+                            prev ? { ...prev, enRouteAt: new Date().toISOString() } : prev,
+                          );
+                          toast.success("Trajeto iniciado! O cliente foi notificado.");
+                        } catch (err: any) {
+                          toast.error(
+                            err?.response?.data?.message || "Erro ao iniciar trajeto",
+                          );
+                        } finally {
+                          setActionLoading(null);
+                        }
+                      }}
+                      disabled={!!actionLoading}
+                      className="btn bg-blue-600 hover:bg-blue-700 text-white w-full py-2.5 flex items-center justify-center gap-2"
+                    >
+                      {actionLoading === "enroute" ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Navigation className="w-4 h-4" />
+                      )}
+                      Iniciar trajeto
+                    </button>
+                  )}
+
+                  {/* En-route confirmed badge */}
+                  {paymentApproved && order.enRouteAt && (
+                    <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                      <Navigation className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <p className="text-sm text-blue-700 dark:text-blue-400">
+                        Voce esta a caminho — o cliente foi notificado.
+                      </p>
+                    </div>
                   )}
 
                   {/* Start service button */}
@@ -1203,6 +1326,19 @@ const OrderDetails: React.FC = () => {
         variant={confirmAction?.variant || "danger"}
         loading={!!actionLoading}
       />
+
+      {/* Delay alert modal (client only) */}
+      {delayAlert && (
+        <DelayAlertModal
+          orderId={delayAlert.orderId}
+          orderTitle={delayAlert.orderTitle}
+          professionalName={delayAlert.professionalName}
+          onRespond={async (orderId, arrived, action) => {
+            await delayResponse(orderId, { arrived, action });
+          }}
+          onClose={() => setDelayAlert(null)}
+        />
+      )}
     </div>
   );
 };

@@ -107,6 +107,13 @@ export interface ServiceOrder {
   rescheduleStatus?: string;
   rescheduleRequestedBy?: number;
 
+  // DRAFT conversion flow
+  convertProposedBy?: number;
+  convertStatus?: string;
+
+  // Professional en-route tracking
+  enRouteAt?: string;
+
   addressId?: number;
   addressNotes?: string;
 
