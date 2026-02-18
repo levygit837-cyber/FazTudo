@@ -107,23 +107,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error: null,
   });
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from localStorage + revalidate with server
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
 
     if (token && userStr) {
       try {
-        const user = JSON.parse(userStr);
+        const cachedUser = JSON.parse(userStr);
+        // Immediately set cached data for fast UI render
         setState({
-          user,
+          user: cachedUser,
           token,
           isAuthenticated: true,
-          isLoading: false,
+          isLoading: true, // Keep loading until server validates
           error: null,
         });
+
+        // Revalidate with server
+        api
+          .get("/auth/profile")
+          .then((response) => {
+            const serverUser = response.data.data?.user || response.data.data;
+            localStorage.setItem("user", JSON.stringify(serverUser));
+            setState({
+              user: serverUser,
+              token,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+            });
+          })
+          .catch(() => {
+            // Token invalid — clear everything
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("refreshToken");
+            setState({
+              user: null,
+              token: null,
+              isAuthenticated: false,
+              isLoading: false,
+              error: null,
+            });
+          });
       } catch (error) {
-        // Clear invalid storage
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         setState((prev) => ({ ...prev, isLoading: false }));
