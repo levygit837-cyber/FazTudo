@@ -54,6 +54,22 @@ jobs:
           PLATFORM_FEE_PERCENTAGE: "10"
           MP_SANDBOX: "true"
 
+      - name: Run security tests
+        working-directory: backend
+        run: npx vitest run tests/security/
+        env:
+          NODE_ENV: test
+          DATABASE_URL: file:./test.db
+          JWT_SECRET: test-secret-key-for-ci-pipeline-32chars
+          JWT_EXPIRES_IN: 7d
+          JWT_REFRESH_EXPIRES_IN: 30d
+          BCRYPT_SALT_ROUNDS: "4"
+          CORS_ORIGIN: http://localhost:5173
+          PORT: "3001"
+          DEFAULT_ESCROW_HOLD_DAYS: "7"
+          PLATFORM_FEE_PERCENTAGE: "10"
+          MP_SANDBOX: "true"
+
   frontend:
     name: Frontend (lint + type check + build)
     runs-on: ubuntu-latest
@@ -84,3 +100,24 @@ jobs:
         run: npm run build
         env:
           VITE_API_URL: http://localhost:3001
+
+  security-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Backend dependency audit
+        working-directory: backend
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Frontend dependency audit
+        working-directory: frontend
+        run: npm audit --audit-level=high
+        continue-on-error: true
