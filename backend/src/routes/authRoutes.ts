@@ -57,6 +57,7 @@ router.get(
 router.post(
   "/upgrade-to-professional",
   verifyToken,
+  requireVerified,
   authController.upgradeToProfessional,
 );
 
