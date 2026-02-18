@@ -1,5 +1,7 @@
+import type { Request } from "express";
 import rateLimit from 'express-rate-limit';
 import { env } from '../config/env';
+import type { AuthRequest } from "./auth";
 
 /**
  * General API rate limiter.
@@ -69,3 +71,50 @@ export const financialLimiter = rateLimit({
     statusCode: 429,
   },
 });
+
+/**
+ * Rate limiter by authenticated userId (not by IP).
+ * Immune to X-Forwarded-For manipulation since it uses the JWT identity.
+ * Use in addition to IP-based limiters for sensitive authenticated endpoints.
+ */
+export const createUserRateLimiter = (
+  maxRequests: number,
+  windowMs: number,
+  message: string = "Muitas requisições. Tente novamente mais tarde.",
+) =>
+  rateLimit({
+    windowMs,
+    max: maxRequests,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: Request) => {
+      const authReq = req as AuthRequest;
+      // Falls back to IP if user not authenticated
+      return authReq.user ? `user:${authReq.user.id}` : req.ip || "unknown";
+    },
+    message: {
+      success: false,
+      message,
+      statusCode: 429,
+    },
+  });
+
+/**
+ * User-based rate limiter for financial operations.
+ * 3 operations per 15 minutes per user (not per IP).
+ */
+export const userFinancialLimiter = createUserRateLimiter(
+  3,
+  15 * 60 * 1000,
+  "Muitas operações financeiras. Tente novamente em 15 minutos.",
+);
+
+/**
+ * User-based rate limiter for sensitive auth operations.
+ * 5 operations per 15 minutes per user.
+ */
+export const userSensitiveLimiter = createUserRateLimiter(
+  5,
+  15 * 60 * 1000,
+  "Muitas tentativas. Tente novamente mais tarde.",
+);
