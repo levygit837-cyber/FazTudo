@@ -14,12 +14,23 @@ export interface DashboardStats {
 }
 
 export interface TrafficStats {
-  pageViews: number;
-  uniqueVisitors: number;
-  bounceRate: number;
-  avgSessionDuration: number;
-  topPages: Array<{ path: string; views: number }>;
-  dailyVisits: Array<{ date: string; visits: number }>;
+  kpis: {
+    totalSessions: { value: number; change: number };
+    avgDuration: { value: number; change: number };
+    activeUsers: { value: number; change: number };
+  };
+  charts: {
+    dailySessions: Array<{ date: string; sessions: number; uniqueUsers: number }>;
+    hourlyDistribution: number[]; // 24 elements, index = hour
+    deviceDistribution: Array<{ device: string; count: number }>;
+  };
+  chat: {
+    totalMessages: number;
+    avgMessagesPerDay: number;
+    avgMessagesPerConversation: number;
+    avgChatDurationSeconds: number;
+  };
+  retention: Array<{ cohort: string; d1: number; d7: number; d14: number; d30: number }>;
 }
 
 export interface AdminStats {
@@ -91,7 +102,7 @@ export interface PaginatedResponse<T> {
 
 export async function getDashboardStats(period?: string) {
   const params = period ? { period } : {};
-  const res = await api.get<ApiResponse<DashboardStats>>("/admin/dashboard", {
+  const res = await api.get<ApiResponse<DashboardStats>>("/admin/stats/dashboard", {
     params,
   });
   return res.data.data;
@@ -99,7 +110,7 @@ export async function getDashboardStats(period?: string) {
 
 export async function getTrafficStats(period?: string) {
   const params = period ? { period } : {};
-  const res = await api.get<ApiResponse<TrafficStats>>("/admin/traffic", {
+  const res = await api.get<ApiResponse<TrafficStats>>("/admin/stats/traffic", {
     params,
   });
   return res.data.data;
