@@ -12,6 +12,7 @@ import {
   createBoletoPayment,
 } from "../../services/mercadopagoService";
 
+import { validateMercadoPagoSignature } from "../../lib/webhookValidator";
 import { createLogger } from "../../lib/logger";
 
 const log = createLogger("paymentController");
@@ -534,6 +535,28 @@ export const mercadoPagoWebhook = async (
   res: Response,
 ): Promise<void> => {
   try {
+    // SECURITY: Validate MercadoPago HMAC-SHA256 signature BEFORE any processing
+    const xSignature = req.headers["x-signature"] as string | null;
+    const xRequestId = req.headers["x-request-id"] as string | null;
+    const dataId = (req.query["data.id"] as string) || req.body?.data?.id?.toString() || null;
+
+    const signatureCheck = validateMercadoPagoSignature({
+      xSignature,
+      xRequestId,
+      dataId,
+      secret: env.MP_WEBHOOK_SECRET,
+    });
+
+    if (!signatureCheck.valid) {
+      log.warn(
+        { reason: signatureCheck.reason, ip: req.ip },
+        "Webhook rejected: invalid or missing HMAC signature"
+      );
+      // Always return 200 to MP (so it doesn't retry), but don't process
+      res.status(200).json({ received: false, reason: signatureCheck.reason });
+      return;
+    }
+
     const { type, data, action } = req.body;
 
     // MP pode enviar type="payment" ou action="payment.created"/"payment.updated"
