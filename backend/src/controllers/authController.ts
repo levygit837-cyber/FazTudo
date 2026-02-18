@@ -118,9 +118,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (existingUser) {
-      res
-        .status(409)
-        .json(errorResponse("User with this email already exists"));
+      // Anti-enumeration: return generic success to prevent email harvesting.
+      // An attacker cannot distinguish between "email registered" and "email new".
+      log.info({ email }, "Registration attempt for existing email (anti-enumeration)");
+      res.status(200).json(
+        successResponse(
+          null,
+          "Se este email não estiver cadastrado, você receberá um email de boas-vindas em breve.",
+        ),
+      );
       return;
     }
 
