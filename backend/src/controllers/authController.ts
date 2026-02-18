@@ -150,7 +150,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         bio: true,
         ratingAverage: true,
         totalReviews: true,
-        tokenVersion: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -163,7 +162,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       name: user.name,
       role: user.role,
       status: user.status,
-      tokenVersion: user.tokenVersion,
+      tokenVersion: 0, // newly created user always starts at version 0
     });
 
     // Generate refresh token
@@ -278,8 +277,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
+    // Remove password, tokenVersion and refreshToken from response
+    const { password: _, tokenVersion: _tv, refreshToken: _rt, ...userWithoutPassword } = user;
 
     // Generate JWT token
     const token = generateToken({
@@ -592,6 +591,7 @@ export const resetPassword = async (
           gt: new Date(),
         },
       },
+      select: { id: true, email: true, name: true },
     });
 
     if (!user) {
