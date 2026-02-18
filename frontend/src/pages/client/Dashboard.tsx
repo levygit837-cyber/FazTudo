@@ -47,16 +47,6 @@ const TIPS = [
   { text: "Compare precos e descricoes antes de contratar. Cada profissional tem um diferencial unico!", cta: "Buscar servicos", to: "/services" },
 ];
 
-const CATEGORY_ICONS: Record<string, string> = {
-  "Eletrica": "⚡",
-  "Encanamento": "🔧",
-  "Jardinagem": "🌿",
-  "Limpeza": "✨",
-  "Pintura": "🎨",
-  "Marcenaria": "🪵",
-  "Ar Condicionado": "❄️",
-  "Mudancas": "📦",
-};
 
 function getGreeting(): { text: string; icon: React.ReactNode; period: string } {
   const hour = new Date().getHours();
@@ -138,6 +128,24 @@ const ClientDashboard: React.FC = () => {
   const greeting = useMemo(() => getGreeting(), []);
   const currentTip = TIPS[tipIndex];
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const tipDragRef = React.useRef<{ startX: number; isDragging: boolean }>({ startX: 0, isDragging: false });
+
+  const handleTipPointerDown = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    tipDragRef.current = { startX: e.clientX, isDragging: true };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handleTipPointerUp = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!tipDragRef.current.isDragging) return;
+    tipDragRef.current.isDragging = false;
+    const delta = e.clientX - tipDragRef.current.startX;
+    const THRESHOLD = 40;
+    if (delta < -THRESHOLD) {
+      setTipIndex((i) => (i + 1) % TIPS.length);
+    } else if (delta > THRESHOLD) {
+      setTipIndex((i) => (i - 1 + TIPS.length) % TIPS.length);
+    }
+  }, []);
 
   // Auto-rotate tips every 8 seconds
   useEffect(() => {
@@ -183,7 +191,6 @@ const ClientDashboard: React.FC = () => {
         id: String(cat.id),
         name: cat.name,
         count: cat._count?.serviceListings || 0,
-        icon: CATEGORY_ICONS[cat.name] || undefined,
       })),
     [categories],
   );
@@ -399,7 +406,12 @@ const ClientDashboard: React.FC = () => {
           )}
 
           {/* Dica do FazTudo — redesigned */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-indigo-600 text-white p-6 shadow-lg shadow-primary-600/20">
+          <div
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-indigo-600 text-white p-6 shadow-lg shadow-primary-600/20 cursor-grab active:cursor-grabbing select-none"
+            onPointerDown={handleTipPointerDown}
+            onPointerUp={handleTipPointerUp}
+            onPointerCancel={() => { tipDragRef.current.isDragging = false; }}
+          >
             {/* Decorative shapes */}
             <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/5" />
             <div className="absolute -bottom-6 -left-6 w-20 h-20 rounded-full bg-white/5" />
