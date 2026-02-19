@@ -145,10 +145,11 @@ export const formatOrderStatus = (status: string): string => {
   const statusMap: Record<string, string> = {
     DRAFT: "Rascunho",
     PENDING: "Pendente",
+    ACCEPTED: "Aceito",
     IN_PROGRESS: "Em andamento",
     AWAITING_CLIENT_CONFIRMATION: "Aguardando sua confirmação",
     AWAITING_PROFESSIONAL_CONFIRMATION: "Aguardando confirmação do profissional",
-    COMPLETED: "Concluido",
+    COMPLETED: "Concluído",
     CANCELLED: "Cancelado",
     EXPIRED: "Expirado",
     DISPUTED: "Em disputa",
