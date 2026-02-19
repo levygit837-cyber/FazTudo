@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { env } from '../config/env';
 import type { AuthRequest } from "./auth";
 
@@ -89,8 +89,8 @@ export const createUserRateLimiter = (
     legacyHeaders: false,
     keyGenerator: (req: Request) => {
       const authReq = req as AuthRequest;
-      // Falls back to IP if user not authenticated
-      return authReq.user ? `user:${authReq.user.id}` : req.ip || "unknown";
+      // Falls back to IP if user not authenticated (uses ipKeyGenerator for IPv6 safety)
+      return authReq.user ? `user:${authReq.user.id}` : ipKeyGenerator(req.ip ?? "unknown");
     },
     message: {
       success: false,
