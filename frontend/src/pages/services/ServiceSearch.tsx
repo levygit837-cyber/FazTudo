@@ -251,8 +251,12 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
           s.id === service.id ? { ...s, isAvailable: !s.isAvailable } : s,
         ),
       );
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao alterar disponibilidade:", err);
+      toast.error(
+        "Erro ao alterar disponibilidade",
+        err?.response?.data?.message || "Tente novamente.",
+      );
     }
   };
 
