@@ -46,7 +46,7 @@ const StatCard: React.FC<{
 );
 
 const CompanyDashboard: React.FC = () => {
-  const { state } = useAuth() as any;
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +107,7 @@ const CompanyDashboard: React.FC = () => {
           </h1>
         </div>
         <p className="text-slate-500 dark:text-slate-400 ml-10">
-          Bem-vindo, {state?.user?.name}. Aqui está um resumo da sua empresa.
+          Bem-vindo, {user?.name}. Aqui está um resumo da sua empresa.
         </p>
       </div>
 
