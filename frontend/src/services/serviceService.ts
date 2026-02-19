@@ -715,7 +715,8 @@ export const createDraftOrder = async (
     serviceListingId,
     message,
   });
-  return extractData(response);
+  const payload = extractData(response);
+  return payload.serviceOrder || payload;
 };
 
 /**
