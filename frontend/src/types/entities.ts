@@ -287,6 +287,8 @@ export interface Message {
   locationLng?: number;
   locationLabel?: string;
 
+  metadata?: Record<string, any> | null;
+
   sender?: User;
   recipient?: User;
   serviceOrder?: ServiceOrder;

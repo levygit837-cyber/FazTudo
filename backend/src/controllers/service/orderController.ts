@@ -1398,7 +1398,7 @@ export const createDraftOrder = async (
   }
 };
 
-// Converter DRAFT em pedido real (PENDING) — requer confirmação de ambas as partes
+// Converter DRAFT em pedido real (PENDING) — ou propor/aceitar/rejeitar conversão
 export const convertDraftToOrder = async (
   req: AuthRequest,
   res: Response,
@@ -1415,13 +1415,19 @@ export const convertDraftToOrder = async (
       return;
     }
 
-    const { title, description, scheduledDate, price } = req.body;
+    const { action = "accept", title, description, scheduledDate, price } = req.body;
 
     const serviceOrder = await prisma.serviceOrder.findUnique({
       where: { id: orderId },
       include: {
-        serviceListing: {
-          select: { title: true, price: true },
+        client: { select: { id: true, name: true, profileImage: true } },
+        professional: { select: { id: true, name: true, profileImage: true } },
+        serviceListing: { select: { id: true, title: true, price: true } },
+        messages: {
+          where: { type: "TEXT" },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: { content: true, senderId: true, createdAt: true },
         },
       },
     });
@@ -1436,7 +1442,6 @@ export const convertDraftToOrder = async (
       return;
     }
 
-    // Verificar que o usuário é participante
     const isClient = serviceOrder.clientId === req.user.id;
     const isProfessional = serviceOrder.professionalId === req.user.id;
 
@@ -1445,7 +1450,98 @@ export const convertDraftToOrder = async (
       return;
     }
 
-    // Converter scheduledDate
+    // ── ACTION: propose ──────────────────────────────────────────────────────
+    // Cria mensagem SYSTEM no chat com resumo do pedido + link de checkout.
+    // Não converte o pedido ainda — o pagamento faz isso.
+    if (action === "propose") {
+      const serviceTitle = serviceOrder.serviceListing?.title || serviceOrder.title;
+      const servicePrice = (serviceOrder.price ?? 0).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      });
+      const proposerName = req.user.name;
+
+      const systemContent =
+        `💼 ${proposerName} quer contratar este serviço!\n\n` +
+        `📋 Serviço: ${serviceTitle}\n` +
+        `💰 Valor: ${servicePrice}\n\n` +
+        `Para continuar, o cliente deve realizar o pagamento. ` +
+        `Clique no botão abaixo para prosseguir com a contratação.`;
+
+      const systemMessage = await prisma.message.create({
+        data: {
+          content: systemContent,
+          type: "SYSTEM",
+          senderId: req.user.id,
+          recipientId: isClient
+            ? serviceOrder.professionalId!
+            : serviceOrder.clientId,
+          serviceOrderId: orderId,
+          metadata: {
+            action: "hire_proposal",
+            checkoutUrl: `/client/orders/${orderId}/checkout`,
+            proposedBy: req.user.id,
+            proposerName,
+          },
+        },
+      });
+
+      // Notificar a outra parte
+      const notifyUserId = isClient
+        ? serviceOrder.professionalId!
+        : serviceOrder.clientId;
+
+      await createNotification(
+        notifyUserId,
+        NotificationType.ORDER_CREATED,
+        `${proposerName} quer contratar o serviço`,
+        `${proposerName} propôs a contratação de "${serviceTitle}". Veja o chat para detalhes.`,
+        orderId,
+        { proposedBy: req.user.id },
+      );
+
+      // Emitir proposta via Socket para que o outro lado veja o card de aceitar/recusar
+      emitToOrder(orderId, "chat:message", {
+        ...systemMessage,
+        metadata: systemMessage.metadata,
+      });
+      emitToOrder(orderId, "order:convertProposal", {
+        orderId,
+        proposedBy: req.user.id,
+        proposerName,
+      });
+
+      res.status(200).json(
+        successResponse(
+          { message: systemMessage },
+          "Proposta enviada com sucesso. O cliente pode prosseguir com o pagamento no chat.",
+        ),
+      );
+      return;
+    }
+
+    // ── ACTION: reject ───────────────────────────────────────────────────────
+    if (action === "reject") {
+      const notifyUserId = isClient
+        ? serviceOrder.professionalId!
+        : serviceOrder.clientId;
+
+      await createNotification(
+        notifyUserId,
+        NotificationType.SYSTEM_ALERT,
+        "Proposta recusada",
+        `${req.user.name} recusou a proposta de contratação.`,
+        orderId,
+      );
+
+      emitToOrder(orderId, "order:convertRejected", { orderId });
+
+      res.status(200).json(successResponse(null, "Proposta recusada."));
+      return;
+    }
+
+    // ── ACTION: accept (ou padrão) ──────────────────────────────────────────
+    // Converte DRAFT → PENDING (comportamento original)
     let scheduledDateObj: Date | undefined;
     if (scheduledDate) {
       scheduledDateObj = new Date(scheduledDate);
@@ -1465,19 +1561,12 @@ export const convertDraftToOrder = async (
         scheduledDate: scheduledDateObj || serviceOrder.scheduledDate,
       },
       include: {
-        client: {
-          select: { id: true, name: true, profileImage: true },
-        },
-        professional: {
-          select: { id: true, name: true, profileImage: true },
-        },
-        serviceListing: {
-          select: { id: true, title: true, price: true },
-        },
+        client: { select: { id: true, name: true, profileImage: true } },
+        professional: { select: { id: true, name: true, profileImage: true } },
+        serviceListing: { select: { id: true, title: true, price: true } },
       },
     });
 
-    // Notificar a outra parte
     const notifyUserId = isClient
       ? serviceOrder.professionalId!
       : serviceOrder.clientId;
@@ -1492,10 +1581,8 @@ export const convertDraftToOrder = async (
       { convertedBy: req.user.id },
     );
 
-    emitToOrder(orderId, "order:statusChanged", {
-      orderId,
-      status: "PENDING",
-    });
+    emitToOrder(orderId, "order:statusChanged", { orderId, status: "PENDING" });
+    emitToOrder(orderId, "order:convertAccepted", { orderId });
 
     res.status(200).json(
       successResponse(

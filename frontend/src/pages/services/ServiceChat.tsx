@@ -282,7 +282,50 @@ const ServiceChat: React.FC = () => {
     const isOwn = message.senderId === user?.id;
 
     switch (msgType) {
-      case "SYSTEM":
+      case "SYSTEM": {
+        // Detectar se é uma mensagem de proposta de contratação
+        const metadata = message.metadata as Record<string, any> | null | undefined;
+        const isHireProposal = metadata?.action === "hire_proposal";
+        const checkoutUrl = metadata?.checkoutUrl as string | undefined;
+
+        if (isHireProposal && checkoutUrl) {
+          // Mensagem especial: proposta de contratação com botão de checkout
+          return (
+            <div className="flex items-center justify-center py-3 px-2">
+              <div className="w-full max-w-sm rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShoppingCart className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                    Proposta de Contratação
+                  </span>
+                </div>
+                <div className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line mb-3">
+                  {message.content}
+                </div>
+                {/* Só mostra o botão de pagamento para o cliente */}
+                {!isProfessionalRoute && (
+                  <button
+                    onClick={() => navigate(checkoutUrl)}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2.5 transition-colors"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    Realizar Pagamento
+                  </button>
+                )}
+                {isProfessionalRoute && (
+                  <p className="text-xs text-center text-slate-500 dark:text-slate-400">
+                    Aguardando o cliente realizar o pagamento…
+                  </p>
+                )}
+                <p className="mt-2 text-[10px] text-center text-slate-400 dark:text-slate-500">
+                  {formatRelativeTime(message.createdAt)}
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        // Mensagem de sistema padrão
         return (
           <div className="flex items-center justify-center py-2">
             <div className="flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800 px-4 py-2 text-center text-xs text-slate-500 dark:text-slate-400">
@@ -291,6 +334,7 @@ const ServiceChat: React.FC = () => {
             </div>
           </div>
         );
+      }
 
       case "ATTACHMENT": {
         const isImage = message.attachmentType?.startsWith("image/");
@@ -550,7 +594,9 @@ const ServiceChat: React.FC = () => {
                   setConverting(true);
                   try {
                     await convertDraftOrder(orderId, "propose");
-                    toast.success("Proposta enviada! Aguardando confirmacao.");
+                    toast.success("Proposta enviada! Veja a mensagem no chat para prosseguir com o pagamento.");
+                    // Recarregar mensagens para mostrar a nova mensagem SYSTEM
+                    await loadMessages(orderId);
                   } catch (err: any) {
                     toast.error(err?.response?.data?.message || "Erro ao propor pedido");
                   } finally {
