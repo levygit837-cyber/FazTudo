@@ -118,11 +118,25 @@ export const createServiceSchema = z.object({
     .pipe(z.string().min(20, 'Descricao deve ter no minimo 20 caracteres').max(2000, 'Descricao muito longa')),
   price: positiveAmountSchema.pipe(z.number().max(999999.99, 'Valor maximo excedido')),
   categoryId: z.number().int().positive('Categoria invalida'),
-  estimatedDuration: z.string().max(100).optional(),
+  estimatedHours: z.number().positive().optional(),
+  images: z.array(z.string()).max(20).optional(),
   tags: z.array(z.string().max(50)).max(10).optional(),
 });
 
-export const updateServiceSchema = createServiceSchema.partial().refine(
+export const updateServiceSchema = z.object({
+  title: sanitizedString
+    .pipe(z.string().min(5, 'Titulo deve ter no minimo 5 caracteres').max(150, 'Titulo muito longo'))
+    .optional(),
+  description: sanitizedString
+    .pipe(z.string().min(20, 'Descricao deve ter no minimo 20 caracteres').max(2000, 'Descricao muito longa'))
+    .optional(),
+  price: positiveAmountSchema.pipe(z.number().max(999999.99, 'Valor maximo excedido')).optional(),
+  categoryId: z.number().int().positive('Categoria invalida').optional(),
+  estimatedHours: z.number().positive().optional(),
+  isAvailable: z.boolean().optional(),
+  images: z.array(z.string()).max(20).optional(),
+  tags: z.array(z.string().max(50)).max(10).optional(),
+}).refine(
   (data) => Object.keys(data).length > 0,
   { message: 'Pelo menos um campo deve ser fornecido' },
 );

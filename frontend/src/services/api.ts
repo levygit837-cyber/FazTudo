@@ -25,6 +25,11 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Prevent stale 304 responses by disabling GET cache
+    if (config.method === "get") {
+      config.headers["Cache-Control"] = "no-cache";
+      config.headers["Pragma"] = "no-cache";
+    }
     return config;
   },
   (error) => {
