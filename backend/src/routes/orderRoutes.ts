@@ -122,10 +122,11 @@ router.post(
 );
 
 // Criar pedido rascunho (DRAFT) para conversar antes de formalizar
+// Profissionais também podem criar DRAFT para contatar outros profissionais (tirar dúvidas)
 router.post(
   "/orders/draft",
   verifyToken,
-  requireRole("CLIENT"),
+  requireRole("CLIENT", "PROFESSIONAL"),
   requireVerified,
   serviceController.createDraftOrder,
 );

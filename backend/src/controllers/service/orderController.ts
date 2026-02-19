@@ -1280,8 +1280,8 @@ export const createDraftOrder = async (
       return;
     }
 
-    if (req.user.role !== "CLIENT") {
-      res.status(403).json(errorResponse("Only clients can create draft orders"));
+    if (req.user.role !== "CLIENT" && req.user.role !== "PROFESSIONAL") {
+      res.status(403).json(errorResponse("Only clients and professionals can create draft orders"));
       return;
     }
 
@@ -1308,6 +1308,12 @@ export const createDraftOrder = async (
 
     if (!serviceListing.isAvailable) {
       res.status(400).json(errorResponse("This service is not available"));
+      return;
+    }
+
+    // Profissional não pode criar DRAFT no próprio serviço
+    if (serviceListing.professionalId === req.user.id) {
+      res.status(400).json(errorResponse("Você não pode criar um pedido no seu próprio serviço"));
       return;
     }
 
