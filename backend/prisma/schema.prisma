@@ -435,6 +435,9 @@ model Message {
   locationLng    Float?
   locationLabel  String?
 
+  // Extra metadata (e.g. hire_proposal action, checkoutUrl)
+  metadata Json?
+
   sender       User         @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
   recipient    User         @relation("Recipient", fields: [recipientId], references: [id], onDelete: Cascade)
   serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
