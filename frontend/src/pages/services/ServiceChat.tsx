@@ -594,7 +594,9 @@ const ServiceChat: React.FC = () => {
                   setConverting(true);
                   try {
                     await convertDraftOrder(orderId, "propose");
-                    toast.success("Proposta enviada! Aguardando confirmacao.");
+                    toast.success("Proposta enviada! Veja a mensagem no chat para prosseguir com o pagamento.");
+                    // Recarregar mensagens para mostrar a nova mensagem SYSTEM
+                    await loadMessages(orderId);
                   } catch (err: any) {
                     toast.error(err?.response?.data?.message || "Erro ao propor pedido");
                   } finally {
