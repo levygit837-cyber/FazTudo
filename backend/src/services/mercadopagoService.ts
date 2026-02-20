@@ -1,6 +1,22 @@
 import { getPreferenceClient, getPaymentClient } from "../config/mercadopago";
 import { env } from "../config/env";
 
+// ============================================
+// SECURITY: Webhook Secret Guard (VULN-01)
+// ============================================
+
+/**
+ * Validates that the webhook secret is configured before any signature check.
+ * Returns false immediately if the secret is empty, preventing forged webhook
+ * acceptance in environments where MP_WEBHOOK_SECRET was not set.
+ *
+ * NOTE: Full HMAC signature validation is performed in lib/webhookValidator.ts.
+ * This guard provides defence-in-depth at the service layer.
+ */
+export function isMPWebhookSecretConfigured(): boolean {
+  return Boolean(env.MP_WEBHOOK_SECRET && env.MP_WEBHOOK_SECRET.trim().length > 0);
+}
+
 export interface CreateMPPreferenceParams {
   orderId: number;
   title: string;
