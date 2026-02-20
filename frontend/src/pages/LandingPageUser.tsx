@@ -6,11 +6,8 @@ import {
   Briefcase,
   CheckCircle2,
   ChevronRight,
-  ClipboardCheck,
   LogOut,
-  Search,
   Shield,
-  ShieldCheck,
   Star,
   User,
   Users,
@@ -27,6 +24,7 @@ import RegisterPromptProfessional from "../components/landing/RegisterPromptProf
 import { TrustBadge } from "../components/common/TrustBadge";
 import { formatCurrency } from "../utils/formatters";
 import { useAuth } from "../context/AuthContext";
+import { HowItWorksInteractive } from "../components/landing/HowItWorksInteractive";
 
 const LandingPageUser: React.FC = () => {
   const navigate = useNavigate();
@@ -64,23 +62,6 @@ const LandingPageUser: React.FC = () => {
     { name: "Design Web", icon: <Monitor className="h-5 w-5" /> },
   ];
 
-  const steps = [
-    {
-      title: "Publique seu pedido",
-      description: "Descreva o servico, data e local em poucos minutos.",
-      icon: <ClipboardCheck className="h-6 w-6" />,
-    },
-    {
-      title: "Compare propostas",
-      description: "Receba propostas de profissionais verificados.",
-      icon: <Search className="h-6 w-6" />,
-    },
-    {
-      title: "Contrate com seguranca",
-      description: "Pagamento protegido e aprovacao apos conclusao.",
-      icon: <ShieldCheck className="h-6 w-6" />,
-    },
-  ];
 
   const testimonials = [
     {
@@ -381,39 +362,7 @@ const LandingPageUser: React.FC = () => {
           </section>
 
           {/* ─── HOW IT WORKS ─── */}
-          <section id="como-funciona" className="bg-white dark:bg-slate-900">
-            <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-              <div className="mx-auto mb-12 max-w-2xl text-center">
-                <p className="font-bold text-2xl text-slate-900 dark:text-white m-0" style={{ letterSpacing: "-0.03em" }}>
-                  Como funciona
-                </p>
-                <p className="text-slate-500 dark:text-slate-400 text-base mt-2">
-                  Da solicitacao ao pagamento, tudo acontece dentro da plataforma.
-                </p>
-              </div>
-              <div className="grid gap-6 md:grid-cols-3">
-                {steps.map((step, index) => (
-                  <article
-                    key={step.title}
-                    className="relative rounded-2xl p-6 md:p-8 transition-all duration-200 bg-slate-50 dark:bg-slate-800/50 dark:backdrop-blur-xl border border-slate-200 dark:border-slate-800/50 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-md dark:hover:shadow-glow-blue"
-                  >
-                    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
-                      {step.icon}
-                    </div>
-                    <p className="mb-0.5 font-semibold uppercase tracking-wider text-[0.6875rem] text-slate-400 dark:text-slate-500">
-                      Passo {index + 1}
-                    </p>
-                    <p className="font-bold text-lg text-slate-900 dark:text-white">
-                      {step.title}
-                    </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                      {step.description}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </section>
+          <HowItWorksInteractive />
 
           {/* ─── TRUST BANNER ─── */}
           <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

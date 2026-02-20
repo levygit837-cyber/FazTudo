@@ -104,7 +104,11 @@ const Login: React.FC = () => {
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-xl sm:p-8">
           {/* Erro geral */}
           {(authError || submitError) && (
-            <div className="mb-6 flex items-start rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+            <div
+              role="alert"
+              aria-live="polite"
+              className="mb-6 flex items-start rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400"
+            >
               <AlertCircle className="mr-2 mt-0.5 h-5 w-5 shrink-0" />
               <span>{authError || submitError}</span>
             </div>
@@ -150,7 +154,7 @@ const Login: React.FC = () => {
                 />
               </div>
               {errors.email && (
-                <p className="mt-1.5 text-xs text-red-600">{errors.email}</p>
+                <p role="alert" className="mt-1.5 text-xs text-red-600">{errors.email}</p>
               )}
             </div>
 
@@ -197,6 +201,7 @@ const Login: React.FC = () => {
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 dark:text-slate-400 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
@@ -206,7 +211,7 @@ const Login: React.FC = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1.5 text-xs text-red-600">{errors.password}</p>
+                <p role="alert" className="mt-1.5 text-xs text-red-600">{errors.password}</p>
               )}
             </div>
 
@@ -230,6 +235,7 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
+              aria-busy={isLoading}
               className="relative w-full rounded-xl bg-primary-600 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isLoading ? (
