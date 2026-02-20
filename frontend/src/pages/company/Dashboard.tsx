@@ -23,7 +23,8 @@ interface DashboardData {
   completedOrders: number;
   totalServices: number;
   totalMembers: number;
-  walletBalance: number;
+  walletBalance?: number;     // legado — alguns builds antigos
+  availableBalance?: number;  // campo atual retornado pelo backend
 }
 
 const StatCard: React.FC<{
@@ -84,8 +85,11 @@ const CompanyDashboard: React.FC = () => {
     completedOrders: 0,
     totalServices: 0,
     totalMembers: 0,
-    walletBalance: 0,
+    availableBalance: 0,
   };
+
+  // Normalizar: backend retorna availableBalance, interface legada usava walletBalance
+  const walletBalance = stats.availableBalance ?? stats.walletBalance ?? 0;
 
   const quickLinks = [
     { to: "/company/profile", icon: <Building2 className="h-5 w-5" />, label: "Perfil da Empresa", desc: "Editar informações" },
@@ -151,7 +155,7 @@ const CompanyDashboard: React.FC = () => {
         />
         <StatCard
           title="Saldo em Carteira"
-          value={`R$ ${stats.walletBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+          value={`R$ ${walletBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
           icon={<CreditCard className="h-6 w-6 text-emerald-600" />}
           color="bg-emerald-100 dark:bg-emerald-900/30"
           subtitle="Disponível para saque"
