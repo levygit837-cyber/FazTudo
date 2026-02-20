@@ -249,7 +249,7 @@ export const createPayment = async (
       log.error({ err: mpError }, "MercadoPago payment creation failed");
 
       // Em dev, criar pagamento local como fallback
-      if (env.NODE_ENV !== "production") {
+      if (env.NODE_ENV === "development" && process.env.ALLOW_LOCAL_PAYMENT_FALLBACK === "true") {
         log.warn("⚠️ MercadoPago unavailable — creating local payment record");
         mpResult = { status: "approved", id: `local-${Date.now()}` };
         paymentData = { paymentType: body.paymentMethod, localFallback: true };

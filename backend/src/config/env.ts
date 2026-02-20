@@ -87,6 +87,7 @@ export interface EnvConfig {
 
   // Development
   ENABLE_SWAGGER: boolean;
+  ALLOW_LOCAL_PAYMENT_FALLBACK: boolean;
 }
 
 /**
@@ -170,7 +171,15 @@ function getEnvConfig(): EnvConfig {
     MP_PUBLIC_KEY: process.env.PUBLIC_KEY_MP || process.env.MP_PUBLIC_KEY || '',
     MP_CLIENT_ID: process.env.CLIENT_ID || process.env.MP_CLIENT_ID || '',
     MP_CLIENT_SECRET: process.env.CLIENT_SECRET || process.env.MP_CLIENT_SECRET || '',
-    MP_WEBHOOK_SECRET: process.env.MP_WEBHOOK_SECRET || '',
+    MP_WEBHOOK_SECRET: (() => {
+      if (process.env.NODE_ENV === 'production' && !process.env.MP_WEBHOOK_SECRET) {
+        throw new Error(
+          'FATAL: MP_WEBHOOK_SECRET must be set in production. '
+          + 'Without it, webhook signatures cannot be verified and payments can be forged.'
+        );
+      }
+      return process.env.MP_WEBHOOK_SECRET || '';
+    })(),
     MP_SANDBOX: process.env.MP_SANDBOX !== 'false',
 
     // Notifications
@@ -182,7 +191,10 @@ function getEnvConfig(): EnvConfig {
     SMTP_USER: process.env.SMTP_USER || '',
     SMTP_PASS: process.env.SMTP_PASS || '',
     SMTP_FROM_NAME: process.env.SMTP_FROM_NAME || 'FazTudo',
-    SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL || 'amplimusicstudo@gmail.com',
+    SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL ||
+      (process.env.NODE_ENV === 'production'
+        ? (() => { throw new Error('FATAL: SMTP_FROM_EMAIL must be set in production'); })()
+        : 'noreply@faztudo.local'),
 
     // File Upload
     MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '10', 10),
@@ -196,6 +208,7 @@ function getEnvConfig(): EnvConfig {
 
     // Development
     ENABLE_SWAGGER: process.env.ENABLE_SWAGGER === 'true',
+    ALLOW_LOCAL_PAYMENT_FALLBACK: process.env.ALLOW_LOCAL_PAYMENT_FALLBACK === 'true',
   };
 
   return config;
