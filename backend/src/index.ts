@@ -91,10 +91,7 @@ app.use("/uploads/chat", verifyToken, express.static(path.join(process.cwd(), "u
 // Non-chat uploads remain publicly accessible
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// General rate limiter for all routes (after static)
-app.use(generalLimiter);
-
-// CORS with specific origins
+// 1. CORS — DEVE vir antes do rate limiter para que 429 também tenha CORS headers
 app.use(
   cors({
     origin: env.CORS_ORIGIN === "*" ? "*" : env.CORS_ORIGIN.split(","),
@@ -103,6 +100,9 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   }),
 );
+
+// 2. Rate limiter (após CORS para que 429 tenha Access-Control-Allow-Origin)
+app.use(generalLimiter);
 
 // Body parsing with size limits
 app.use(express.json({ limit: env.BODY_SIZE_LIMIT }));
