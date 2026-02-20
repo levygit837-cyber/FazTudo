@@ -3,6 +3,7 @@ import { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { createLogger } from "./logger";
+import prisma from "./prisma";
 
 const log = createLogger("socket");
 
@@ -45,16 +46,45 @@ export function initializeSocket(httpServer: HttpServer): Server {
   });
 
   io.on("connection", (socket: Socket) => {
-    const userId = (socket as any).userId;
+    const userId: number = (socket as any).userId;
+    const userRole: string = (socket as any).userRole;
     log.info({ userId, socketId: socket.id }, "Client connected");
 
     // Join personal room
     socket.join(`user:${userId}`);
 
-    // Join order rooms
-    socket.on("join:order", (orderId: number) => {
-      socket.join(`order:${orderId}`);
-      log.debug({ userId, orderId }, "Joined order room");
+    // Join order rooms — DB-verified: only actual participants (client, professional, or admin) may join
+    socket.on("join:order", async (orderId: unknown) => {
+      try {
+        const orderIdNum = parseInt(String(orderId), 10);
+        if (isNaN(orderIdNum) || orderIdNum <= 0) return;
+
+        // Verify user is actually a participant of this order
+        const order = await prisma.serviceOrder.findUnique({
+          where: { id: orderIdNum },
+          select: { clientId: true, professionalId: true },
+        });
+
+        if (!order) return;
+
+        const isParticipant =
+          order.clientId === userId ||
+          order.professionalId === userId ||
+          userRole === "ADMIN";
+
+        if (!isParticipant) {
+          log.warn(
+            { userId, orderId: orderIdNum },
+            "Unauthorized attempt to join order room"
+          );
+          return;
+        }
+
+        socket.join(`order:${orderIdNum}`);
+        log.debug({ userId, orderId: orderIdNum }, "Joined order room");
+      } catch (err) {
+        log.error({ err }, "join:order error");
+      }
     });
 
     socket.on("leave:order", (orderId: number) => {
