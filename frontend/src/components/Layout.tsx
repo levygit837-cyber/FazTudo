@@ -356,7 +356,7 @@ const Layout: React.FC = () => {
               {isAuthenticated && isClient && (
                 <Link
                   to="/client/orders/new"
-                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all no-underline"
+                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.02] transition-all duration-200 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500"
                 >
                   <FileText size={16} />
                   Pedir Serviço
@@ -568,7 +568,7 @@ const Layout: React.FC = () => {
       </header>
 
       {/* Main content */}
-      <main id="main-content" className="flex-1 container-responsive py-8">
+      <main id="main-content" key={location.pathname} className="flex-1 container-responsive py-8 page-transition">
         <Outlet />
       </main>
 

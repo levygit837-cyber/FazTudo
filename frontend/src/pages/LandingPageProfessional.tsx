@@ -258,6 +258,10 @@ const LandingPageProfessional: React.FC = () => {
                       Novo pagamento de {formatCurrency(1240)} processado agora
                     </span>
                   </div>
+                  <p className="mt-4 text-[0.6875rem] text-slate-500 text-center">
+                    * Estimativas baseadas na média dos profissionais ativos no último trimestre.
+                    Resultados individuais variam conforme dedicação e especialidade.
+                  </p>
                 </div>
               </div>
             </div>

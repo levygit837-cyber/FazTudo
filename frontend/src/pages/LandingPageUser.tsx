@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ChevronRight,
   LogOut,
+  Search,
   Shield,
   Star,
   User,
@@ -33,6 +34,16 @@ const LandingPageUser: React.FC = () => {
   const [registerRole, setRegisterRole] = useState<"CLIENT" | "PROFESSIONAL">("CLIENT");
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [heroSearch, setHeroSearch] = useState("");
+
+  const handleHeroSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (heroSearch.trim()) {
+      navigate(`/services?q=${encodeURIComponent(heroSearch.trim())}`);
+    } else {
+      navigate("/services");
+    }
+  };
 
   const handleLandingSwitch = (path: string) => {
     if (isLeaving) return;
@@ -234,30 +245,51 @@ const LandingPageUser: React.FC = () => {
                   orcamento rapido e pagamento seguro em todo o Brasil.
                 </p>
 
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Link
-                    to="/services"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold shadow-glow-blue-lg transition-all duration-200 bg-primary-600 text-white hover:bg-primary-500 hover:-translate-y-0.5 no-underline text-[0.9375rem]"
+                {/* Inline hero search */}
+                <form onSubmit={handleHeroSearch} className="flex flex-col gap-3 sm:flex-row w-full max-w-lg">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" aria-hidden="true" />
+                    <input
+                      type="search"
+                      value={heroSearch}
+                      onChange={(e) => setHeroSearch(e.target.value)}
+                      placeholder="Ex: Encanamento, Pintura, Elétrica..."
+                      className="w-full rounded-xl pl-12 pr-4 py-3.5 text-[0.9375rem] font-medium bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent shadow-lg"
+                      aria-label="Buscar serviços"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold shadow-glow-blue-lg transition-all duration-200 bg-primary-600 text-white hover:bg-primary-500 hover:-translate-y-0.5 text-[0.9375rem] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-300"
                   >
-                    Encontrar profissional
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  {isAuthenticated ? (
-                    <Link
-                      to={dashboardPath}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 no-underline text-[0.9375rem]"
-                    >
-                      Ir ao Dashboard
-                    </Link>
-                  ) : (
+                    Buscar
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </form>
+
+                {/* Quick category pills */}
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <span className="text-xs text-slate-400 self-center">Populares:</span>
+                  {categories.slice(0, 4).map((cat) => (
                     <button
-                      onClick={() => handleLandingSwitch("/profissionais")}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 text-[0.9375rem]"
+                      key={cat.name}
+                      onClick={() => navigate(`/services?q=${encodeURIComponent(cat.name)}`)}
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all bg-white/10 dark:bg-slate-800/50 text-slate-300 dark:text-slate-400 border border-slate-600 dark:border-slate-700 hover:bg-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-400"
                     >
-                      Oferecer servicos
+                      <span aria-hidden="true">{cat.icon}</span>
+                      {cat.name}
                     </button>
-                  )}
+                  ))}
                 </div>
+
+                {isAuthenticated && (
+                  <Link
+                    to={dashboardPath}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 no-underline text-[0.9375rem] w-fit"
+                  >
+                    Ir ao Dashboard
+                  </Link>
+                )}
 
                 <div className="flex items-center gap-2 text-slate-500 text-sm">
                   <Users className="h-4 w-4" />

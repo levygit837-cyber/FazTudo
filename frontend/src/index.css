@@ -1002,7 +1002,32 @@
   transition: opacity 200ms ease, transform 200ms ease;
 }
 
+/* Page enter transition */
+.page-transition {
+  animation: page-enter 0.25s ease-out;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
   .animate-soft-pop,
   .animate-fade-in,
   .animate-slide-up,
@@ -1013,6 +1038,7 @@
   .animate-stepComplete,
   .landing-exit,
   .card-route-exit,
+  .page-transition,
   .stagger-grid > * {
     animation: none !important;
     transition: none !important;
