@@ -5,6 +5,8 @@
  * within the platform, protecting both parties.
  */
 
+import type { Request, Response, NextFunction } from "express";
+
 interface FilterResult {
   clean: boolean;
   sanitized: string;
@@ -159,3 +161,26 @@ export function getBlockedContentMessage(blockedTypes: string[]): string {
   const types = blockedTypes.join(", ");
   return `Sua mensagem contém informações de contato pessoal (${types}) que foram removidas. Para sua segurança, mantenha a comunicação pela plataforma.`;
 }
+
+// ─── EXPRESS MIDDLEWARE ────────────────────────────────────────────────────
+
+/**
+ * Express middleware: blocks messages containing personal contact information.
+ * Returns HTTP 400 if req.body.content contains disallowed content types.
+ * Apply to all routes that accept chat text messages.
+ */
+export const chatFilterMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  if (req.body?.content && typeof req.body.content === "string") {
+    const result = filterChatContent(req.body.content);
+    if (!result.clean) {
+      res.status(400).json({
+        success: false,
+        message: `Mensagem contém informações de contato não permitidas: ${result.blockedTypes.join(", ")}`,
+        data: { blockedTypes: result.blockedTypes },
+      });
+      return;
+    }
+    req.body.content = result.sanitized;
+  }
+  next();
+};

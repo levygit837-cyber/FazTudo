@@ -5,6 +5,7 @@ import {
   requireVerified,
   authLogger,
 } from "../middleware/auth";
+import { chatFilterMiddleware } from "../middleware/chatFilter";
 import { requireOrderParticipant } from "../middleware/uploadAuthCheck";
 import { validateBody } from "../middleware/validate";
 import { sendMessageSchema } from "../middleware/validation";
@@ -30,6 +31,7 @@ router.post(
   "/orders/:orderId/messages",
   verifyToken,
   requireVerified,
+  chatFilterMiddleware,
   validateBody(sendMessageSchema),
   serviceController.sendMessage,
 );
