@@ -294,13 +294,21 @@ export const createPayment = async (
 
     // Se aprovado, criar transação e notificar
     if (isApproved) {
+      // Snapshot real do saldo do cliente antes da transação
+      const clientWallet = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { balance: true },
+      });
+      const clientBalanceBefore = clientWallet?.balance ?? 0;
+      const clientBalanceAfter = clientBalanceBefore - serviceOrder.price;
+
       await prisma.transaction.create({
         data: {
           type: "PAYMENT",
           amount: serviceOrder.price,
           description: `Pagamento confirmado para pedido #${orderId}: ${serviceOrder.title}`,
-          balanceBefore: 0,
-          balanceAfter: 0,
+          balanceBefore: clientBalanceBefore,
+          balanceAfter: clientBalanceAfter,
           userId: req.user.id,
           paymentId: payment.id,
         },
@@ -463,6 +471,14 @@ export const releasePayment = async (
     const platformFee = (payment.amount * platformFeePercentage) / 100;
     const professionalAmount = payment.amount - platformFee;
 
+    // Snapshot real do saldo do profissional antes de liberar pagamento
+    const proWallet = await prisma.user.findUnique({
+      where: { id: serviceOrder.professionalId! },
+      select: { balance: true },
+    });
+    const proBalanceBefore = proWallet?.balance ?? 0;
+    const proBalanceAfter = proBalanceBefore + professionalAmount;
+
     // Executar transação para liberar pagamento
     const [updatedPayment, professionalTransaction] = await prisma.$transaction(
       [
@@ -480,8 +496,8 @@ export const releasePayment = async (
             type: "PAYMENT",
             amount: professionalAmount,
             description: `Payment released from escrow for order #${orderId}`,
-            balanceBefore: 0, // Seria calculado com o saldo atual do profissional
-            balanceAfter: 0,
+            balanceBefore: proBalanceBefore,
+            balanceAfter: proBalanceAfter,
             userId: serviceOrder.professionalId!,
             paymentId: payment.id,
           },
@@ -622,6 +638,14 @@ export const mercadoPagoWebhook = async (
       const heldUntil = new Date();
       heldUntil.setDate(heldUntil.getDate() + env.DEFAULT_ESCROW_HOLD_DAYS);
 
+      // Snapshot real do saldo do cliente antes da transação do webhook
+      const webhookClientWallet = await prisma.user.findUnique({
+        where: { id: payment.clientId },
+        select: { balance: true },
+      });
+      const webhookBalanceBefore = webhookClientWallet?.balance ?? 0;
+      const webhookBalanceAfter = webhookBalanceBefore - payment.amount;
+
       await prisma.$transaction([
         prisma.payment.update({
           where: { id: payment.id },
@@ -645,8 +669,8 @@ export const mercadoPagoWebhook = async (
             type: "PAYMENT",
             amount: payment.amount,
             description: `Pagamento confirmado via MercadoPago para pedido #${orderId}`,
-            balanceBefore: 0,
-            balanceAfter: 0,
+            balanceBefore: webhookBalanceBefore,
+            balanceAfter: webhookBalanceAfter,
             userId: payment.clientId,
             paymentId: payment.id,
           },

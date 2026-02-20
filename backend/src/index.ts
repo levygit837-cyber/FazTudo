@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Request, type Response, type NextFunction } from "express";
 import { createServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
@@ -127,8 +127,19 @@ app.get("/", (_req, res) => {
   });
 });
 
-// Database Health Check
-app.get("/health", async (_req, res) => {
+// Protect health endpoint - internal use only
+const localOnlyMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  const ip = req.ip || req.socket?.remoteAddress || "";
+  const isLocal = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+  if (!isLocal) {
+    res.status(404).json({ success: false, message: "Not found" });
+    return;
+  }
+  next();
+};
+
+// Database Health Check (localhost only)
+app.get("/health", localOnlyMiddleware, async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({

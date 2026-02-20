@@ -168,7 +168,7 @@ describe('Security: Input Validation', () => {
         paymentMethod: 'pix',
         payerEmail: 'teste@teste.com',
         payerName: 'Test User',
-        payerCPF: '12345678900',
+        payerCPF: '12345678909', // valid CPF — MercadoPago sandbox CPF (algorithmically correct)
       });
       expect(result.success).toBe(true);
     });
