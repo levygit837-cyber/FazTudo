@@ -1,5 +1,11 @@
 // frontend/src/components/common/TourSpotlight.tsx
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import ReactDOM from "react-dom";
 import {
   ArrowRight,
@@ -40,32 +46,105 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Wallet,
 };
 
-// ─── Simulation Card ─────────────────────────────────────────────────────────
+// ─── Simulation Cards ────────────────────────────────────────────────────────
 
-const SimulationOrderCard: React.FC = () => (
-  <div className="mt-3 rounded-xl border border-slate-200 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-800/60 p-4">
-    <div className="flex items-center gap-3 mb-2">
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-sm font-bold">
-        J
-      </div>
-      <div>
-        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-          João Silva
+type SimVariant = "order" | "map" | "confirm" | "payment";
+
+const SimulationContent: React.FC<{ variant: SimVariant }> = ({ variant }) => {
+  const base =
+    "mt-3 rounded-xl border border-slate-200 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-800/60 p-4 text-sm";
+
+  if (variant === "order")
+    return (
+      <div className={base}>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-sm font-bold">
+            J
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800 dark:text-slate-100">
+              João Silva
+            </p>
+            <p className="text-xs text-slate-500">
+              Instalação Elétrica • R$ 350,00
+            </p>
+          </div>
+          <span className="ml-auto rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+            Novo pedido
+          </span>
+        </div>
+        <p className="text-xs text-slate-500">
+          <span aria-hidden="true">📅</span> Agendado para amanhã às 14h00
         </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Instalação Elétrica • R$ 350,00
+      </div>
+    );
+
+  if (variant === "map")
+    return (
+      <div className={base}>
+        <div className="flex items-center gap-2 mb-2">
+          <MapPin className="h-4 w-4 text-primary-500 flex-shrink-0" />
+          <p className="font-medium text-slate-800 dark:text-slate-100 text-xs">
+            Rua das Flores, 123 — São Paulo
+          </p>
+        </div>
+        <div className="h-16 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+          <p className="text-xs text-slate-400">🗺️ Mapa integrado</p>
+        </div>
+        <p className="text-xs text-primary-600 dark:text-primary-400 mt-2 font-medium">
+          → Ver rota no mapa
         </p>
       </div>
-      <span className="ml-auto rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
-        Pendente
-      </span>
+    );
+
+  if (variant === "confirm")
+    return (
+      <div className={base}>
+        <div className="flex items-center gap-2 mb-3">
+          <CheckCircle className="h-4 w-4 text-emerald-500" />
+          <p className="text-xs font-medium text-slate-800 dark:text-slate-100">
+            Instalação Elétrica — concluída
+          </p>
+        </div>
+        <div className="flex gap-3 text-xs">
+          <div className="flex-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-2 text-center">
+            <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+              ✓ Você confirmou
+            </p>
+          </div>
+          <div className="flex-1 rounded-lg bg-slate-100 dark:bg-slate-700/50 p-2 text-center">
+            <p className="text-slate-500">Aguard. cliente...</p>
+          </div>
+        </div>
+      </div>
+    );
+
+  // payment
+  return (
+    <div className={base}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs text-slate-500">Pagamento liberado</p>
+        <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+          + R$ 315,00
+        </span>
+      </div>
+      <div className="text-xs text-slate-500 space-y-1">
+        <div className="flex justify-between">
+          <span>Valor do serviço</span>
+          <span>R$ 350,00</span>
+        </div>
+        <div className="flex justify-between text-slate-400">
+          <span>Taxa plataforma (10%)</span>
+          <span>− R$ 35,00</span>
+        </div>
+        <div className="flex justify-between font-semibold text-emerald-600 dark:text-emerald-400 pt-1 border-t border-slate-200 dark:border-slate-700">
+          <span>Seu ganho</span>
+          <span>R$ 315,00</span>
+        </div>
+      </div>
     </div>
-    <p className="text-xs text-slate-500 dark:text-slate-400">
-      <span aria-hidden="true">📍</span>{" "}
-      <span className="sr-only">Localização:</span>Rua das Flores, 123 — São Paulo
-    </p>
-  </div>
-);
+  );
+};
 
 // ─── Arrow positions ─────────────────────────────────────────────────────────
 
@@ -95,6 +174,7 @@ export const TourSpotlight: React.FC = () => {
     prevStep,
     skipTour,
     completeTour,
+    readyNonce,
   } = useTour();
 
   const [cardPos, setCardPos] = useState<{
@@ -103,6 +183,8 @@ export const TourSpotlight: React.FC = () => {
     arrowDir: ArrowDir;
   } | null>(null);
   const highlightRef = useRef<HTMLElement | null>(null);
+  // Timer ref for retry back-off cancellation
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentStepData = isActive ? steps[currentStep] : null;
   const isLastStep = isActive && currentStep === steps.length - 1;
@@ -110,9 +192,93 @@ export const TourSpotlight: React.FC = () => {
   const Icon =
     currentStepData ? (ICON_MAP[currentStepData.icon] ?? Sparkles) : Sparkles;
 
-  // Highlight target element and calculate card position
+  // Extract positioning logic into a stable callback so it can be called from
+  // both the useLayoutEffect and from retry timeouts.
+  const positionCard = useCallback(
+    (stepData: NonNullable<typeof currentStepData>) => {
+      if (stepData.simulationMode) return false;
+
+      const target = document.querySelector<HTMLElement>(
+        `[data-tour="${stepData.id}"]`
+      );
+      if (!target) return false; // element not in DOM yet
+
+      // Remove highlight from previous target if different
+      if (highlightRef.current && highlightRef.current !== target) {
+        highlightRef.current.style.outline = "";
+        highlightRef.current.style.outlineOffset = "";
+        highlightRef.current.style.position = "";
+        highlightRef.current.style.zIndex = "";
+      }
+
+      // Apply highlight
+      target.style.outline = "2px solid var(--color-primary-500, #3b82f6)";
+      target.style.outlineOffset = "4px";
+      target.style.position = "relative";
+      target.style.zIndex = "9999";
+      highlightRef.current = target;
+
+      // Scroll into view
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Calculate card position
+      const rect = target.getBoundingClientRect();
+      const cardW = 320;
+      const cardH = 260;
+      const gap = 12;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      let top = 0;
+      let left = 0;
+      let arrowDir: ArrowDir = "top";
+
+      if (rect.bottom + cardH + gap < vh) {
+        top = rect.bottom + gap;
+        left = Math.min(
+          Math.max(rect.left + rect.width / 2 - cardW / 2, 16),
+          vw - cardW - 16
+        );
+        arrowDir = "top";
+      } else if (rect.top - cardH - gap > 0) {
+        top = rect.top - cardH - gap;
+        left = Math.min(
+          Math.max(rect.left + rect.width / 2 - cardW / 2, 16),
+          vw - cardW - 16
+        );
+        arrowDir = "bottom";
+      } else if (rect.right + cardW + gap < vw) {
+        top = Math.min(
+          Math.max(rect.top + rect.height / 2 - cardH / 2, 16),
+          vh - cardH - 16
+        );
+        left = rect.right + gap;
+        arrowDir = "left";
+      } else {
+        top = Math.min(
+          Math.max(rect.top + rect.height / 2 - cardH / 2, 16),
+          vh - cardH - 16
+        );
+        left = Math.max(rect.left - cardW - gap, 16);
+        arrowDir = "right";
+      }
+
+      setCardPos({ top, left, arrowDir });
+      return true;
+    },
+    [] // no deps — only touches refs and DOM
+  );
+
+  // Highlight target element and calculate card position.
+  // Uses retry with back-off to handle the race between navigate() and DOM mount.
   useLayoutEffect(() => {
-    // Always remove previous highlight first (even when tour becomes inactive)
+    // Cancel any pending retry from a previous step
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
+    // Clear previous highlight
     if (highlightRef.current) {
       highlightRef.current.style.outline = "";
       highlightRef.current.style.outlineOffset = "";
@@ -124,77 +290,53 @@ export const TourSpotlight: React.FC = () => {
     if (!isActive || !currentStepData) return;
 
     if (isSimulation) {
-      setCardPos(null); // centered via CSS
+      setCardPos(null); // centred via CSS
       return;
     }
 
-    const target = document.querySelector<HTMLElement>(
-      `[data-tour="${currentStepData.id}"]`
-    );
+    // First attempt — element might already be in DOM (same-route step)
+    const found = positionCard(currentStepData);
+    if (!found) {
+      // Element not yet in DOM (navigate() just fired). Retry with back-off:
+      // 100ms → 300ms → 600ms, then give up and centre.
+      const delays = [100, 300, 600];
+      let attempt = 0;
 
-    if (!target) {
-      setCardPos(null);
-      return;
+      const tryAgain = () => {
+        if (attempt >= delays.length) {
+          setCardPos(null); // best effort: centre
+          return;
+        }
+        retryTimerRef.current = setTimeout(() => {
+          const ok = positionCard(currentStepData);
+          if (!ok) {
+            attempt++;
+            tryAgain();
+          }
+        }, delays[attempt++]);
+      };
+      tryAgain();
     }
 
-    // Highlight the element
-    target.style.outline = "2px solid var(--color-primary-500, #3b82f6)";
-    target.style.outlineOffset = "4px";
-    target.style.position = "relative";
-    target.style.zIndex = "9999";
-    highlightRef.current = target;
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [isActive, currentStep, currentStepData, isSimulation, positionCard, readyNonce]);
 
-    // Scroll into view
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
+  // Reposition on window resize
+  useEffect(() => {
+    if (!isActive || !currentStepData || isSimulation) return;
 
-    // Calculate card position
-    const rect = target.getBoundingClientRect();
-    const cardW = 320;
-    const cardH = 260; // approx
-    const gap = 12;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const handleResize = () => {
+      positionCard(currentStepData);
+    };
 
-    let top = 0;
-    let left = 0;
-    let arrowDir: ArrowDir = "top";
-
-    // Prefer below the element
-    if (rect.bottom + cardH + gap < vh) {
-      top = rect.bottom + gap;
-      left = Math.min(
-        Math.max(rect.left + rect.width / 2 - cardW / 2, 16),
-        vw - cardW - 16
-      );
-      arrowDir = "top";
-    } else if (rect.top - cardH - gap > 0) {
-      // Above
-      top = rect.top - cardH - gap;
-      left = Math.min(
-        Math.max(rect.left + rect.width / 2 - cardW / 2, 16),
-        vw - cardW - 16
-      );
-      arrowDir = "bottom";
-    } else if (rect.right + cardW + gap < vw) {
-      // Right
-      top = Math.min(
-        Math.max(rect.top + rect.height / 2 - cardH / 2, 16),
-        vh - cardH - 16
-      );
-      left = rect.right + gap;
-      arrowDir = "left";
-    } else {
-      // Left
-      top = Math.min(
-        Math.max(rect.top + rect.height / 2 - cardH / 2, 16),
-        vh - cardH - 16
-      );
-      left = Math.max(rect.left - cardW - gap, 16);
-      arrowDir = "right";
-    }
-
-    setCardPos({ top, left, arrowDir });
-  }, [isActive, currentStep, currentStepData, isSimulation]);
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isActive, currentStepData, isSimulation, positionCard]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -204,6 +346,9 @@ export const TourSpotlight: React.FC = () => {
         highlightRef.current.style.outlineOffset = "";
         highlightRef.current.style.position = "";
         highlightRef.current.style.zIndex = "";
+      }
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
       }
     };
   }, []);
@@ -306,8 +451,10 @@ export const TourSpotlight: React.FC = () => {
             {currentStepData.description}
           </p>
 
-          {/* Simulation content */}
-          {isSimulation && <SimulationOrderCard />}
+          {/* Simulation content — variant-specific mini-card */}
+          {isSimulation && currentStepData.simulationVariant && (
+            <SimulationContent variant={currentStepData.simulationVariant} />
+          )}
 
           {/* Progress dots */}
           <div
