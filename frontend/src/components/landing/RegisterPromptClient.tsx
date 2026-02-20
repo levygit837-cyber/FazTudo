@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -126,7 +126,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
   onSwitchToProfessional,
 }) => {
   const navigate = useNavigate();
-  const { register, clearError, error: authError } = useAuth();
+  const { register, logout, clearError, error: authError } = useAuth();
 
   const [step, setStep] = useState<ClientStep>(1);
   const [formData, setFormData] = useState<ClientFormData>(INITIAL_FORM);
@@ -134,6 +134,15 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+
+  // If user registered but closes modal without going to /verify-email,
+  // log them out so their PENDING session doesn't contaminate the main app.
+  const handleClose = useCallback(() => {
+    if (isCompleted) {
+      logout();
+    }
+    onClose();
+  }, [isCompleted, logout, onClose]);
   const [selectedCtaId, setSelectedCtaId] = useState<string>(
     CLIENT_CTA_OPTIONS[0].id,
   );
@@ -143,7 +152,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
     if (!isOpen) return;
 
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") handleClose();
     };
 
     const previousOverflow = document.body.style.overflow;
@@ -155,7 +164,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
       window.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = previousOverflow;
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -348,7 +357,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
       <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
         <button
           className="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Fechar cadastro de cliente"
         />
 
@@ -361,7 +370,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
         >
           <button
             className="absolute right-4 top-4 z-20 rounded-full p-1.5 text-slate-500 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Fechar modal"
           >
             <X className="h-5 w-5" />
@@ -683,7 +692,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
                     <button
                       type="button"
                       className="rounded-xl border border-slate-300 dark:border-slate-600 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={onClose}
+                      onClick={handleClose}
                     >
                       Fechar
                     </button>
