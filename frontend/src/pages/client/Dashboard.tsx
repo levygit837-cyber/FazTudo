@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useTour } from "../../context/TourContext";
 import { StatsCard } from "../../components/dashboard/StatsCard";
 import { ActivityTimeline, ActivityItem } from "../../components/dashboard/ActivityTimeline";
 import { CategoryPills, CategoryPillItem } from "../../components/dashboard/CategoryPills";
@@ -24,7 +25,6 @@ import { OrderCard } from "../../components/orders/OrderCard";
 import { ServiceCard } from "../../components/services/ServiceCard";
 import { SkeletonDashboard } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
-import { ClientOnboarding } from "../../components/common/ClientOnboarding";
 import { QuickActionBar } from "../../components/dashboard/QuickActionBar";
 import {
   getDashboardStats,
@@ -114,14 +114,12 @@ function formatTimeAgo(dateStr: string): string {
 const ClientDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { startTour } = useTour();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendedService[]>([]);
   const [categories, setCategories] = useState<CategoryWithCounts[]>([]);
   const [tipIndex, setTipIndex] = useState(0);
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => !localStorage.getItem("faztudo_client_onboarding_done"),
-  );
   const [stats, setStats] = useState<ClientDashboardStats>({
     totalOrders: 0,
     pendingOrders: 0,
@@ -138,10 +136,13 @@ const ClientDashboard: React.FC = () => {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const tipDragRef = React.useRef<{ startX: number; isDragging: boolean }>({ startX: 0, isDragging: false });
 
-  const handleDismissOnboarding = () => {
-    localStorage.setItem("faztudo_client_onboarding_done", "1");
-    setShowOnboarding(false);
-  };
+  // Disparar tour na primeira visita
+  useEffect(() => {
+    if (!localStorage.getItem("faztudo_client_tour_done")) {
+      const timer = setTimeout(() => startTour("client"), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [startTour]);
 
   const handleTipPointerDown = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     tipDragRef.current = { startX: e.clientX, isDragging: true };
@@ -216,14 +217,9 @@ const ClientDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* ──────── ONBOARDING ──────── */}
-      {showOnboarding && (
-        <ClientOnboarding onDismiss={handleDismissOnboarding} />
-      )}
-
       {/* ──────── HERO ZONE ──────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4" data-tour="tour-client-welcome">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
             {greeting.icon}
           </div>
@@ -240,6 +236,7 @@ const ClientDashboard: React.FC = () => {
         {/* CTA Principal */}
         <Link
           to="/services"
+          data-tour="tour-search-services"
           className="
             group inline-flex items-center gap-3 px-6 py-3.5
             bg-gradient-to-r from-primary-600 to-primary-700
@@ -257,14 +254,16 @@ const ClientDashboard: React.FC = () => {
       </div>
 
       {/* ──────── QUICK ACTIONS ──────── */}
-      <QuickActionBar
-        actions={[
-          { label: "Novo pedido", to: "/client/orders/new", icon: PlusCircle, variant: "primary" },
-          { label: "Buscar serviços", to: "/services", icon: Search, variant: "secondary" },
-          { label: "Meus pedidos", to: "/client/orders", icon: FileText, variant: "secondary" },
-          { label: "Mensagens", to: "/messages", icon: MessageSquare, variant: "ghost" },
-        ]}
-      />
+      <div data-tour="tour-new-order-btn">
+        <QuickActionBar
+          actions={[
+            { label: "Novo pedido", to: "/client/orders/new", icon: PlusCircle, variant: "primary" },
+            { label: "Buscar serviços", to: "/services", icon: Search, variant: "secondary" },
+            { label: "Meus pedidos", to: "/client/orders", icon: FileText, variant: "secondary" },
+            { label: "Mensagens", to: "/messages", icon: MessageSquare, variant: "ghost" },
+          ]}
+        />
+      </div>
 
       {/* ──────── STAT STRIP — Assimétrico ──────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-grid">
