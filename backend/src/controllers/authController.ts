@@ -234,7 +234,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         {
           user,
           token,
-          refreshToken,
         },
         "User registered successfully",
       ),
@@ -331,7 +330,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         {
           user: userWithoutPassword,
           token,
-          refreshToken: newRefreshToken,
         },
         "Login successful",
       ),
@@ -1052,10 +1050,10 @@ export const refreshAccessToken = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.refreshToken as string | undefined;
 
     if (!refreshToken) {
-      res.status(400).json(errorResponse("Refresh token is required"));
+      res.status(401).json(errorResponse("Refresh token not found"));
       return;
     }
 
@@ -1110,9 +1108,12 @@ export const refreshAccessToken = async (
       data: { refreshToken: newRefreshToken },
     });
 
+    res.cookie("accessToken", newToken, getCookieOptions(ACCESS_TOKEN_MAX_AGE));
+    res.cookie("refreshToken", newRefreshToken, getCookieOptions(REFRESH_TOKEN_MAX_AGE));
+
     res.status(200).json(
       successResponse(
-        { token: newToken, refreshToken: newRefreshToken },
+        { token: newToken },
         "Token refreshed successfully",
       ),
     );

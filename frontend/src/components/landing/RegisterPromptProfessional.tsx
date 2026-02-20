@@ -130,12 +130,12 @@ const StepBadge: React.FC<{ active: boolean; label: string; index: number }> = (
       className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
         active
           ? "bg-primary-600 text-white"
-          : "bg-slate-200 text-slate-600"
+          : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
       }`}
     >
       {index}
     </span>
-    <span className={`text-xs font-medium ${active ? "text-slate-900" : "text-slate-500"}`}>
+    <span className={`text-xs font-medium ${active ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>
       {label}
     </span>
   </div>
@@ -404,14 +404,14 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
         />
 
         <div
-          className={`relative z-10 max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl animate-soft-pop transition-all duration-150 ${
+          className={`relative z-10 max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl animate-soft-pop transition-all duration-150 ${
             isSwitchingRole ? "-translate-x-1 scale-[0.99] opacity-0" : "translate-x-0 scale-100 opacity-100"
           }`}
           role="dialog"
           aria-modal="true"
         >
           <button
-            className="absolute right-4 top-4 z-20 rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            className="absolute right-4 top-4 z-20 rounded-full p-1.5 text-slate-500 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
             onClick={onClose}
             aria-label="Fechar modal"
           >
@@ -419,6 +419,7 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
           </button>
 
           <div className="grid gap-0 md:grid-cols-[1fr_1.45fr]">
+            {/* Left panel — already dark-themed (bg-slate-900 text-white), looks correct in both modes */}
             <div className="hidden bg-slate-900 p-8 text-white md:block">
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
@@ -464,14 +465,14 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
             </div>
 
             <div className="space-y-6 p-6 sm:p-8">
-              <div className="inline-flex rounded-xl bg-slate-100 p-1">
+              <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
                 <button
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 transition-colors hover:text-slate-900 dark:hover:text-white"
                   onClick={handleSwitchToClient}
                 >
                   Sou Cliente
                 </button>
-                <button className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-primary-700 shadow-sm">
+                <button className="rounded-lg bg-white dark:bg-slate-700 px-4 py-2 text-sm font-semibold text-primary-700 dark:text-primary-300 shadow-sm">
                   Sou Profissional
                 </button>
               </div>
@@ -483,7 +484,7 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
               </div>
 
               {combinedError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-3 py-2 text-sm text-red-700 dark:text-red-300">
                   {combinedError}
                 </div>
               )}
@@ -492,199 +493,199 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
                 <>
                   {step === 1 && (
                     <div className="space-y-4">
-                      <h2 className="text-2xl font-bold text-slate-900">Etapa 1: Dados pessoais</h2>
+                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Etapa 1: Dados pessoais</h2>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Nome completo</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Nome completo</label>
                         <div className="relative">
-                          <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                           <input
                             type="text"
                             value={formData.name}
                             onChange={(event) => handleFieldChange("name", event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                             placeholder="Seu nome completo"
                             autoComplete="name"
                           />
                         </div>
-                        {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
+                        {errors.name && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.name}</p>}
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Telefone</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Telefone</label>
                           <div className="relative">
-                            <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                             <input
                               type="tel"
                               value={formData.phone}
                               onChange={(event) =>
                                 handleFieldChange("phone", formatPhone(event.target.value))
                               }
-                              className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                               placeholder="(11) 99999-9999"
                               autoComplete="tel"
                             />
                           </div>
-                          {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
+                          {errors.phone && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.phone}</p>}
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">E-mail</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">E-mail</label>
                           <div className="relative">
-                            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                             <input
                               type="email"
                               value={formData.email}
                               onChange={(event) => handleFieldChange("email", event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                               placeholder="seu@email.com"
                               autoComplete="email"
                             />
                           </div>
-                          {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+                          {errors.email && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.email}</p>}
                         </div>
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Endereco completo</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Endereco completo</label>
                         <div className="relative">
-                          <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                           <input
                             type="text"
                             value={formData.address}
                             onChange={(event) => handleFieldChange("address", event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                             placeholder="Rua, numero, bairro, cidade"
                             autoComplete="street-address"
                           />
                         </div>
-                        {errors.address && <p className="mt-1 text-xs text-red-600">{errors.address}</p>}
+                        {errors.address && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.address}</p>}
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Raio de atendimento (km)</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Raio de atendimento (km)</label>
                         <input
                           type="number"
                           min={1}
                           value={formData.serviceRadiusKm}
                           onChange={(event) => handleFieldChange("serviceRadiusKm", event.target.value)}
-                          className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                           placeholder="Ex: 15"
                         />
                         {errors.serviceRadiusKm && (
-                          <p className="mt-1 text-xs text-red-600">{errors.serviceRadiusKm}</p>
+                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.serviceRadiusKm}</p>
                         )}
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Senha</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Senha</label>
                           <div className="relative">
-                            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                             <input
                               type="password"
                               value={formData.password}
                               onChange={(event) => handleFieldChange("password", event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                               placeholder="Minimo 8 caracteres"
                               autoComplete="new-password"
                             />
                           </div>
-                          {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
+                          {errors.password && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.password}</p>}
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Confirmar senha</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar senha</label>
                           <div className="relative">
-                            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                             <input
                               type="password"
                               value={formData.confirmPassword}
                               onChange={(event) =>
                                 handleFieldChange("confirmPassword", event.target.value)
                               }
-                              className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                               placeholder="Repita a senha"
                               autoComplete="new-password"
                             />
                           </div>
                           {errors.confirmPassword && (
-                            <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>
+                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.confirmPassword}</p>
                           )}
                         </div>
                       </div>
 
-                      <label className="flex items-start gap-2 text-sm text-slate-700">
+                      <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={formData.acceptedTerms}
                           onChange={(event) =>
                             handleFieldChange("acceptedTerms", event.target.checked)
                           }
-                          className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                          className="mt-1 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500"
                         />
                         <span>Li e aceito os termos de uso e politica de privacidade.</span>
                       </label>
                       {errors.acceptedTerms && (
-                        <p className="text-xs text-red-600">{errors.acceptedTerms}</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">{errors.acceptedTerms}</p>
                       )}
                     </div>
                   )}
 
                   {step === 2 && (
                     <div className="space-y-4">
-                      <h2 className="text-2xl font-bold text-slate-900">Etapa 2: Dados de atuacao</h2>
+                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Etapa 2: Dados de atuacao</h2>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Categorias principais de servico</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Categorias principais de servico</label>
                         <input
                           type="text"
                           value={formData.mainCategories}
                           onChange={(event) => handleFieldChange("mainCategories", event.target.value)}
-                          className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                           placeholder="Ex: Eletrica, Hidraulica"
                         />
                         {errors.mainCategories && (
-                          <p className="mt-1 text-xs text-red-600">{errors.mainCategories}</p>
+                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.mainCategories}</p>
                         )}
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Subcategorias (opcional)</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Subcategorias (opcional)</label>
                         <input
                           type="text"
                           value={formData.subcategories}
                           onChange={(event) => handleFieldChange("subcategories", event.target.value)}
-                          className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                           placeholder="Ex: Instalacao de chuveiro, manutencao preventiva"
                         />
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Experiencia</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Experiencia</label>
                           <input
                             type="number"
                             min={1}
                             value={formData.experienceValue}
                             onChange={(event) => handleFieldChange("experienceValue", event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                             placeholder="Ex: 3"
                           />
                           {errors.experienceValue && (
-                            <p className="mt-1 text-xs text-red-600">{errors.experienceValue}</p>
+                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.experienceValue}</p>
                           )}
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Unidade</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Unidade</label>
                           <select
                             value={formData.experienceUnit}
                             onChange={(event) =>
                               handleFieldChange("experienceUnit", event.target.value)
                             }
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-3 py-2.5 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                           >
                             <option value="years">Anos</option>
                             <option value="months">Meses</option>
@@ -693,7 +694,7 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Forma de cobranca</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Forma de cobranca</label>
                         <div className="grid gap-2 sm:grid-cols-3">
                           {[
                             { value: "HOUR", label: "Por hora" },
@@ -706,8 +707,8 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
                               onClick={() => handleFieldChange("pricingModel", option.value)}
                               className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
                                 formData.pricingModel === option.value
-                                  ? "border-primary-500 bg-primary-50 text-primary-700"
-                                  : "border-slate-300 text-slate-700 hover:border-slate-400"
+                                  ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                                  : "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-500"
                               }`}
                             >
                               {option.label}
@@ -715,31 +716,31 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
                           ))}
                         </div>
                         {errors.pricingModel && (
-                          <p className="mt-1 text-xs text-red-600">{errors.pricingModel}</p>
+                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.pricingModel}</p>
                         )}
                       </div>
 
-                      <label className="flex items-start gap-2 text-sm text-slate-700">
+                      <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={formData.acceptedServiceRules}
                           onChange={(event) =>
                             handleFieldChange("acceptedServiceRules", event.target.checked)
                           }
-                          className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                          className="mt-1 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500"
                         />
                         <span>Concordo com os termos e regras de prestacao de servicos.</span>
                       </label>
                       {errors.acceptedServiceRules && (
-                        <p className="text-xs text-red-600">{errors.acceptedServiceRules}</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">{errors.acceptedServiceRules}</p>
                       )}
                     </div>
                   )}
 
                   {step === 3 && (
                     <div className="space-y-4">
-                      <h2 className="text-2xl font-bold text-slate-900">Etapa 3: Validacao inicial</h2>
-                      <p className="text-sm text-slate-600">
+                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Etapa 3: Validacao inicial</h2>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
                         Selecione como receber a verificacao da conta apos concluir o cadastro.
                       </p>
 
@@ -749,12 +750,12 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
                           onClick={() => handleFieldChange("verificationMethod", "EMAIL")}
                           className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
                             formData.verificationMethod === "EMAIL"
-                              ? "border-primary-500 bg-primary-50 text-primary-700"
-                              : "border-slate-300 text-slate-700 hover:border-slate-400"
+                              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                              : "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-500"
                           }`}
                         >
                           <span className="mb-1 block font-semibold">E-mail</span>
-                          <span className="text-xs text-slate-500">Codigo enviado para {formData.email || "seu e-mail"}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">Codigo enviado para {formData.email || "seu e-mail"}</span>
                         </button>
 
                         <button
@@ -762,20 +763,20 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
                           onClick={() => handleFieldChange("verificationMethod", "SMS")}
                           className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
                             formData.verificationMethod === "SMS"
-                              ? "border-primary-500 bg-primary-50 text-primary-700"
-                              : "border-slate-300 text-slate-700 hover:border-slate-400"
+                              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                              : "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-500"
                           }`}
                         >
                           <span className="mb-1 block font-semibold">SMS</span>
-                          <span className="text-xs text-slate-500">Codigo enviado para {formData.phone || "seu telefone"}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">Codigo enviado para {formData.phone || "seu telefone"}</span>
                         </button>
                       </div>
 
                       {errors.verificationMethod && (
-                        <p className="text-xs text-red-600">{errors.verificationMethod}</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">{errors.verificationMethod}</p>
                       )}
 
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                      <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-3 text-xs text-amber-800 dark:text-amber-300">
                         <p className="font-semibold">KYC sera solicitado depois no perfil.</p>
                         <p className="mt-1">
                           Para aceitar servicos, o profissional precisara concluir KYC verificado no perfil (CPF/CNPJ, documento com foto e selfie).
@@ -788,7 +789,7 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
                     {step > 1 ? (
                       <button
                         type="button"
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                         onClick={handlePreviousStep}
                       >
                         <ArrowLeft className="h-4 w-4" />
@@ -824,7 +825,7 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
 
               {isCompleted && (
                 <div className="space-y-5">
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                  <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 p-4 text-sm text-emerald-800 dark:text-emerald-300">
                     <p className="font-semibold">Cadastro profissional concluido.</p>
                     <p className="mt-1">
                       Conta criada com sucesso. O KYC sera concluido depois no perfil, antes de aceitar servicos.
@@ -841,7 +842,7 @@ const RegisterPromptProfessional: React.FC<RegisterPromptProfessionalProps> = ({
                     </button>
                     <button
                       type="button"
-                      className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                      className="rounded-xl border border-slate-300 dark:border-slate-600 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                       onClick={onClose}
                     >
                       Fechar
