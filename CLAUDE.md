@@ -4,7 +4,7 @@
 > **Stack**: Express 5 + React 19 + TypeScript + Prisma + SQLite
 > **Repo**: git@github.com:levygamer200-ux/faztudo.git
 > **Branch principal**: main
-> **Ultima atualizacao**: 2026-02-18
+> **Ultima atualizacao**: 2026-02-20
 
 ---
 
@@ -224,7 +224,7 @@ VITE_API_URL=http://localhost:3001
 
 ## Testes
 
-11 arquivos de teste no backend:
+11 arquivos de teste no backend (33 arquivos no total após expansão da suite):
 - **Integration**: orderFlow, chatMensagens, professionalCalendar, professionalCrm, professionalFinance, professionalReputation, systemMessage, emailVerification, passwordReset
 - **Unit**: emailService, envSmtp, scheduler
 - **Middleware**: chatFilter, sanitize
@@ -249,6 +249,19 @@ VITE_API_URL=http://localhost:3001
 6. **Rotas `:id` no serviceRoutes**: No `serviceRoutes.ts`, as rotas com parametro `/:id` ficam NO FINAL para nao conflitar com rotas nomeadas como `/orders`, `/briefs`, etc.
 
 7. **Multiplos routers no mesmo prefixo**: Todos os routers de servico sao montados em `/api/services`. Express processa na ordem de registro (serviceRoutes primeiro, depois orderRoutes, etc.).
+
+8. **Cookie sameSite em dev**: `getCookieOptions` em `authController.ts` usa `sameSite: "lax"` em
+   dev e `"strict"` em prod. Manter assim — `"strict"` quebra cross-origin cookies em dev (porta 5173 → 3001).
+
+9. **Ordem de middleware CORS**: `cors()` deve ficar ANTES de `generalLimiter` em `index.ts`. Se rate-limited (429),
+   a resposta precisa ter `Access-Control-Allow-Origin` para o browser não reportar falso CORS error.
+
+10. **Tour steps condicionais**: Steps com `requiresUnverified: true` no `PROFESSIONAL_STEPS` são automaticamente
+    filtrados por `startTour()` quando `user.isVerified === true`. Para adicionar novos steps KYC, usar esse campo.
+
+11. **Tour posicionamento cross-route**: `TourSpotlight` usa retry automático (100ms → 300ms → 600ms) para encontrar
+    `data-tour` elementos após `navigate()`. Páginas que são alvo de tour podem chamar `onTourTargetReady()` (via
+    `useTour()`) no seu `useEffect` de mount para sinalizar que o elemento está pronto mais rapidamente.
 
 ---
 
@@ -382,6 +395,8 @@ git push origin feat/nome-da-feature
 5. **Sem logging estruturado**: ~~Backend usa `console.log/error`~~ → **RESOLVIDO**: Migrado para Pino em todos os 27 arquivos.
 
 6. **Bug no teste de validacao**: ~~`validation.test.ts` > `createPaymentSchema` usa 'PIX' (maiusculo) mas schema espera 'pix' (minusculo)~~ → **RESOLVIDO**: Teste corrigido para incluir todos os campos obrigatórios do schema.
+
+7. **Cookie SameSite e CORS em dev**: ~~`sameSite: "strict"` impedia cookies cross-origin em dev, quebrando refresh token e causando aparência de "offline"~~ → **RESOLVIDO**: Alterado para `"lax"` em dev. `cors()` movido antes de `generalLimiter` para que 429 não apareça como erro de CORS.
 
 ### Prioridade BAIXA (Melhorias Futuras)
 
