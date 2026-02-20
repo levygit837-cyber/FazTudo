@@ -109,12 +109,12 @@ const StepBadge: React.FC<{ active: boolean; label: string; index: number }> = (
       className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
         active
           ? "bg-primary-600 text-white"
-          : "bg-slate-200 text-slate-600"
+          : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
       }`}
     >
       {index}
     </span>
-    <span className={`text-xs font-medium ${active ? "text-slate-900" : "text-slate-500"}`}>
+    <span className={`text-xs font-medium ${active ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>
       {label}
     </span>
   </div>
@@ -353,14 +353,14 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
         />
 
         <div
-          className={`relative z-10 max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl animate-soft-pop transition-all duration-150 ${
+          className={`relative z-10 max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl animate-soft-pop transition-all duration-150 ${
             isSwitchingRole ? "translate-x-1 scale-[0.99] opacity-0" : "translate-x-0 scale-100 opacity-100"
           }`}
           role="dialog"
           aria-modal="true"
         >
           <button
-            className="absolute right-4 top-4 z-20 rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            className="absolute right-4 top-4 z-20 rounded-full p-1.5 text-slate-500 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
             onClick={onClose}
             aria-label="Fechar modal"
           >
@@ -368,19 +368,19 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
           </button>
 
           <div className="grid gap-0 md:grid-cols-[1fr_1.35fr]">
-            <div className="relative hidden bg-slate-50 p-8 md:block">
-              <div className="absolute inset-0 bg-[radial-gradient(#dbeafe_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
+            <div className="relative hidden bg-slate-50 dark:bg-slate-800/50 p-8 md:block">
+              <div className="absolute inset-0 bg-[radial-gradient(#dbeafe_1px,transparent_1px)] dark:bg-[radial-gradient(#1e3a5f_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
               <div className="relative space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-700">
+                <div className="inline-flex items-center gap-2 rounded-full bg-primary-100 dark:bg-primary-900/40 px-3 py-1 text-xs font-semibold text-primary-700 dark:text-primary-300">
                   <Sparkles className="h-3.5 w-3.5" />
                   FazTudo para Clientes
                 </div>
 
                 <div>
-                  <h3 className="text-3xl font-bold leading-tight text-slate-900">
+                  <h3 className="text-3xl font-bold leading-tight text-slate-900 dark:text-white">
                     Qual resultado voce quer primeiro?
                   </h3>
-                  <p className="mt-2 text-sm text-slate-600">
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                     Escolha uma estrategia e veja como a plataforma se adapta ao seu ritmo.
                   </p>
                 </div>
@@ -393,20 +393,20 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
                       onClick={() => setSelectedCtaId(option.id)}
                       className={`w-full rounded-xl border px-3 py-3 text-left transition ${
                         selectedCtaId === option.id
-                          ? "border-primary-500 bg-primary-50"
-                          : "border-slate-200 bg-white hover:border-slate-300"
+                          ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30"
+                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600"
                       }`}
                     >
-                      <p className="text-sm font-semibold text-slate-900">{option.title}</p>
-                      <p className="text-xs text-slate-500">{option.subtitle}</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{option.title}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{option.subtitle}</p>
                     </button>
                   ))}
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-sm font-semibold text-slate-900">{selectedCta.title}</p>
-                  <p className="mt-1 text-sm text-slate-600">{selectedCta.microcopy}</p>
-                  <p className="mt-3 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{selectedCta.title}</p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{selectedCta.microcopy}</p>
+                  <p className="mt-3 inline-flex rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300">
                     {selectedCta.metric}
                   </p>
                 </div>
@@ -414,12 +414,12 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
             </div>
 
             <div className="space-y-6 p-6 sm:p-8">
-              <div className="inline-flex rounded-xl bg-slate-100 p-1">
-                <button className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-primary-700 shadow-sm">
+              <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+                <button className="rounded-lg bg-white dark:bg-slate-700 px-4 py-2 text-sm font-semibold text-primary-700 dark:text-primary-300 shadow-sm">
                   Sou Cliente
                 </button>
                 <button
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 transition-colors hover:text-slate-900 dark:hover:text-white"
                   onClick={handleSwitchToProfessional}
                 >
                   Sou Profissional
@@ -433,7 +433,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
               </div>
 
               {combinedError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-3 py-2 text-sm text-red-700 dark:text-red-300">
                   {combinedError}
                 </div>
               )}
@@ -442,135 +442,135 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
                 <>
                   {step === 1 && (
                     <div className="space-y-4">
-                      <h2 className="text-2xl font-bold text-slate-900">Etapa 1: Dados pessoais</h2>
+                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Etapa 1: Dados pessoais</h2>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Nome completo</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Nome completo</label>
                         <div className="relative">
-                          <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                           <input
                             type="text"
                             value={formData.name}
                             onChange={(event) => handleFieldChange("name", event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                             placeholder="Seu nome completo"
                             autoComplete="name"
                           />
                         </div>
-                        {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
+                        {errors.name && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.name}</p>}
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Telefone</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Telefone</label>
                           <div className="relative">
-                            <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                             <input
                               type="tel"
                               value={formData.phone}
                               onChange={(event) =>
                                 handleFieldChange("phone", formatPhone(event.target.value))
                               }
-                              className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                               placeholder="(11) 99999-9999"
                               autoComplete="tel"
                             />
                           </div>
-                          {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
+                          {errors.phone && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.phone}</p>}
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">E-mail</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">E-mail</label>
                           <div className="relative">
-                            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                             <input
                               type="email"
                               value={formData.email}
                               onChange={(event) => handleFieldChange("email", event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                               placeholder="seu@email.com"
                               autoComplete="email"
                             />
                           </div>
-                          {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+                          {errors.email && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.email}</p>}
                         </div>
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Endereco</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Endereco</label>
                         <div className="relative">
-                          <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                           <input
                             type="text"
                             value={formData.address}
                             onChange={(event) => handleFieldChange("address", event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                             placeholder="Rua, numero, bairro, cidade"
                             autoComplete="street-address"
                           />
                         </div>
-                        {errors.address && <p className="mt-1 text-xs text-red-600">{errors.address}</p>}
+                        {errors.address && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.address}</p>}
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Senha</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Senha</label>
                           <div className="relative">
-                            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                             <input
                               type="password"
                               value={formData.password}
                               onChange={(event) => handleFieldChange("password", event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                               placeholder="Minimo 8 caracteres"
                               autoComplete="new-password"
                             />
                           </div>
-                          {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
+                          {errors.password && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.password}</p>}
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Confirmar senha</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar senha</label>
                           <div className="relative">
-                            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                             <input
                               type="password"
                               value={formData.confirmPassword}
                               onChange={(event) =>
                                 handleFieldChange("confirmPassword", event.target.value)
                               }
-                              className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
                               placeholder="Repita a senha"
                               autoComplete="new-password"
                             />
                           </div>
                           {errors.confirmPassword && (
-                            <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>
+                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.confirmPassword}</p>
                           )}
                         </div>
                       </div>
 
-                      <label className="flex items-start gap-2 text-sm text-slate-700">
+                      <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={formData.acceptedTerms}
                           onChange={(event) =>
                             handleFieldChange("acceptedTerms", event.target.checked)
                           }
-                          className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                          className="mt-1 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500"
                         />
                         <span>Li e aceito os termos de uso e politica de privacidade.</span>
                       </label>
                       {errors.acceptedTerms && (
-                        <p className="text-xs text-red-600">{errors.acceptedTerms}</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">{errors.acceptedTerms}</p>
                       )}
                     </div>
                   )}
 
                   {step === 2 && (
                     <div className="space-y-4">
-                      <h2 className="text-2xl font-bold text-slate-900">Etapa 2: Verificacao</h2>
-                      <p className="text-sm text-slate-600">
+                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Etapa 2: Verificacao</h2>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
                         Escolha como deseja validar a conta quando a verificacao for liberada.
                       </p>
 
@@ -580,12 +580,12 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
                           onClick={() => handleFieldChange("verificationMethod", "EMAIL")}
                           className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
                             formData.verificationMethod === "EMAIL"
-                              ? "border-primary-500 bg-primary-50 text-primary-700"
-                              : "border-slate-300 text-slate-700 hover:border-slate-400"
+                              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                              : "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-500"
                           }`}
                         >
                           <span className="mb-1 block font-semibold">E-mail</span>
-                          <span className="text-xs text-slate-500">Codigo enviado para {formData.email || "seu e-mail"}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">Codigo enviado para {formData.email || "seu e-mail"}</span>
                         </button>
 
                         <button
@@ -593,29 +593,29 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
                           onClick={() => handleFieldChange("verificationMethod", "SMS")}
                           className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
                             formData.verificationMethod === "SMS"
-                              ? "border-primary-500 bg-primary-50 text-primary-700"
-                              : "border-slate-300 text-slate-700 hover:border-slate-400"
+                              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                              : "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-500"
                           }`}
                         >
                           <span className="mb-1 block font-semibold">SMS</span>
-                          <span className="text-xs text-slate-500">Codigo enviado para {formData.phone || "seu telefone"}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">Codigo enviado para {formData.phone || "seu telefone"}</span>
                         </button>
                       </div>
 
                       {errors.verificationMethod && (
-                        <p className="text-xs text-red-600">{errors.verificationMethod}</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">{errors.verificationMethod}</p>
                       )}
                     </div>
                   )}
 
                   {step === 3 && (
                     <div className="space-y-4">
-                      <h2 className="text-2xl font-bold text-slate-900">Etapa 3: Confirmacao</h2>
-                      <p className="text-sm text-slate-600">
+                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Etapa 3: Confirmacao</h2>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
                         Revise os dados e finalize o cadastro de cliente.
                       </p>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300">
                         <p><strong>Nome:</strong> {formData.name}</p>
                         <p><strong>E-mail:</strong> {formData.email}</p>
                         <p><strong>Telefone:</strong> {formData.phone}</p>
@@ -629,7 +629,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
                     {step > 1 ? (
                       <button
                         type="button"
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                         onClick={handlePreviousStep}
                       >
                         <ArrowLeft className="h-4 w-4" />
@@ -665,7 +665,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
 
               {isCompleted && (
                 <div className="space-y-5">
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                  <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 p-4 text-sm text-emerald-800 dark:text-emerald-300">
                     <p className="font-semibold">Cadastro criado com sucesso.</p>
                     <p className="mt-1">
                       Sua conta foi criada e a validacao por {formData.verificationMethod === "EMAIL" ? "e-mail" : "SMS"} sera habilitada na proxima etapa da plataforma.
@@ -682,7 +682,7 @@ const RegisterPromptClient: React.FC<RegisterPromptClientProps> = ({
                     </button>
                     <button
                       type="button"
-                      className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                      className="rounded-xl border border-slate-300 dark:border-slate-600 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                       onClick={onClose}
                     >
                       Fechar
