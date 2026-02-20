@@ -12,7 +12,7 @@ import { SocketProvider } from "./context/SocketContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import { TourProvider } from "./context/TourContext";
-// import { TourSpotlight } from "./components/common/TourSpotlight"; // uncomment after Task 2
+import { TourSpotlight } from "./components/common/TourSpotlight";
 import ToastContainer from "./components/common/Toast";
 import LandingPageProfessional from "./pages/LandingPageProfessional";
 import LandingPageUser from "./pages/LandingPageUser";
@@ -90,6 +90,7 @@ const App: React.FC = () => {
         <ToastProvider>
         <AuthProvider>
         <TourProvider>
+        <TourSpotlight />
         <SocketProvider>
         <SessionTracker />
         <Routes>
