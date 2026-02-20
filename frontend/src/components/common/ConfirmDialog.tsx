@@ -73,6 +73,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
+      aria-describedby="confirm-dialog-message"
     >
       <div
         ref={dialogRef}
@@ -91,7 +92,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               >
                 {title}
               </h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+              <p
+                id="confirm-dialog-message"
+                className="mt-2 text-sm text-slate-600 dark:text-slate-400"
+              >
                 {message}
               </p>
             </div>

@@ -416,9 +416,10 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                   <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">
                     Categorias
                   </h3>
-                  <div className="space-y-1 max-h-64 overflow-y-auto">
+                  <div role="group" aria-label="Filtros de categoria" className="space-y-1 max-h-64 overflow-y-auto">
                     <button
                       onClick={() => handleCategorySelect(null)}
+                      aria-pressed={!categoryId}
                       className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                         !categoryId
                           ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 font-medium"
@@ -431,6 +432,7 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                       <button
                         key={cat.id}
                         onClick={() => handleCategorySelect(cat.id)}
+                        aria-pressed={categoryId === cat.id.toString()}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                           categoryId === cat.id.toString()
                             ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 font-medium"
@@ -458,16 +460,18 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                       <input
                         type="number"
                         placeholder="Min"
+                        aria-label="Preço mínimo"
                         value={minPrice || ""}
                         onChange={(e) =>
                           handlePriceFilter(e.target.value, maxPrice || "")
                         }
                         className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm dark:text-slate-100"
                       />
-                      <span className="text-slate-400 dark:text-slate-500 self-center">-</span>
+                      <span aria-hidden="true" className="text-slate-400 dark:text-slate-500 self-center">-</span>
                       <input
                         type="number"
                         placeholder="Max"
+                        aria-label="Preço máximo"
                         value={maxPrice || ""}
                         onChange={(e) =>
                           handlePriceFilter(minPrice || "", e.target.value)

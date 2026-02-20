@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { OrderCard } from "./OrderCard";
 import { SkeletonOrderCard } from "../common/Skeleton";
 import { EmptyState } from "../common/EmptyState";
+import { EmptyStateGuided } from "../common/EmptyStateGuided";
+import { ShoppingBag, Briefcase } from "lucide-react";
 import { SearchBar } from "../common/SearchBar";
 import Tabs from "../common/Tabs";
 import { listOrders, acceptOrder, cancelOrder } from "../../services/serviceService";
@@ -203,15 +205,39 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
           ))}
         </div>
       ) : filteredOrders.length === 0 && !refreshing ? (
-        <EmptyState
-          icon="package"
-          title="Nenhum pedido encontrado"
-          description={activeTab !== "all" ? "Nenhum pedido com este status." : config.emptyDescription}
-          action={{
-            label: config.emptyActionLabel,
-            onClick: () => navigate(config.emptyActionPath),
-          }}
-        />
+        activeTab !== "all" ? (
+          <EmptyState
+            icon="package"
+            title="Nenhum pedido encontrado"
+            description="Nenhum pedido com este status."
+            action={{
+              label: config.emptyActionLabel,
+              onClick: () => navigate(config.emptyActionPath),
+            }}
+          />
+        ) : role === "client" ? (
+          <EmptyStateGuided
+            icon={ShoppingBag}
+            title="Nenhum pedido ainda"
+            description="Você ainda não fez nenhum pedido. Explore nossos serviços e encontre o profissional ideal para o que você precisa."
+            actions={[
+              { label: "Explorar serviços", to: "/services" },
+              { label: "Como funciona?", to: "/#como-funciona", variant: "secondary" },
+            ]}
+            tip="Profissionais disponíveis 24h. Receba orçamentos em minutos!"
+          />
+        ) : (
+          <EmptyStateGuided
+            icon={Briefcase}
+            title="Nenhum pedido recebido ainda"
+            description="Quando clientes solicitarem seus serviços, os pedidos aparecerão aqui. Certifique-se de ter serviços publicados e um perfil completo."
+            actions={[
+              { label: "Criar serviço", to: "/professional/create-service" },
+              { label: "Completar perfil", to: "/profile", variant: "secondary" },
+            ]}
+            tip="Perfis com foto e descrição completa recebem 3x mais pedidos!"
+          />
+        )
       ) : (
         <div className="relative">
           {refreshing && (
