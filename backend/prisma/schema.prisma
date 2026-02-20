@@ -140,6 +140,12 @@ model User {
   companyProfile         CompanyProfile?
   companyMember          CompanyMember?
 
+  // Analytics relations (B1)
+  searchEvents           SearchEvent[]
+  listingViews           ServiceListingView[] @relation("ListingViewer")
+  orderEvents            ServiceOrderEvent[]  @relation("OrderEventActor")
+  devices                UserDevice[]
+
   @@index([email])
   @@index([role])
   @@index([status])
@@ -198,6 +204,7 @@ model ServiceListing {
   professionalId Int
   categoryId     Int
   serviceOrders  ServiceOrder[]
+  views          ServiceListingView[] // analytics
 
   professional User            @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   category     ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -258,6 +265,7 @@ model ServiceOrder {
   scheduleBlock ScheduleBlock?
   disputes      Dispute[]
   team          ServiceTeam?
+  events        ServiceOrderEvent[] // analytics
 
   // Reschedule approval flow
   rescheduleProposedDate DateTime?
@@ -807,4 +815,106 @@ model PageView {
   @@index([sessionId])
   @@index([path])
   @@index([enteredAt])
+}
+
+// ─── ANALYTICS MODELS (B1) ────────────────────────────────────────────────────
+
+/// Records every search performed on the platform for ranking and funnel analysis.
+model SearchEvent {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  query      String
+  categoryId Int?
+  city       String?
+  lat        Float?
+  lng        Float?
+  resultCount Int     @default(0)
+  clickedId  Int?     // ServiceListing.id that was clicked (null = no click)
+  device     String?  // "mobile" | "desktop" | "tablet"
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([query])
+  @@index([city])
+  @@index([createdAt])
+}
+
+/// Impressions of service listings — enables CTR and visibility analytics.
+model ServiceListingView {
+  id               Int            @id @default(autoincrement())
+  listingId        Int
+  listing          ServiceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  viewerId         Int?
+  viewer           User?          @relation("ListingViewer", fields: [viewerId], references: [id], onDelete: SetNull)
+  source           String?        // "search" | "category" | "recommendation" | "direct"
+  device           String?        // "mobile" | "desktop" | "tablet"
+  sessionDuration  Int?           // seconds on listing page
+  convertedToOrder Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+
+  @@index([listingId])
+  @@index([viewerId])
+  @@index([createdAt])
+  @@index([convertedToOrder])
+}
+
+/// State transitions for orders — enables funnel analysis and drop-off identification.
+model ServiceOrderEvent {
+  id        Int          @id @default(autoincrement())
+  orderId   Int
+  order     ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorId   Int?
+  actor     User?        @relation("OrderEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  fromStatus String?     // previous order status
+  toStatus  String       // new order status
+  durationMs Int?        // ms since last state transition
+  metadata  String?      // JSON blob for extra context
+  createdAt DateTime     @default(now())
+
+  @@index([orderId])
+  @@index([actorId])
+  @@index([toStatus])
+  @@index([createdAt])
+}
+
+/// Aggregated daily KPIs per city — pre-computed for dashboard performance.
+model CityMetrics {
+  id                    Int      @id @default(autoincrement())
+  city                  String
+  date                  DateTime // date only (stored as midnight UTC)
+  newUsers              Int      @default(0)
+  newProfessionals      Int      @default(0)
+  ordersCreated         Int      @default(0)
+  ordersCompleted       Int      @default(0)
+  ordersCancelled       Int      @default(0)
+  gmv                   Float    @default(0) // Gross Merchandise Value (R$)
+  platformFeeCollected  Float    @default(0)
+  avgOrderValue         Float    @default(0)
+  avgCompletionDays     Float    @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([city, date])
+  @@index([city])
+  @@index([date])
+}
+
+/// Tracks devices per user — enables cross-device analysis and mobile-first insights.
+model UserDevice {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceType  String   // "mobile" | "desktop" | "tablet"
+  os          String?  // "iOS" | "Android" | "Windows" | "macOS" | "Linux"
+  browser     String?
+  userAgent   String?
+  pushToken   String?  // FCM/APNs token for push notifications
+  isActive    Boolean  @default(true)
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([deviceType])
+  @@index([lastSeenAt])
 }

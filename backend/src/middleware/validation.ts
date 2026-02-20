@@ -497,3 +497,24 @@ export const rescheduleOrderSchema = z.object({
   scheduledDate: z.string().datetime("Data inválida"),
   message: z.string().max(500).optional(),
 });
+
+// ============================================
+// ANALYTICS SCHEMAS — B2
+// ============================================
+
+export const trackSearchSchema = z.object({
+  query: z.string().min(1).max(200).optional(),
+  category: z.string().max(100).optional(),
+  city: z.string().max(100).optional(),
+  resultsCount: z.number().int().min(0).default(0),
+  sessionId: z.string().max(100).optional(),
+  device: z.enum(["mobile", "tablet", "desktop", "unknown"]).optional(),
+});
+
+export const trackListingViewSchema = z.object({
+  listingId: z.number().int().positive('Listing ID invalido'),
+  source: z.enum(["search", "recommendation", "landing", "direct", "unknown"]).optional(),
+  city: z.string().max(100).optional(),
+  device: z.enum(["mobile", "tablet", "desktop", "unknown"]).optional(),
+  sessionId: z.string().max(100).optional(),
+});
