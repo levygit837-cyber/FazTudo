@@ -39,11 +39,16 @@ const CompanyOrders: React.FC = () => {
   const fetchData = () => {
     setLoading(true);
     Promise.all([
-      api.get("/services/orders"),
+      api.get("/company/orders"),
       api.get("/company/members"),
     ])
       .then(([ordersRes, membersRes]) => {
-        setOrders(ordersRes.data.data ?? ordersRes.data.orders ?? []);
+        // Backend returns { data: { orders: [...], pagination: {...} } }
+        const ordersData = ordersRes.data.data;
+        const ordersList = Array.isArray(ordersData)
+          ? ordersData
+          : (ordersData?.orders ?? []);
+        setOrders(ordersList);
         setMembers(membersRes.data.data ?? []);
       })
       .catch((err) => setError(err.response?.data?.message || "Erro ao carregar pedidos"))

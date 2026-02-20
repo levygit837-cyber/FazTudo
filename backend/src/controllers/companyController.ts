@@ -66,6 +66,75 @@ export async function getCompanyStorefront(req: AuthRequest, res: Response) {
 }
 
 /** GET /api/company/dashboard */
+/** GET /api/company/orders */
+export async function getCompanyOrders(req: AuthRequest, res: Response) {
+  try {
+    const companyId = req.companyId!;
+    const profile = await prisma.companyProfile.findUnique({
+      where: { id: companyId },
+      select: { userId: true },
+    });
+    if (!profile) return res.status(404).json({ success: false, message: "Empresa não encontrada" });
+
+    // Get all member userIds (including company owner)
+    const members = await prisma.companyMember.findMany({
+      where: { companyId, isActive: true },
+      select: { userId: true },
+    });
+    const memberUserIds = members.map((m) => m.userId);
+    // Include company owner themselves
+    const professionalIds = Array.from(new Set([profile.userId, ...memberUserIds]));
+
+    const { status, page = "1", limit = "20" } = req.query as Record<string, string>;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const where: any = { professionalId: { in: professionalIds } };
+    const validStatuses = [
+      "DRAFT", "PENDING", "ACCEPTED", "IN_PROGRESS",
+      "AWAITING_CLIENT_CONFIRMATION", "AWAITING_PROFESSIONAL_CONFIRMATION",
+      "COMPLETED", "CANCELLED", "EXPIRED", "DISPUTED",
+    ];
+    if (status && status !== "all" && validStatuses.includes(status)) {
+      where.status = status;
+    }
+
+    const [orders, total] = await Promise.all([
+      prisma.serviceOrder.findMany({
+        where,
+        include: {
+          client: { select: { id: true, name: true, profileImage: true } },
+          professional: { select: { id: true, name: true, profileImage: true } },
+          serviceListing: { select: { id: true, title: true, price: true } },
+          payments: {
+            where: { status: { in: ["HELD", "RELEASED"] } },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+          _count: { select: { messages: true, reviews: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum,
+      }),
+      prisma.serviceOrder.count({ where }),
+    ]);
+
+    return res.json({
+      success: true,
+      message: "Pedidos da empresa obtidos",
+      data: {
+        orders,
+        pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+      },
+    });
+  } catch (err) {
+    log.error({ err }, "getCompanyOrders error");
+    throw err;
+  }
+}
+
 export async function getCompanyDashboard(req: AuthRequest, res: Response) {
   try {
     const companyId = req.companyId!;
