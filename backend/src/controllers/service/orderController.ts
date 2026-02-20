@@ -11,6 +11,34 @@ import { createLogger } from "../../lib/logger";
 
 const log = createLogger("orderController");
 
+// ─── ANALYTICS HELPER ─────────────────────────────────────────────────────────
+
+/**
+ * Records a ServiceOrderEvent for audit trail and funnel analytics.
+ * Non-blocking: failures are logged but never propagate to the caller.
+ */
+async function recordOrderEvent(
+  orderId: number,
+  fromStatus: string | null,
+  toStatus: string,
+  actorId: number | null,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await prisma.serviceOrderEvent.create({
+      data: {
+        orderId,
+        fromStatus: fromStatus ?? null,
+        toStatus,
+        actorId: actorId ?? null,
+        metadata: metadata ? JSON.stringify(metadata) : null,
+      },
+    });
+  } catch (err) {
+    log.error({ err }, "Failed to record order event — non-blocking");
+  }
+}
+
 
 // Tipos para request bodies
 interface CreateServiceOrderBody {
@@ -636,6 +664,7 @@ export const acceptServiceOrder = async (
       orderId: serviceOrder.id,
       status: "ACCEPTED",
     });
+    void recordOrderEvent(serviceOrder.id, serviceOrder.status, "ACCEPTED", req.user.id);
 
     res
       .status(200)
@@ -735,6 +764,8 @@ export const startServiceOrder = async (
       orderId,
       { professionalId: req.user.id, professionalName: req.user.name },
     );
+
+    void recordOrderEvent(orderId, serviceOrder.status, "IN_PROGRESS", req.user.id);
 
     // Real-time Socket.io emissions
     emitToOrder(serviceOrder.id, "order:statusChanged", {
@@ -862,6 +893,8 @@ export const completeServiceOrder = async (
         { clientId: req.user.id, clientName: req.user.name },
       );
     }
+
+    void recordOrderEvent(orderId, serviceOrder.status, "AWAITING_PROFESSIONAL_CONFIRMATION", req.user.id);
 
     // Real-time Socket.io emissions
     emitToOrder(orderId, "order:statusChanged", {
@@ -1108,6 +1141,8 @@ export const confirmProfessionalCompletion = async (
       { professionalId: req.user.id, professionalName: req.user.name },
     );
 
+    void recordOrderEvent(orderId, serviceOrder.status, "COMPLETED", req.user.id);
+
     // Real-time Socket.io emissions
     emitToOrder(orderId, "order:statusChanged", {
       orderId,
@@ -1253,6 +1288,8 @@ export const cancelServiceOrder = async (
       orderId,
       { cancelledById: req.user.id, cancelledByName: actorName, reason },
     );
+
+    void recordOrderEvent(orderId, serviceOrder.status, "CANCELLED", req.user.id, { reason });
 
     // Real-time Socket.io emissions
     emitToOrder(orderId, "order:statusChanged", {
