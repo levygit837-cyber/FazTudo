@@ -8,6 +8,7 @@ import React, {
   useState,
 } from "react";
 import { useNavigate } from "react-router";
+import { useAuth } from "./AuthContext";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ export interface TourStep {
   title: string;
   description: string;
   simulationMode?: boolean; // true = no target element, center on screen
+  requiresUnverified?: boolean; // se true, step só aparece para usuários não verificados
 }
 
 interface TourState {
@@ -107,14 +109,16 @@ export const PROFESSIONAL_STEPS: TourStep[] = [
     title: "Complete a verificação (KYC)",
     description:
       "Clique aqui para enviar seus documentos. É rápido e garante mais confiança para os seus clientes.",
+    requiresUnverified: true, // step só aparece para usuários não verificados
   },
   {
     id: "tour-verify-form",
-    route: "/verify-email",
+    route: "/verify-account", // corrigido: era "/verify-email", o data-tour fica em /verify-account
     icon: "FileText",
     title: "Envie seus documentos",
     description:
       "Preencha seus dados e envie uma foto do documento. Você será notificado por email quando aprovado.",
+    requiresUnverified: true, // step só aparece para usuários não verificados
   },
   {
     id: "tour-create-service-btn",
@@ -188,6 +192,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [state, setState] = useState<TourState>({
     isActive: false,
     tourId: null,
@@ -212,7 +217,12 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const startTour = useCallback(
     (id: TourId) => {
-      const steps = STEPS_MAP[id];
+      // Filtrar steps que requerem usuário não verificado quando já é verificado
+      const allSteps = STEPS_MAP[id];
+      const steps = allSteps.filter((step) => {
+        if (step.requiresUnverified && user?.isVerified) return false;
+        return true;
+      });
       setState({
         isActive: true,
         tourId: id,
@@ -221,7 +231,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       navigateToStep(steps[0]);
     },
-    [navigateToStep]
+    [navigateToStep, user?.isVerified]
   );
 
   const nextStep = useCallback(() => {
