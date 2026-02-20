@@ -499,22 +499,23 @@ export const rescheduleOrderSchema = z.object({
 });
 
 // ============================================
-// ANALYTICS SCHEMAS — B2
+// ANALYTICS SCHEMAS (B2)
 // ============================================
 
 export const trackSearchSchema = z.object({
   query: z.string().min(1).max(200).optional(),
-  category: z.string().max(100).optional(),
+  categoryId: z.number().int().positive().optional(),
   city: z.string().max(100).optional(),
-  resultsCount: z.number().int().min(0).default(0),
-  sessionId: z.string().max(100).optional(),
-  device: z.enum(["mobile", "tablet", "desktop", "unknown"]).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  resultCount: z.number().int().min(0).optional(),
+  clickedId: z.number().int().positive().optional(),
+  device: z.enum(["mobile", "desktop", "tablet"]).optional(),
 });
 
 export const trackListingViewSchema = z.object({
-  listingId: z.number().int().positive('Listing ID invalido'),
-  source: z.enum(["search", "recommendation", "landing", "direct", "unknown"]).optional(),
-  city: z.string().max(100).optional(),
-  device: z.enum(["mobile", "tablet", "desktop", "unknown"]).optional(),
-  sessionId: z.string().max(100).optional(),
+  listingId: z.number().int().positive("ID do listing inválido"),
+  source: z.enum(["search", "category", "recommendation", "direct", "other"]).optional(),
+  device: z.enum(["mobile", "desktop", "tablet"]).optional(),
+  sessionDuration: z.number().int().min(0).optional(),
 });

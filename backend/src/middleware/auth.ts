@@ -138,6 +138,50 @@ export const verifyToken = async (
   }
 };
 
+
+/**
+ * Optional authentication middleware.
+ * Populates req.user if a valid token is present; silently skips if not.
+ * Use for endpoints that work for both anonymous and authenticated users (e.g. analytics).
+ */
+export const optionalAuth = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    let token: string | undefined;
+    if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    } else {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.substring(7);
+      } else if (authHeader) {
+        token = authHeader;
+      }
+    }
+
+    if (!token) {
+      next();
+      return;
+    }
+
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload;
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, name: true, role: true, status: true, isVerified: true, tokenVersion: true },
+    });
+
+    if (user && user.tokenVersion === decoded.tokenVersion) {
+      req.user = user;
+    }
+  } catch {
+    // Token invalid or expired — treat as anonymous
+  }
+  next();
+};
+
 // Middleware para verificar roles específicas
 export const requireRole = (...allowedRoles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
