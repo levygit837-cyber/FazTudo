@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidCPF } from '../utils/cpfValidator';
 
 // ============================================
 // HELPERS
@@ -34,6 +35,45 @@ const positiveAmountSchema = z
   .number()
   .positive('Valor deve ser maior que zero')
   .finite('Valor invalido');
+
+/** CPF: validates structure + official check digits [VULN-09] */
+const cpfSchema = z
+  .string()
+  .refine(isValidCPF, { message: 'CPF invalido' });
+
+/**
+ * Trusted image URL — must be HTTPS and from an allowlisted CDN/storage domain.
+ * Prevents SSRF by rejecting arbitrary external URLs in profile images. [VULN-10]
+ */
+const TRUSTED_IMAGE_HOSTS = [
+  'res.cloudinary.com',
+  'storage.googleapis.com',
+  'amazonaws.com',
+  's3.amazonaws.com',
+  'cloudflare-ipfs.com',
+  'imagedelivery.net',        // Cloudflare Images
+  'faztudo.com.br',
+  'faztudo.app',
+  'localhost',
+];
+
+const trustedImageUrlSchema = z
+  .string()
+  .url('URL de imagem invalida')
+  .refine(
+    (url) => {
+      try {
+        const parsed = new URL(url);
+        // Allow http only for localhost (dev)
+        if (parsed.hostname === 'localhost') return true;
+        if (parsed.protocol !== 'https:') return false;
+        return TRUSTED_IMAGE_HOSTS.some((host) => parsed.hostname.endsWith(host));
+      } catch {
+        return false;
+      }
+    },
+    { message: 'URL de imagem deve ser de um provedor de hospedagem confiavel (Cloudinary, S3, GCS, etc.)' },
+  );
 
 // ============================================
 // AUTH SCHEMAS
@@ -101,7 +141,7 @@ export const updateProfileSchema = z.object({
   bio: sanitizedString
     .pipe(z.string().max(500, 'Bio muito longa'))
     .optional(),
-  profileImage: z.string().url('URL de imagem invalida').optional(),
+  profileImage: trustedImageUrlSchema.optional(),
 }).refine(
   (data) => Object.keys(data).length > 0,
   { message: 'Pelo menos um campo deve ser fornecido' },
@@ -212,7 +252,7 @@ export const createPaymentSchema = z.object({
   // Dados do pagador (obrigatórios)
   payerEmail: z.string().email('Email invalido'),
   payerName: z.string().min(2, 'Nome muito curto').max(200),
-  payerCPF: z.string().min(11, 'CPF invalido').max(14),
+  payerCPF: cpfSchema,
   // Campos para cartão de crédito (opcionais)
   token: z.string().max(500).optional(),
   paymentMethodId: z.string().max(100).optional(),
