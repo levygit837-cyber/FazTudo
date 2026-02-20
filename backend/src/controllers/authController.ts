@@ -21,7 +21,10 @@ const log = createLogger("authController");
 const getCookieOptions = (maxAgeMs: number) => ({
   httpOnly: true,
   secure: env.NODE_ENV === "production",
-  sameSite: "strict" as const,
+  // "lax" permite que o cookie seja enviado em requests cross-origin da mesma app
+  // (e.g., frontend:5173 → backend:3001 em dev). "strict" bloquearia todos os cookies
+  // em requests cross-origin, quebrando o refresh token flow em SPAs.
+  sameSite: (env.NODE_ENV === "production" ? "strict" : "lax") as "strict" | "lax",
   path: "/",
   maxAge: maxAgeMs,
 });
@@ -349,7 +352,7 @@ export const logout = async (
     const clearOpts = {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
-      sameSite: "strict" as const,
+      sameSite: (env.NODE_ENV === "production" ? "strict" : "lax") as "strict" | "lax",
       path: "/",
     };
     res.clearCookie("accessToken", clearOpts);
