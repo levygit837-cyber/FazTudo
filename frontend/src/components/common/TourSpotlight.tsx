@@ -112,9 +112,7 @@ export const TourSpotlight: React.FC = () => {
 
   // Highlight target element and calculate card position
   useLayoutEffect(() => {
-    if (!isActive || !currentStepData) return;
-
-    // Remove previous highlight
+    // Always remove previous highlight first (even when tour becomes inactive)
     if (highlightRef.current) {
       highlightRef.current.style.outline = "";
       highlightRef.current.style.outlineOffset = "";
@@ -122,6 +120,8 @@ export const TourSpotlight: React.FC = () => {
       highlightRef.current.style.zIndex = "";
       highlightRef.current = null;
     }
+
+    if (!isActive || !currentStepData) return;
 
     if (isSimulation) {
       setCardPos(null); // centered via CSS

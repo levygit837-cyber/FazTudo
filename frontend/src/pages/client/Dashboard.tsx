@@ -114,7 +114,7 @@ function formatTimeAgo(dateStr: string): string {
 const ClientDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { startTour } = useTour();
+  const { startTour, isActive } = useTour();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendedService[]>([]);
@@ -138,11 +138,11 @@ const ClientDashboard: React.FC = () => {
 
   // Disparar tour na primeira visita
   useEffect(() => {
-    if (!localStorage.getItem("faztudo_client_tour_done")) {
+    if (!isActive && !localStorage.getItem("faztudo_client_tour_done")) {
       const timer = setTimeout(() => startTour("client"), 500);
       return () => clearTimeout(timer);
     }
-  }, [startTour]);
+  }, [startTour, isActive]);
 
   const handleTipPointerDown = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     tipDragRef.current = { startX: e.clientX, isDragging: true };

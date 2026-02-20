@@ -48,7 +48,7 @@ function getGreeting(): { text: string; icon: React.ReactNode } {
 const ProfessionalDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { startTour } = useTour();
+  const { startTour, isActive } = useTour();
   const [loading, setLoading] = useState(true);
   const [recentOrders, setRecentOrders] = useState<ServiceOrder[]>([]);
   const [stats, setStats] = useState<ProfessionalDashboardStats>({
@@ -68,11 +68,11 @@ const ProfessionalDashboard: React.FC = () => {
 
   // Disparar tour na primeira visita
   useEffect(() => {
-    if (!localStorage.getItem("faztudo_pro_tour_done")) {
+    if (!isActive && !localStorage.getItem("faztudo_pro_tour_done")) {
       const timer = setTimeout(() => startTour("professional"), 500);
       return () => clearTimeout(timer);
     }
-  }, [startTour]);
+  }, [startTour, isActive]);
 
   useEffect(() => {
     const loadData = async () => {

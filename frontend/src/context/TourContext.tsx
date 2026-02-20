@@ -110,7 +110,7 @@ export const PROFESSIONAL_STEPS: TourStep[] = [
   },
   {
     id: "tour-verify-form",
-    route: "/verify-account",
+    route: "/verify-email",
     icon: "FileText",
     title: "Envie seus documentos",
     description:
@@ -126,7 +126,7 @@ export const PROFESSIONAL_STEPS: TourStep[] = [
   },
   {
     id: "tour-create-service-form",
-    route: "/professional/create-service",
+    route: "/professional/catalog/new",
     icon: "Edit",
     title: "Descreva seu serviço",
     description:
