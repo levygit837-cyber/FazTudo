@@ -21,6 +21,7 @@ import { OrderCard } from "../../components/orders/OrderCard";
 import { ServiceCard } from "../../components/services/ServiceCard";
 import { SkeletonDashboard } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
+import { ClientOnboarding } from "../../components/common/ClientOnboarding";
 import {
   getDashboardStats,
   getRecentOrders,
@@ -114,6 +115,9 @@ const ClientDashboard: React.FC = () => {
   const [recommendations, setRecommendations] = useState<RecommendedService[]>([]);
   const [categories, setCategories] = useState<CategoryWithCounts[]>([]);
   const [tipIndex, setTipIndex] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem("faztudo_client_onboarding_done"),
+  );
   const [stats, setStats] = useState<ClientDashboardStats>({
     totalOrders: 0,
     pendingOrders: 0,
@@ -129,6 +133,11 @@ const ClientDashboard: React.FC = () => {
   const currentTip = TIPS[tipIndex];
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const tipDragRef = React.useRef<{ startX: number; isDragging: boolean }>({ startX: 0, isDragging: false });
+
+  const handleDismissOnboarding = () => {
+    localStorage.setItem("faztudo_client_onboarding_done", "1");
+    setShowOnboarding(false);
+  };
 
   const handleTipPointerDown = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     tipDragRef.current = { startX: e.clientX, isDragging: true };
@@ -203,6 +212,11 @@ const ClientDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
+      {/* ──────── ONBOARDING ──────── */}
+      {showOnboarding && (
+        <ClientOnboarding onDismiss={handleDismissOnboarding} />
+      )}
+
       {/* ──────── HERO ZONE ──────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div className="flex items-center gap-4">

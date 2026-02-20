@@ -21,6 +21,7 @@ import { ProgressRing } from "../../components/dashboard/ProgressRing";
 import { OrderCard } from "../../components/orders/OrderCard";
 import { SkeletonDashboard } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
+import { ProfessionalOnboarding } from "../../components/common/ProfessionalOnboarding";
 import {
   getDashboardStats,
   getRecentOrders,
@@ -45,6 +46,9 @@ const ProfessionalDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [recentOrders, setRecentOrders] = useState<ServiceOrder[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem("faztudo_pro_onboarding_done"),
+  );
   const [stats, setStats] = useState<ProfessionalDashboardStats>({
     totalOrders: 0,
     pendingOrders: 0,
@@ -59,6 +63,11 @@ const ProfessionalDashboard: React.FC = () => {
   });
 
   const greeting = useMemo(() => getGreeting(), []);
+
+  const handleDismissOnboarding = () => {
+    localStorage.setItem("faztudo_pro_onboarding_done", "1");
+    setShowOnboarding(false);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -94,6 +103,11 @@ const ProfessionalDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
+      {/* ──────── ONBOARDING ──────── */}
+      {showOnboarding && (
+        <ProfessionalOnboarding onDismiss={handleDismissOnboarding} />
+      )}
+
       {/* ──────── COMMAND CENTER HEADER ──────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
         <div className="flex items-center gap-4">
