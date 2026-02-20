@@ -22,6 +22,7 @@ export interface TourStep {
   description: string;
   simulationMode?: boolean; // true = no target element, center on screen
   requiresUnverified?: boolean; // se true, step só aparece para usuários não verificados
+  simulationVariant?: "order" | "map" | "confirm" | "payment"; // visual variant for simulation steps
 }
 
 interface TourState {
@@ -38,6 +39,8 @@ interface TourContextValue extends TourState {
   skipTour: () => void;
   completeTour: () => void;
   resetTour: (id: TourId) => void; // limpa localStorage e permite rever
+  onTourTargetReady: () => void; // chamado pelas páginas quando o data-tour está montado
+  readyNonce: number; // incrementa quando uma página sinaliza que seu data-tour está pronto
 }
 
 // ─── Steps definitions ───────────────────────────────────────────────────────
@@ -144,6 +147,7 @@ export const PROFESSIONAL_STEPS: TourStep[] = [
     description:
       "João Silva acabou de solicitar sua Instalação Elétrica. Após o dia agendado, você terá 15 minutos para chegar ao local combinado.",
     simulationMode: true,
+    simulationVariant: "order",
   },
   {
     id: "sim-navigate-map",
@@ -153,6 +157,7 @@ export const PROFESSIONAL_STEPS: TourStep[] = [
     description:
       "O mapa integrado mostra a rota até o endereço do cliente. Clique em 'Ver rota' para abrir a navegação passo a passo.",
     simulationMode: true,
+    simulationVariant: "map",
   },
   {
     id: "sim-confirm-completion",
@@ -162,6 +167,7 @@ export const PROFESSIONAL_STEPS: TourStep[] = [
     description:
       "Ao terminar o serviço, confirme a conclusão. O cliente também confirma. O pagamento fica em escrow até os dois confirmarem.",
     simulationMode: true,
+    simulationVariant: "confirm",
   },
   {
     id: "sim-payment-released",
@@ -171,6 +177,7 @@ export const PROFESSIONAL_STEPS: TourStep[] = [
     description:
       "Na simulação paramos aqui. Na realidade, 90% do valor vai direto para sua carteira FazTudo. Agora você está pronto para atender!",
     simulationMode: true,
+    simulationVariant: "payment",
   },
 ];
 
@@ -199,6 +206,8 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({
     currentStep: 0,
     steps: [],
   });
+  // Incremented when a page signals its data-tour target is ready in the DOM
+  const [readyNonce, setReadyNonce] = useState(0);
 
   // ref to avoid stale closure in navigate
   const stateRef = useRef(state);
@@ -275,16 +284,24 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({
     [startTour]
   );
 
+  // Called by pages when their data-tour target finishes mounting,
+  // triggering TourSpotlight to re-attempt positioning.
+  const notifyTargetReady = useCallback(() => {
+    setReadyNonce((n) => n + 1);
+  }, []);
+
   return (
     <TourContext.Provider
       value={{
         ...state,
+        readyNonce,
         startTour,
         nextStep,
         prevStep,
         skipTour,
         completeTour,
         resetTour,
+        onTourTargetReady: notifyTargetReady,
       }}
     >
       {children}

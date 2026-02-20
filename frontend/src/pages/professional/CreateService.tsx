@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, PlusCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useTour } from "../../context/TourContext";
 import { CategoryWithCounts, getMainCategories } from "../../services/categoryService";
 import {
   CreateServiceListingData,
@@ -11,11 +12,22 @@ import {
 const CreateService: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isActive, onTourTargetReady } = useTour();
 
   const [categories, setCategories] = useState<CategoryWithCounts[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Notify tour when this page's data-tour target finishes mounting
+  useEffect(() => {
+    if (isActive) {
+      const raf = requestAnimationFrame(() => {
+        onTourTargetReady();
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [isActive, onTourTargetReady]);
 
   const [form, setForm] = useState<CreateServiceListingData>({
     title: "",
