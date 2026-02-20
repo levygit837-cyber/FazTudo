@@ -8,6 +8,9 @@ import {
   ArrowRight,
   DollarSign,
   Lightbulb,
+  MessageSquare,
+  PlusCircle,
+  FileText,
   Sun,
   Sunrise,
   Moon,
@@ -22,6 +25,7 @@ import { ServiceCard } from "../../components/services/ServiceCard";
 import { SkeletonDashboard } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
 import { ClientOnboarding } from "../../components/common/ClientOnboarding";
+import { QuickActionBar } from "../../components/dashboard/QuickActionBar";
 import {
   getDashboardStats,
   getRecentOrders,
@@ -251,6 +255,16 @@ const ClientDashboard: React.FC = () => {
           <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
         </Link>
       </div>
+
+      {/* ──────── QUICK ACTIONS ──────── */}
+      <QuickActionBar
+        actions={[
+          { label: "Novo pedido", to: "/client/orders/new", icon: PlusCircle, variant: "primary" },
+          { label: "Buscar serviços", to: "/services", icon: Search, variant: "secondary" },
+          { label: "Meus pedidos", to: "/client/orders", icon: FileText, variant: "secondary" },
+          { label: "Mensagens", to: "/messages", icon: MessageSquare, variant: "ghost" },
+        ]}
+      />
 
       {/* ──────── STAT STRIP — Assimétrico ──────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-grid">

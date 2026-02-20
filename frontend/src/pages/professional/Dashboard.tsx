@@ -7,12 +7,14 @@ import {
   FileText,
   Wallet,
   AlertTriangle,
+  Calendar,
+  MessageSquare,
+  PlusCircle,
   Sun,
   Sunrise,
   Moon,
   TrendingUp,
   BarChart3,
-  Calendar,
   Award,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -22,6 +24,7 @@ import { OrderCard } from "../../components/orders/OrderCard";
 import { SkeletonDashboard } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
 import { ProfessionalOnboarding } from "../../components/common/ProfessionalOnboarding";
+import { QuickActionBar } from "../../components/dashboard/QuickActionBar";
 import {
   getDashboardStats,
   getRecentOrders,
@@ -151,6 +154,16 @@ const ProfessionalDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ──────── QUICK ACTIONS ──────── */}
+      <QuickActionBar
+        actions={[
+          { label: "Criar serviço", to: "/professional/create-service", icon: PlusCircle, variant: "primary" },
+          { label: "Pedidos recebidos", to: "/professional/services", icon: FileText, variant: "secondary" },
+          { label: "Agenda", to: "/professional/agenda", icon: Calendar, variant: "secondary" },
+          { label: "Mensagens", to: "/messages", icon: MessageSquare, variant: "ghost" },
+        ]}
+      />
 
       {/* ──────── ALERT BAR ──────── */}
       {stats.pendingOrders > 0 && (
