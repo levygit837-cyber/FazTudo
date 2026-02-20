@@ -143,7 +143,7 @@ const CreateService: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5" data-tour="tour-create-service-form">
           <div className="grid gap-5 md:grid-cols-2">
             <div className="md:col-span-2">
               <label className="label">Titulo do servico</label>
