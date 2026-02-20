@@ -117,13 +117,11 @@ app.use(xssSanitizer);
 // HEALTH CHECKS
 // ============================================
 
-// Health Check
+// Root ping (no version/environment info leaked)
 app.get("/", (_req, res) => {
   res.json({
-    message: "Faz Tudo API is running",
+    message: "FazTudo API",
     status: "OK",
-    timestamp: new Date().toISOString(),
-    version: "1.0.0",
   });
 });
 
