@@ -67,8 +67,12 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
       <div className="relative h-48 overflow-hidden bg-slate-100 dark:bg-slate-800">
         <img
           src={imageUrl}
-          alt={title}
+          alt=""
+          role="presentation"
+          width={400}
+          height={192}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/placeholder-service.jpg";
           }}
@@ -83,16 +87,17 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
           </span>
         </div>
 
-        {/* Favorite button */}
+        {/* Favorite button — 44px touch target for WCAG 2.5.5 */}
         <button
           onClick={handleFavoriteClick}
-          className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/50 transition-colors"
+          className="absolute top-2 right-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
           aria-label={favorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
         >
           <Heart
             className={`h-4 w-4 transition-all ${
               favorited ? "fill-red-500 text-red-500 scale-110" : "fill-transparent"
             }`}
+            aria-hidden="true"
           />
         </button>
 
@@ -133,8 +138,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
                 </div>
               )}
             </div>
-            {/* Online indicator dot */}
-            <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
+            {/* Online indicator removed — status not tracked in real-time */}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
