@@ -16,14 +16,15 @@ import {
   TrendingUp,
   BarChart3,
   Award,
+  BadgeCheck,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useTour } from "../../context/TourContext";
 import { MoneyCard } from "../../components/dashboard/MoneyCard";
 import { ProgressRing } from "../../components/dashboard/ProgressRing";
 import { OrderCard } from "../../components/orders/OrderCard";
 import { SkeletonDashboard } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
-import { ProfessionalOnboarding } from "../../components/common/ProfessionalOnboarding";
 import { QuickActionBar } from "../../components/dashboard/QuickActionBar";
 import {
   getDashboardStats,
@@ -47,11 +48,9 @@ function getGreeting(): { text: string; icon: React.ReactNode } {
 const ProfessionalDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { startTour } = useTour();
   const [loading, setLoading] = useState(true);
   const [recentOrders, setRecentOrders] = useState<ServiceOrder[]>([]);
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => !localStorage.getItem("faztudo_pro_onboarding_done"),
-  );
   const [stats, setStats] = useState<ProfessionalDashboardStats>({
     totalOrders: 0,
     pendingOrders: 0,
@@ -67,10 +66,13 @@ const ProfessionalDashboard: React.FC = () => {
 
   const greeting = useMemo(() => getGreeting(), []);
 
-  const handleDismissOnboarding = () => {
-    localStorage.setItem("faztudo_pro_onboarding_done", "1");
-    setShowOnboarding(false);
-  };
+  // Disparar tour na primeira visita
+  useEffect(() => {
+    if (!localStorage.getItem("faztudo_pro_tour_done")) {
+      const timer = setTimeout(() => startTour("professional"), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [startTour]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -106,14 +108,9 @@ const ProfessionalDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* ──────── ONBOARDING ──────── */}
-      {showOnboarding && (
-        <ProfessionalOnboarding onDismiss={handleDismissOnboarding} />
-      )}
-
       {/* ──────── COMMAND CENTER HEADER ──────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4" data-tour="tour-pro-welcome">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
             {greeting.icon}
           </div>
@@ -156,14 +153,44 @@ const ProfessionalDashboard: React.FC = () => {
       </div>
 
       {/* ──────── QUICK ACTIONS ──────── */}
-      <QuickActionBar
-        actions={[
-          { label: "Criar serviço", to: "/professional/create-service", icon: PlusCircle, variant: "primary" },
-          { label: "Pedidos recebidos", to: "/professional/services", icon: FileText, variant: "secondary" },
-          { label: "Agenda", to: "/professional/agenda", icon: Calendar, variant: "secondary" },
-          { label: "Mensagens", to: "/messages", icon: MessageSquare, variant: "ghost" },
-        ]}
-      />
+      <div data-tour="tour-create-service-btn">
+        <QuickActionBar
+          actions={[
+            { label: "Criar serviço", to: "/professional/create-service", icon: PlusCircle, variant: "primary" },
+            { label: "Pedidos recebidos", to: "/professional/services", icon: FileText, variant: "secondary" },
+            { label: "Agenda", to: "/professional/agenda", icon: Calendar, variant: "secondary" },
+            { label: "Mensagens", to: "/messages", icon: MessageSquare, variant: "ghost" },
+          ]}
+        />
+      </div>
+
+      {/* ──────── KYC BANNER ──────── */}
+      {!user?.isVerified && (
+        <Link
+          to="/verify-account"
+          data-tour="tour-kyc-cta"
+          className="
+            flex items-center gap-3 p-4 rounded-2xl
+            bg-primary-50 dark:bg-primary-900/15
+            border-2 border-primary-200 dark:border-primary-800/50
+            hover:bg-primary-100 dark:hover:bg-primary-900/25
+            transition-all duration-200 group
+          "
+        >
+          <div className="w-11 h-11 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+            <BadgeCheck className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-bold text-primary-900 dark:text-primary-200">
+              Verifique sua identidade para receber pagamentos
+            </p>
+            <p className="text-sm text-primary-700 dark:text-primary-400">
+              Complete a verificação KYC em poucos minutos e ganhe mais confiança dos clientes.
+            </p>
+          </div>
+          <ArrowRight className="w-5 h-5 text-primary-500 flex-shrink-0 transition-transform group-hover:translate-x-1" />
+        </Link>
+      )}
 
       {/* ──────── ALERT BAR ──────── */}
       {stats.pendingOrders > 0 && (
