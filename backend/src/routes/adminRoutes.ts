@@ -17,7 +17,7 @@ import { auditLog } from "../middleware/auditLog";
 const router = Router();
 
 // Public admin login (no auth required)
-router.post("/login", authLimiter, validateBody(adminLoginSchema), adminController.adminLogin);
+router.post("/login", authLimiter, auditLog("ADMIN_LOGIN"), validateBody(adminLoginSchema), adminController.adminLogin);
 
 // All routes below require admin auth
 router.use(verifyToken, requireRole("ADMIN"));
@@ -49,6 +49,6 @@ router.put("/config", auditLog("ADMIN_UPDATE_CONFIG"), validateBody(updatePlatfo
 // IMPORTANT: /companies/pending must come BEFORE /companies/:companyId routes
 router.get("/companies/pending", getPendingCompanies);
 router.get("/companies", getAllCompanies);
-router.post("/companies/:companyId/verify", validateBody(verifyCompanySchema), verifyCompany);
+router.post("/companies/:companyId/verify", auditLog("ADMIN_VERIFY_COMPANY"), validateBody(verifyCompanySchema), verifyCompany);
 
 export default router;
