@@ -25,7 +25,7 @@ import RegisterPromptProfessional from "../components/landing/RegisterPromptProf
 import { TrustBadge } from "../components/common/TrustBadge";
 import { formatCurrency } from "../utils/formatters";
 import { useAuth } from "../context/AuthContext";
-import { HowItWorksInteractive } from "../components/landing/HowItWorksInteractive";
+import { HowItWorksSimple } from "../components/landing/HowItWorksSimple";
 
 const LandingPageUser: React.FC = () => {
   const navigate = useNavigate();
@@ -115,12 +115,6 @@ const LandingPageUser: React.FC = () => {
             </Link>
 
             <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
-              <a
-                href="#como-funciona"
-                className="text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 no-underline"
-              >
-                Como funciona
-              </a>
               <a
                 href="#categorias"
                 className="text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 no-underline"
@@ -394,7 +388,7 @@ const LandingPageUser: React.FC = () => {
           </section>
 
           {/* ─── HOW IT WORKS ─── */}
-          <HowItWorksInteractive />
+          <HowItWorksSimple />
 
           {/* ─── TRUST BANNER ─── */}
           <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

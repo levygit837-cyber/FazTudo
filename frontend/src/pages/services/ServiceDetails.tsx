@@ -508,6 +508,7 @@ const ServiceDetails: React.FC = () => {
               {/* Botão de contato */}
               <button
                 onClick={handleContactProfessional}
+                data-tour="tour-service-chat-btn"
                 className="w-full mt-4 btn btn-outline flex items-center justify-center gap-2"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -607,6 +608,7 @@ const ServiceDetails: React.FC = () => {
                 <button
                   onClick={handleHireService}
                   disabled={hiring}
+                  data-tour="tour-request-service-btn"
                   className="w-full btn btn-primary py-3 disabled:opacity-70"
                 >
                   {hiring ? "Criando pedido..." : "Contratar servico"}

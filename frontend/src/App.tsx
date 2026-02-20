@@ -11,6 +11,8 @@ import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
+import { TourProvider } from "./context/TourContext";
+import { TourSpotlight } from "./components/common/TourSpotlight";
 import ToastContainer from "./components/common/Toast";
 import LandingPageProfessional from "./pages/LandingPageProfessional";
 import LandingPageUser from "./pages/LandingPageUser";
@@ -87,6 +89,8 @@ const App: React.FC = () => {
       <ThemeProvider>
         <ToastProvider>
         <AuthProvider>
+        <TourProvider>
+        <TourSpotlight />
         <SocketProvider>
         <SessionTracker />
         <Routes>
@@ -194,6 +198,7 @@ const App: React.FC = () => {
             </Route>
         </Routes>
         </SocketProvider>
+        </TourProvider>
         </AuthProvider>
         <ToastContainer />
         </ToastProvider>

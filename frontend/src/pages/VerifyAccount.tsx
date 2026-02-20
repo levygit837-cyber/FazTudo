@@ -8,7 +8,7 @@ const VerifyAccount: React.FC = () => {
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-3xl items-center px-4 py-10">
-      <div className="card w-full border border-slate-200 dark:border-slate-700 p-8 text-center">
+      <div className="card w-full border border-slate-200 dark:border-slate-700 p-8 text-center" data-tour="tour-verify-form">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400">
           <ShieldCheck className="h-7 w-7" />
         </div>

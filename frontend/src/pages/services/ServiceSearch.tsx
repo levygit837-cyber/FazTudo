@@ -564,8 +564,12 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                       : "space-y-4"
                   }
                 >
-                  {services.map((service) => (
-                    <div key={service.id} className="relative">
+                  {services.map((service, index) => (
+                    <div
+                      key={service.id}
+                      className="relative"
+                      data-tour={index === 0 && !showProfessionalCatalog ? "tour-service-card-first" : undefined}
+                    >
                       {/* "Novo" badge for recent services */}
                       {!showProfessionalCatalog && service.createdAt && isNewService(service.createdAt) && (
                         <div className="absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-medium shadow-sm">

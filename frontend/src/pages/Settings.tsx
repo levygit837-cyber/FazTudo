@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   Bell,
+  BookOpen,
   CreditCard,
   Eye,
   Globe,
@@ -15,6 +16,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
+import { useTour, TourId } from "../context/TourContext";
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -143,6 +145,7 @@ const STATES = [
 
 const Settings: React.FC = () => {
   const { isProfessional, isClient, logout } = useAuth();
+  const { resetTour } = useTour();
   const { theme, toggleTheme } = useTheme();
   const toast = useToast();
   const [settings, setSettings] = useState<SettingsData>(loadSettings);
@@ -471,6 +474,37 @@ const Settings: React.FC = () => {
           </div>
         </Section>
       </div>
+
+      {/* ── Tutorial section ───────────────────────────── */}
+      {(isClient || isProfessional) && (
+        <Section icon={<BookOpen className="h-5 w-5" />} title="Tutorial">
+          <div className="py-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              Rever o tutorial de boas-vindas a qualquer momento.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {isClient && (
+                <button
+                  onClick={() => resetTour("client" as TourId)}
+                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-slate-200 dark:border-slate-800/50 bg-white dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Rever tutorial do cliente
+                </button>
+              )}
+              {isProfessional && (
+                <button
+                  onClick={() => resetTour("professional" as TourId)}
+                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-slate-200 dark:border-slate-800/50 bg-white dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Rever tutorial profissional
+                </button>
+              )}
+            </div>
+          </div>
+        </Section>
+      )}
 
       {/* ── Delete account modal ───────────────────────── */}
       {showDeleteModal && (
