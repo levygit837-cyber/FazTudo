@@ -54,6 +54,8 @@ app.use(requestLogger);
 // ============================================
 
 // Helmet: sets various HTTP headers for security
+// connectSrc inclui FRONTEND_URL para permitir que o SPA faça requests XHR/fetch para esta API
+const frontendOrigins = env.CORS_ORIGIN === "*" ? [] : env.CORS_ORIGIN.split(",").map(o => o.trim());
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -61,7 +63,17 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "ws:", "wss:"],
+      // Inclui origens do frontend e ws/wss para Socket.io
+      connectSrc: [
+        "'self'",
+        ...frontendOrigins,
+        // ws/wss para Socket.io em dev e prod
+        ...frontendOrigins.map(o => o.replace(/^http/, "ws")),
+        "ws://localhost:3001",
+        "wss://localhost:3001",
+        "ws:",
+        "wss:",
+      ],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -97,7 +109,8 @@ app.use(
     origin: env.CORS_ORIGIN === "*" ? "*" : env.CORS_ORIGIN.split(","),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    // Cache-Control e Pragma são adicionados pelo interceptor do Axios em GETs
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Cache-Control', 'Pragma'],
   }),
 );
 
