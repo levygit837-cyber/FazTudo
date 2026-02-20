@@ -13,7 +13,8 @@ const CLIENT_STEPS = [
     icon: Search,
     title: "Encontre o serviço ideal",
     description: "Busque entre centenas de profissionais por categoria, localização ou palavra-chave. Veja avaliações reais e portfólios.",
-    tip: "💡 Dica: Use filtros de preço e avaliação para encontrar mais rápido!",
+    tipEmoji: "💡",
+    tip: "Dica: Use filtros de preço e avaliação para encontrar mais rápido!",
     color: "bg-blue-500",
     lightBg: "bg-blue-50 dark:bg-blue-900/20",
     borderColor: "border-blue-200 dark:border-blue-800",
@@ -23,7 +24,8 @@ const CLIENT_STEPS = [
     icon: ShoppingBag,
     title: "Faça seu pedido com segurança",
     description: "Solicite o serviço com as suas condições. Pague com PIX, cartão ou boleto — o dinheiro fica em escrow até você confirmar o serviço.",
-    tip: "🔒 Seu dinheiro fica protegido até você aprovar o trabalho.",
+    tipEmoji: "🔒",
+    tip: "Seu dinheiro fica protegido até você aprovar o trabalho.",
     color: "bg-purple-500",
     lightBg: "bg-purple-50 dark:bg-purple-900/20",
     borderColor: "border-purple-200 dark:border-purple-800",
@@ -33,7 +35,8 @@ const CLIENT_STEPS = [
     icon: MessageCircle,
     title: "Acompanhe e comunique-se",
     description: "Chat direto com o profissional, envie arquivos e acompanhe o progresso em tempo real pelo seu painel.",
-    tip: "📱 Acesse pelo celular ou computador a qualquer hora.",
+    tipEmoji: "📱",
+    tip: "Acesse pelo celular ou computador a qualquer hora.",
     color: "bg-green-500",
     lightBg: "bg-green-50 dark:bg-green-900/20",
     borderColor: "border-green-200 dark:border-green-800",
@@ -43,7 +46,8 @@ const CLIENT_STEPS = [
     icon: CheckCircle,
     title: "Confirme e avalie",
     description: "Aprove o serviço concluído e o pagamento é liberado. Sua avaliação ajuda outros clientes a escolherem bem.",
-    tip: "⭐ Avaliações honestas fazem a plataforma melhor para todos!",
+    tipEmoji: "⭐",
+    tip: "Avaliações honestas fazem a plataforma melhor para todos!",
     color: "bg-yellow-500",
     lightBg: "bg-yellow-50 dark:bg-yellow-900/20",
     borderColor: "border-yellow-200 dark:border-yellow-800",
@@ -56,7 +60,8 @@ const PROFESSIONAL_STEPS = [
     icon: UserCheck,
     title: "Crie seu perfil profissional",
     description: "Monte um perfil completo com suas habilidades, experiências, certificações e portfólio. Perfis completos recebem 3x mais pedidos.",
-    tip: "📸 Adicione foto profissional — aumenta a taxa de conversão em 80%!",
+    tipEmoji: "📸",
+    tip: "Adicione foto profissional — aumenta a taxa de conversão em 80%!",
     color: "bg-indigo-500",
     lightBg: "bg-indigo-50 dark:bg-indigo-900/20",
     borderColor: "border-indigo-200 dark:border-indigo-800",
@@ -66,7 +71,8 @@ const PROFESSIONAL_STEPS = [
     icon: Briefcase,
     title: "Publique seus serviços",
     description: "Crie listings dos seus serviços com preços transparentes, prazo estimado e descrição detalhada. Seja encontrado por quem precisa de você.",
-    tip: "💰 Defina preços competitivos comparando com outros profissionais.",
+    tipEmoji: "💰",
+    tip: "Defina preços competitivos comparando com outros profissionais.",
     color: "bg-blue-500",
     lightBg: "bg-blue-50 dark:bg-blue-900/20",
     borderColor: "border-blue-200 dark:border-blue-800",
@@ -76,7 +82,8 @@ const PROFESSIONAL_STEPS = [
     icon: MessageCircle,
     title: "Atenda com excelência",
     description: "Aceite pedidos, negocie via chat, execute com qualidade e submeta para confirmação do cliente. Cada detalhe conta para sua reputação.",
-    tip: "⚡ Responder em menos de 1h aumenta suas chances de contratação.",
+    tipEmoji: "⚡",
+    tip: "Responder em menos de 1h aumenta suas chances de contratação.",
     color: "bg-green-500",
     lightBg: "bg-green-50 dark:bg-green-900/20",
     borderColor: "border-green-200 dark:border-green-800",
@@ -86,7 +93,8 @@ const PROFESSIONAL_STEPS = [
     icon: TrendingUp,
     title: "Cresça sua renda",
     description: "Receba pagamentos seguros direto na sua carteira FazTudo (90% do valor). Saque quando quiser. Construa uma base de clientes recorrentes.",
-    tip: "📈 Top profissionais faturam R$5.000+ por mês na plataforma.",
+    tipEmoji: "📈",
+    tip: "Top profissionais faturam R$5.000+ por mês na plataforma.",
     color: "bg-orange-500",
     lightBg: "bg-orange-50 dark:bg-orange-900/20",
     borderColor: "border-orange-200 dark:border-orange-800",
@@ -101,41 +109,41 @@ export const HowItWorksInteractive: React.FC = () => {
   const Icon = current.icon;
 
   return (
-    <section className="py-16 px-4 bg-white dark:bg-gray-900" id="como-funciona" aria-labelledby="how-it-works-title">
+    <section className="py-16 px-4 bg-white dark:bg-slate-900" id="como-funciona" aria-labelledby="how-it-works-title">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
-          <h2 id="how-it-works-title" className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+          <h2 id="how-it-works-title" className="text-3xl font-bold text-slate-900 dark:text-white mb-3">
             Como funciona o FazTudo?
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-lg">
+          <p className="text-slate-500 dark:text-slate-400 text-lg">
             Simples, rápido e seguro para todos
           </p>
         </div>
 
         {/* Role toggle */}
         <div className="flex justify-center mb-8">
-          <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 gap-1">
+          <div className="inline-flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 gap-1">
             <button
               onClick={() => { setRole("client"); setActiveStep(0); }}
-              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all ${
+              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 ${
                 role === "client"
-                  ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
               aria-pressed={role === "client"}
             >
-              👤 Sou Cliente
+              <span aria-hidden="true">👤</span> Sou Cliente
             </button>
             <button
               onClick={() => { setRole("professional"); setActiveStep(0); }}
-              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all ${
+              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 ${
                 role === "professional"
-                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
               aria-pressed={role === "professional"}
             >
-              🔧 Sou Profissional
+              <span aria-hidden="true">🔧</span> Sou Profissional
             </button>
           </div>
         </div>
@@ -148,16 +156,16 @@ export const HowItWorksInteractive: React.FC = () => {
               <button
                 key={i}
                 onClick={() => setActiveStep(i)}
-                className={`flex items-center gap-2 py-2 px-4 rounded-xl text-sm font-medium transition-all border ${
+                className={`flex items-center gap-2 py-2 px-4 rounded-xl text-sm font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 ${
                   i === activeStep
                     ? `${s.color} text-white border-transparent shadow-md scale-105`
                     : i < activeStep
-                    ? `${s.lightBg} ${s.borderColor} text-gray-600 dark:text-gray-300`
-                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-400 hover:border-gray-300"
+                    ? `${s.lightBg} ${s.borderColor} text-slate-600 dark:text-slate-300`
+                    : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 hover:border-slate-300"
                 }`}
                 aria-current={i === activeStep ? "step" : undefined}
               >
-                <StepIcon size={16} />
+                <StepIcon size={16} aria-hidden="true" />
                 <span className="hidden sm:inline">{i + 1}. {s.title.split(" ").slice(0, 2).join(" ")}</span>
                 <span className="sm:hidden">{i + 1}</span>
               </button>
@@ -169,18 +177,18 @@ export const HowItWorksInteractive: React.FC = () => {
         <div className={`rounded-2xl border-2 ${current.borderColor} ${current.lightBg} p-6 transition-all`}>
           <div className="flex gap-4 items-start mb-4">
             <div className={`rounded-xl p-3 ${current.color} text-white flex-shrink-0 shadow-md`}>
-              <Icon size={28} />
+              <Icon size={28} aria-hidden="true" />
             </div>
             <div>
-              <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">
                 Passo {current.number} de {steps.length}
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{current.title}</h3>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{current.description}</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{current.title}</h3>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{current.description}</p>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl px-4 py-3 text-sm text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
-            {current.tip}
+          <div className="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700">
+            <span aria-hidden="true">{current.tipEmoji}</span>{" "}{current.tip}
           </div>
         </div>
 
@@ -189,21 +197,21 @@ export const HowItWorksInteractive: React.FC = () => {
           <button
             onClick={() => setActiveStep((prev) => Math.max(0, prev - 1))}
             disabled={activeStep === 0}
-            className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-30 transition-opacity"
+            className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 disabled:opacity-30 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 rounded"
           >
             ← Anterior
           </button>
           {activeStep < steps.length - 1 ? (
             <button
               onClick={() => setActiveStep((prev) => prev + 1)}
-              className={`px-6 py-2 rounded-xl font-medium text-sm text-white transition-all shadow-md hover:shadow-lg ${current.color}`}
+              className={`px-6 py-2 rounded-xl font-medium text-sm text-white transition-all shadow-md hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white ${current.color}`}
             >
               Próximo passo →
             </button>
           ) : (
             <Link
               to={role === "client" ? "/register?role=client" : "/register?role=professional"}
-              className={`px-6 py-2 rounded-xl font-medium text-sm text-white transition-all shadow-md hover:shadow-lg ${current.color}`}
+              className={`px-6 py-2 rounded-xl font-medium text-sm text-white transition-all shadow-md hover:shadow-lg no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white ${current.color}`}
             >
               {role === "client" ? "Começar agora — é grátis!" : "Cadastre-se como profissional!"}
             </Link>

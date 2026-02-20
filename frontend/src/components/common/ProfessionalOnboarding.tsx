@@ -1,151 +1,190 @@
 import React, { useState } from "react";
 import { Link } from "react-router";
-import { UserCheck, Briefcase, TrendingUp, Star, X } from "lucide-react";
+import { UserCheck, Briefcase, TrendingUp, Star, X, CheckCircle2, Circle } from "lucide-react";
 
 interface ProfessionalOnboardingProps {
   onDismiss: () => void;
 }
 
-const STEPS = [
+interface ChecklistItem {
+  id: string;
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  impact: string;
+  action: { label: string; to: string };
+  color: string;
+}
+
+const CHECKLIST: ChecklistItem[] = [
   {
+    id: "profile",
     icon: UserCheck,
     title: "Complete seu perfil",
-    description: "Adicione foto, descrição e experiências. Profissionais com perfil completo recebem até 3x mais pedidos.",
-    action: { label: "Completar perfil", to: "/profile" },
+    description: "Foto, bio e experiências",
+    impact: "3x mais pedidos",
+    action: { label: "Completar", to: "/profile" },
     color: "text-indigo-500",
-    bg: "bg-indigo-50 dark:bg-indigo-900/20",
   },
   {
+    id: "service",
     icon: Briefcase,
-    title: "Crie seus serviços",
-    description: "Publique os serviços que você oferece com preços, descrições e fotos. Seja específico para atrair os clientes certos.",
-    action: { label: "Criar serviço", to: "/professional/create-service" },
-    color: "text-blue-500",
-    bg: "bg-blue-50 dark:bg-blue-900/20",
+    title: "Crie seu primeiro serviço",
+    description: "Defina preço e descrição",
+    impact: "Comece a receber pedidos",
+    action: { label: "Criar", to: "/professional/create-service" },
+    color: "text-primary-500",
   },
   {
-    icon: TrendingUp,
-    title: "Gerencie seus pedidos",
-    description: "Aceite, acompanhe e finalize pedidos pela plataforma. Mantenha comunicação clara com os clientes via chat.",
-    action: null,
-    color: "text-green-500",
-    bg: "bg-green-50 dark:bg-green-900/20",
-  },
-  {
+    id: "verify",
     icon: Star,
-    title: "Construa sua reputação",
-    description: "Avaliações 5 estrelas melhoram seu ranking. Cumpra prazos e mantenha qualidade para aparecer no topo das buscas.",
-    action: { label: "Ver reputação", to: "/professional/reputation" },
-    color: "text-yellow-500",
-    bg: "bg-yellow-50 dark:bg-yellow-900/20",
+    title: "Verifique sua conta",
+    description: "Documentos e certificações",
+    impact: "Selo de verificado",
+    action: { label: "Verificar", to: "/verify-account" },
+    color: "text-amber-500",
+  },
+  {
+    id: "schedule",
+    icon: TrendingUp,
+    title: "Configure sua agenda",
+    description: "Horários disponíveis",
+    impact: "Mais controle",
+    action: { label: "Configurar", to: "/professional/agenda" },
+    color: "text-emerald-500",
   },
 ];
 
 export const ProfessionalOnboarding: React.FC<ProfessionalOnboardingProps> = ({ onDismiss }) => {
-  const [activeStep, setActiveStep] = useState(0);
-  const step = STEPS[activeStep];
-  const Icon = step.icon;
-  const progress = ((activeStep + 1) / STEPS.length) * 100;
+  const [completed, setCompleted] = useState<Set<string>>(
+    () => new Set(JSON.parse(localStorage.getItem("faztudo_pro_checklist") || "[]"))
+  );
+
+  const toggleItem = (id: string) => {
+    setCompleted((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      localStorage.setItem("faztudo_pro_checklist", JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const progress = Math.round((completed.size / CHECKLIST.length) * 100);
 
   return (
-    <div className="card mb-6 border-2 border-indigo-100 dark:border-indigo-800 relative">
+    <div className="rounded-2xl mb-6 border border-indigo-100 dark:border-indigo-900/50 bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl relative overflow-hidden">
       <button
         onClick={onDismiss}
-        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+        className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 rounded"
         aria-label="Fechar guia de configuração"
       >
         <X size={18} />
       </button>
 
       <div className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-            <Briefcase size={20} className="text-indigo-500" />
-            Configure sua conta profissional
-          </h2>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {activeStep + 1}/{STEPS.length}
-          </span>
+        <div className="flex items-start justify-between mb-4 pr-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <Briefcase size={20} className="text-indigo-500" aria-hidden="true" />
+              Configure sua conta
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              {completed.size}/{CHECKLIST.length} tarefas concluídas
+            </p>
+          </div>
+          <span className="text-2xl font-black text-indigo-500" aria-hidden="true">{progress}%</span>
         </div>
 
         {/* Progress bar */}
-        <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+        <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full mb-5">
           <div
-            className="h-1.5 bg-indigo-500 rounded-full transition-all duration-300"
+            className="h-2 bg-indigo-500 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
             role="progressbar"
-            aria-valuenow={activeStep + 1}
-            aria-valuemin={1}
-            aria-valuemax={STEPS.length}
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuetext={`${progress}% concluído — ${completed.size} de ${CHECKLIST.length} tarefas`}
           />
         </div>
 
-        {/* Step list */}
-        <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-          {STEPS.map((s, i) => {
-            const StepIcon = s.icon;
+        {/* Checklist items */}
+        <div className="space-y-2">
+          {CHECKLIST.map((item) => {
+            const done = completed.has(item.id);
+            const Icon = item.icon;
             return (
-              <button
-                key={i}
-                onClick={() => setActiveStep(i)}
-                className={`flex items-center gap-1.5 py-1 px-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
-                  i === activeStep
-                    ? "bg-indigo-500 text-white"
-                    : i < activeStep
-                    ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-500"
+              <div
+                key={item.id}
+                className={`flex items-center gap-3 rounded-xl p-3 transition-all ${
+                  done
+                    ? "bg-slate-50 dark:bg-slate-800/40 opacity-60"
+                    : "bg-slate-50 dark:bg-slate-800/60"
                 }`}
               >
-                <StepIcon size={12} />
-                {s.title}
-              </button>
+                <button
+                  onClick={() => toggleItem(item.id)}
+                  className={`flex-shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 rounded-full ${
+                    done
+                      ? "text-emerald-500"
+                      : "text-slate-300 dark:text-slate-600 hover:text-slate-400"
+                  }`}
+                  aria-label={done ? `Desmarcar: ${item.title}` : `Marcar como concluído: ${item.title}`}
+                  aria-pressed={done}
+                >
+                  {done ? <CheckCircle2 size={20} /> : <Circle size={20} />}
+                </button>
+
+                <div className={`flex items-center gap-2 flex-shrink-0 ${item.color}`}>
+                  <Icon size={16} aria-hidden="true" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={`text-sm font-medium ${
+                      done
+                        ? "line-through text-slate-400 dark:text-slate-500"
+                        : "text-slate-800 dark:text-slate-200"
+                    }`}
+                  >
+                    {item.title}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{item.description}</p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="hidden sm:inline text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full">
+                    {item.impact}
+                  </span>
+                  {!done && (
+                    <Link
+                      to={item.action.to}
+                      className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
+                    >
+                      {item.action.label} →
+                    </Link>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
 
-        {/* Active step content */}
-        <div className={`rounded-xl p-4 ${step.bg}`}>
-          <div className="flex gap-3 items-start">
-            <div className="rounded-full p-2 bg-white dark:bg-gray-800 shadow-sm flex-shrink-0">
-              <Icon size={22} className={step.color} />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">{step.title}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{step.description}</p>
-              {step.action && (
-                <Link
-                  to={step.action.to}
-                  className="btn btn-primary btn-sm mt-3 inline-flex items-center gap-1.5"
-                >
-                  {step.action.label} →
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <div className="flex justify-between items-center mt-4">
-          <button
-            onClick={() => setActiveStep((prev) => Math.max(0, prev - 1))}
-            disabled={activeStep === 0}
-            className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-30"
-          >
-            ← Anterior
-          </button>
-          {activeStep < STEPS.length - 1 ? (
+        {progress === 100 && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50">
+            <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0" aria-hidden="true" />
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+              Perfil completo! Você está pronto para receber pedidos.
+            </p>
             <button
-              onClick={() => setActiveStep((prev) => prev + 1)}
-              className="btn btn-primary btn-sm"
+              onClick={onDismiss}
+              className="ml-auto text-xs text-emerald-600 dark:text-emerald-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
             >
-              Próximo →
+              Fechar
             </button>
-          ) : (
-            <button onClick={onDismiss} className="btn btn-success btn-sm">
-              Tudo pronto! Começar →
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
