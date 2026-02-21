@@ -153,6 +153,7 @@ model User {
   sessions               UserSession[]
   companyProfile         CompanyProfile?
   companyMember          CompanyMember?
+  storefront             Storefront?
 
   // Analytics relations (B1)
   searchEvents           SearchEvent[]
@@ -179,6 +180,7 @@ model ServiceCategory {
   serviceListings        ServiceListing[]
   professionalCategories ProfessionalCategory[]
   orderBriefs            OrderBrief[]
+  storefronts            Storefront[] @relation("StorefrontMainCategory")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -283,6 +285,7 @@ model ServiceOrder {
   disputes      Dispute[]
   team          ServiceTeam?
   events        ServiceOrderEvent[] // analytics
+  items         ServiceOrderItem[]
 
   // Reschedule approval flow
   rescheduleProposedDate DateTime?
@@ -1020,4 +1023,112 @@ model CompanyInviteToken {
   createdAt   DateTime @default(now())
   @@index([companyId])
   @@index([token])
+}
+
+// ============================================
+// VITRINE (STOREFRONT) MODELS — v2
+// ============================================
+
+model Storefront {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  slug        String   @unique
+  description String?
+  logo        String?
+  banner      String?
+
+  isActive    Boolean  @default(true)
+  isPublished Boolean  @default(false)
+
+  mainCategoryId  Int?
+  mainCategory    ServiceCategory? @relation("StorefrontMainCategory", fields: [mainCategoryId], references: [id])
+
+  ratingAverage   Float   @default(0.0)
+  totalReviews    Int     @default(0)
+  totalServices   Int     @default(0)
+
+  categories  StorefrontCategory[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive, isPublished])
+  @@index([mainCategoryId])
+}
+
+model StorefrontCategory {
+  id           Int        @id @default(autoincrement())
+  storefrontId Int
+  storefront   Storefront @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
+
+  name         String
+  order        Int
+  isActive     Boolean    @default(true)
+
+  services     StorefrontService[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([storefrontId, order])
+}
+
+model StorefrontService {
+  id           Int                @id @default(autoincrement())
+  categoryId   Int
+  category     StorefrontCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  title        String
+  description  String?
+  price        Float
+  images       Json?
+  isAvailable  Boolean            @default(true)
+  order        Int
+
+  options      StorefrontServiceOption[]
+  orderItems   ServiceOrderItem[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([categoryId, order])
+  @@index([isAvailable])
+}
+
+model StorefrontServiceOption {
+  id         Int               @id @default(autoincrement())
+  serviceId  Int
+  service    StorefrontService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  name       String
+  price      Float?
+  isDefault  Boolean   @default(false)
+  order      Int
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([serviceId, order])
+}
+
+model ServiceOrderItem {
+  id              Int               @id @default(autoincrement())
+  serviceOrderId  Int
+  serviceOrder    ServiceOrder      @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceId       Int
+  service         StorefrontService @relation(fields: [serviceId], references: [id])
+
+  quantity        Int     @default(1)
+  unitPrice       Float
+  totalPrice      Float
+  optionsSnapshot Json?
+
+  createdAt       DateTime @default(now())
+
+  @@index([serviceOrderId])
+  @@index([serviceId])
 }
