@@ -185,3 +185,133 @@ export interface CompanyChannelMember {
   memberId: number;
   member: CompanyMember;
 }
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+export type StorefrontBlockType = "HERO" | "ABOUT" | "TESTIMONIALS";
+
+export type CompanyTier = "EMPRESA" | "PARCEIRO" | "ELITE";
+
+// ─── Storefront blocks ────────────────────────────────────────────────────────
+
+export interface CompanyStorefrontBlock {
+  id: number;
+  companyId: number;
+  type: StorefrontBlockType;
+  order: number;
+  isActive: boolean;
+  content: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Storefront sections & items ─────────────────────────────────────────────
+
+export interface CompanyStorefrontItem {
+  id: number;
+  sectionId: number;
+  listingId: number;
+  order: number;
+  isFeatured: boolean;
+  listing?: {
+    id: number;
+    title: string;
+    description: string;
+    price: number;
+    images: string[];
+    category?: { name: string };
+  };
+}
+
+export interface CompanyStorefrontSection {
+  id: number;
+  companyId: number;
+  title: string;
+  description?: string;
+  order: number;
+  isActive: boolean;
+  items: CompanyStorefrontItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Pinned testimonials ─────────────────────────────────────────────────────
+
+export interface CompanyPinnedTestimonial {
+  id: number;
+  companyId: number;
+  reviewId: number;
+  order: number;
+  review?: {
+    id: number;
+    rating: number;
+    comment: string;
+    createdAt: string;
+    author?: { name: string; profileImage?: string };
+  };
+}
+
+// ─── Public storefront response ───────────────────────────────────────────────
+
+export interface PublicStorefront {
+  company: {
+    id: number;
+    companyName: string;
+    cnpj: string;
+    description?: string;
+    logoUrl?: string;
+    tier: CompanyTier;
+    storefrontSections: CompanyStorefrontSection[];
+    storefrontBlocks: CompanyStorefrontBlock[];
+    pinnedTestimonials: CompanyPinnedTestimonial[];
+    user?: { name: string; profileImage?: string };
+    members?: Array<{
+      id: number;
+      role?: { name: string };
+      user?: { name: string; profileImage?: string };
+    }>;
+  };
+  ordersCount: number;
+}
+
+// ─── Invite token ─────────────────────────────────────────────────────────────
+
+export interface CompanyInviteToken {
+  id: number;
+  companyId: number;
+  token: string;
+  role: string;
+  expiresAt: string;
+  usedAt?: string;
+  createdById: number;
+  usedByUserId?: number;
+}
+
+export interface InviteValidation {
+  company: { id: number; companyName: string; logoUrl?: string };
+  role: string;
+  expiresAt: string;
+}
+
+// ─── Analytics types ──────────────────────────────────────────────────────────
+
+export interface ConversionFunnel {
+  received: number;
+  accepted: number;
+  inProgress: number;
+  completed: number;
+}
+
+export interface TeamOccupancyEntry {
+  userId: number;
+  name: string;
+  activeOrders: number;
+}
+
+export interface NPSData {
+  score: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  total: number;
+}
