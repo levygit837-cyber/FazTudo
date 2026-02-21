@@ -87,6 +87,13 @@ enum SalaryStatus {
   FAILED
 }
 
+
+enum StorefrontBlockType {
+  HERO
+  ABOUT
+  TESTIMONIALS
+}
+
 // Models
 model User {
   id            Int        @id @default(autoincrement())
@@ -205,6 +212,7 @@ model ServiceListing {
   categoryId     Int
   serviceOrders  ServiceOrder[]
   views          ServiceListingView[] // analytics
+  storefrontItems CompanyStorefrontItem[]
 
   professional User            @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   category     ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -362,6 +370,7 @@ model Review {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  pinnedBy  CompanyPinnedTestimonial[]
 
   @@unique([authorId, serviceOrderId])
   @@index([targetId])
@@ -680,6 +689,9 @@ model CompanyProfile {
   members  CompanyMember[]
   roles    CompanyRole[]
   channels CompanyChannel[]
+  storefrontSections  CompanyStorefrontSection[]
+  storefrontBlocks    CompanyStorefrontBlock[]
+  pinnedTestimonials  CompanyPinnedTestimonial[]
 }
 
 model CompanyRole {
@@ -917,4 +929,54 @@ model UserDevice {
   @@index([userId])
   @@index([deviceType])
   @@index([lastSeenAt])
+}
+
+// ============================================
+// ENTERPRISE STOREFRONT MODELS
+// ============================================
+
+model CompanyStorefrontSection {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  order       Int
+  isActive    Boolean  @default(true)
+  items       CompanyStorefrontItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CompanyStorefrontItem {
+  id          Int      @id @default(autoincrement())
+  sectionId   Int
+  section     CompanyStorefrontSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  listingId   Int
+  listing     ServiceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  order       Int
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model CompanyStorefrontBlock {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type        StorefrontBlockType
+  order       Int
+  isActive    Boolean  @default(true)
+  content     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CompanyPinnedTestimonial {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reviewId    Int
+  review      Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  order       Int
+  createdAt   DateTime @default(now())
 }
