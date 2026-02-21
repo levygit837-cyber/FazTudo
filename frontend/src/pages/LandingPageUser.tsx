@@ -361,7 +361,7 @@ const LandingPageUser: React.FC = () => {
                   </p>
                 </div>
                 <Link
-                  to="/services"
+                  to="/explorar"
                   className="hidden items-center gap-1.5 font-semibold transition-colors md:inline-flex text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 no-underline text-sm"
                 >
                   Ver todas
@@ -372,7 +372,7 @@ const LandingPageUser: React.FC = () => {
                 {categories.map((cat) => (
                   <Link
                     key={cat.name}
-                    to="/services"
+                    to="/explorar"
                     className="group flex flex-col items-center gap-3 rounded-2xl p-5 md:p-6 text-center transition-all duration-200 bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl border border-slate-200 dark:border-slate-800/50 no-underline shadow-sm hover:border-primary-300 dark:hover:border-primary-700 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-glow-blue"
                   >
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl transition-colors bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400">
@@ -475,7 +475,7 @@ const LandingPageUser: React.FC = () => {
                   {isAuthenticated ? (
                     <>
                       <Link
-                        to="/services"
+                        to="/explorar"
                         className="inline-flex items-center justify-center rounded-xl px-7 py-3.5 font-semibold shadow-glow-blue transition-all duration-200 bg-primary-600 text-white hover:bg-primary-500 hover:-translate-y-0.5 no-underline"
                       >
                         Explorar servicos

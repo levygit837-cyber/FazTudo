@@ -35,6 +35,7 @@ import companyTeamRoutes from "./routes/companyTeamRoutes";
 import companyChannelRoutes from "./routes/companyChannelRoutes";
 import companyStorefrontRoutes from "./routes/companyStorefrontRoutes";
 import companyInviteRoutes from "./routes/companyInviteRoutes";
+import storefrontRoutes from "./routes/storefrontRoutes";
 import { getPublicStorefront } from "./controllers/companyStorefrontController";
 import locationRoutes from "./routes/locationRoutes";
 import geocodingRoutes from "./routes/geocodingRoutes";
@@ -208,6 +209,7 @@ app.use("/api/company/teams", companyTeamRoutes);
 app.use("/api/company/channels", companyChannelRoutes);
 app.use("/api/company", companyRoutes);
 app.get("/api/storefront/:companyId", getPublicStorefront);
+app.use("/api/storefronts", storefrontRoutes);
 
 // ============================================
 // ERROR HANDLING

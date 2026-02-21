@@ -173,7 +173,7 @@ const Security: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                to="/services"
+                to="/explorar"
                 className="btn px-7 py-3 font-semibold bg-primary-600 text-white hover:bg-primary-500 shadow-glow-blue hover:-translate-y-0.5 transition-all no-underline"
               >
                 Encontrar Profissional

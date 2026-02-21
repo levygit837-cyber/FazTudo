@@ -200,7 +200,7 @@ const LandingPageProfessional: React.FC = () => {
                         Ir ao Dashboard
                         <ArrowRight className="h-4 w-4" />
                       </Link>
-                      <Link to="/services" className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 no-underline text-[0.9375rem]">
+                      <Link to="/explorar" className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 no-underline text-[0.9375rem]">
                         Explorar servicos
                       </Link>
                     </>
@@ -410,7 +410,7 @@ const LandingPageProfessional: React.FC = () => {
                       <Link to={dashboardPath} className="inline-flex items-center justify-center rounded-xl px-7 py-3.5 font-semibold shadow-glow-blue transition-all duration-200 bg-primary-600 text-white hover:bg-primary-500 hover:-translate-y-0.5 no-underline">
                         Ver meu painel
                       </Link>
-                      <Link to="/services" className="inline-flex items-center justify-center rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 no-underline">
+                      <Link to="/explorar" className="inline-flex items-center justify-center rounded-xl px-7 py-3.5 font-semibold transition-all duration-200 border-2 border-slate-700 text-white hover:bg-slate-800/50 no-underline">
                         Explorar servicos
                       </Link>
                     </>

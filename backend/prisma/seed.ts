@@ -19,394 +19,333 @@ interface CategorySeed {
 }
 
 const categories: CategorySeed[] = [
-  // ==================== SERVICOS DOMESTICOS ====================
+  // ==================== 1. MANUTENCAO E REPAROS ====================
   {
-    name: "Manutencao Geral",
-    description: "Servicos de manutencao e reparos gerais para sua casa",
+    name: "Manutencao e Reparos",
+    description: "Servicos de manutencao e reparos gerais para sua casa ou empresa",
     icon: "wrench",
-    type: "HOME_SERVICES",
+    type: "BOTH",
     subcategories: [
-      {
-        name: "Eletricista",
-        description: "Instalacoes e reparos eletricos residenciais",
-        icon: "zap",
-      },
-      {
-        name: "Encanador",
-        description:
-          "Servicos de encanamento, vazamentos e instalacoes hidraulicas",
-        icon: "droplet",
-      },
-      {
-        name: "Pintor",
-        description: "Pintura interna e externa, textura e acabamentos",
-        icon: "paintbrush",
-      },
-      {
-        name: "Pedreiro",
-        description: "Construcao, reformas e reparos em alvenaria",
-        icon: "brick-wall",
-      },
-      {
-        name: "Marceneiro",
-        description: "Moveis sob medida, reparos e instalacao de moveis",
-        icon: "hammer",
-      },
-      {
-        name: "Serralheiro",
-        description: "Grades, portoes, estruturas metalicas e reparos",
-        icon: "fence",
-      },
-      {
-        name: "Gesseiro",
-        description: "Forros, divisorias, sancas e acabamentos em gesso",
-        icon: "square",
-      },
+      { name: "Eletricista", description: "Instalacoes e reparos eletricos", icon: "zap" },
+      { name: "Encanador", description: "Encanamento, vazamentos e instalacoes hidraulicas", icon: "droplet" },
+      { name: "Pintor", description: "Pintura interna e externa, textura e acabamentos", icon: "paintbrush" },
+      { name: "Pedreiro", description: "Construcao, reformas e reparos em alvenaria", icon: "brick-wall" },
+      { name: "Marceneiro", description: "Moveis sob medida, reparos e instalacao", icon: "hammer" },
+      { name: "Serralheiro", description: "Grades, portoes, estruturas metalicas e reparos", icon: "fence" },
+      { name: "Gesseiro", description: "Forros, divisorias, sancas e acabamentos em gesso", icon: "square" },
+      { name: "Vidraceiro", description: "Instalacao e reparo de vidros e espelhos", icon: "panel-top" },
+      { name: "Telhadista", description: "Reparos, manutencao e instalacao de telhados", icon: "home" },
     ],
   },
-  {
-    name: "Jardinagem",
-    description: "Cuidados com jardim, plantas e areas externas",
-    icon: "leaf",
-    type: "HOME_SERVICES",
-    subcategories: [
-      {
-        name: "Corte de Grama",
-        description: "Corte e manutencao de gramados",
-        icon: "scissors",
-      },
-      {
-        name: "Poda de Arvores",
-        description: "Poda, remocao e tratamento de arvores",
-        icon: "tree-pine",
-      },
-      {
-        name: "Paisagismo",
-        description: "Projeto e execucao de paisagismo",
-        icon: "flower",
-      },
-      {
-        name: "Manutencao de Jardim",
-        description: "Cuidados gerais, adubacao e irrigacao",
-        icon: "sprout",
-      },
-      {
-        name: "Limpeza de Terreno",
-        description: "Limpeza e preparacao de terrenos",
-        icon: "shovel",
-      },
-    ],
-  },
+
+  // ==================== 2. LIMPEZA ====================
   {
     name: "Limpeza",
     description: "Servicos de limpeza residencial e comercial",
     icon: "sparkles",
     type: "BOTH",
     subcategories: [
-      {
-        name: "Limpeza Residencial",
-        description: "Limpeza geral de casas e apartamentos",
-        icon: "home",
-      },
-      {
-        name: "Limpeza Pos-Obra",
-        description: "Limpeza especializada apos reformas e construcoes",
-        icon: "hard-hat",
-      },
-      {
-        name: "Lavagem de Estofados",
-        description: "Limpeza de sofas, colchoes, tapetes e cortinas",
-        icon: "sofa",
-      },
-      {
-        name: "Limpeza de Vidros",
-        description: "Limpeza de janelas, fachadas e vidros em geral",
-        icon: "square",
-      },
-      {
-        name: "Limpeza de Piscina",
-        description: "Manutencao e limpeza de piscinas",
-        icon: "waves",
-      },
-      {
-        name: "Dedetizacao",
-        description: "Controle de pragas e insetos",
-        icon: "bug",
-      },
+      { name: "Limpeza Residencial", description: "Limpeza geral de casas e apartamentos", icon: "home" },
+      { name: "Limpeza Comercial", description: "Limpeza de escritorios e estabelecimentos", icon: "building" },
+      { name: "Limpeza Pos-Obra", description: "Limpeza especializada apos reformas", icon: "hard-hat" },
+      { name: "Lavagem de Estofados", description: "Limpeza de sofas, colchoes e tapetes", icon: "sofa" },
+      { name: "Limpeza de Piscina", description: "Manutencao e limpeza de piscinas", icon: "waves" },
+      { name: "Dedetizacao", description: "Controle de pragas e insetos", icon: "bug" },
+      { name: "Higienizacao de Ar-Condicionado", description: "Limpeza e higienizacao de splits e centrais", icon: "air-vent" },
     ],
   },
-  {
-    name: "Consertos",
-    description: "Reparos em eletrodomesticos, moveis e equipamentos",
-    icon: "settings",
-    type: "HOME_SERVICES",
-    subcategories: [
-      {
-        name: "Eletrodomesticos",
-        description: "Reparo de geladeiras, maquinas de lavar, fogoes, etc.",
-        icon: "refrigerator",
-      },
-      {
-        name: "Moveis",
-        description: "Reparo e restauracao de moveis",
-        icon: "armchair",
-      },
-      {
-        name: "Eletronicos",
-        description: "Reparo de TVs, computadores, celulares, etc.",
-        icon: "monitor",
-      },
-      {
-        name: "Pequenos Eletrodomesticos",
-        description: "Reparo de liquidificadores, ventiladores, ferros, etc.",
-        icon: "plug",
-      },
-    ],
-  },
+
+  // ==================== 3. INSTALACOES ====================
   {
     name: "Instalacoes",
     description: "Instalacao de equipamentos e sistemas",
     icon: "plug-zap",
     type: "BOTH",
     subcategories: [
-      {
-        name: "Ar Condicionado",
-        description: "Instalacao, manutencao e limpeza de ar condicionado",
-        icon: "air-vent",
-      },
-      {
-        name: "Antenas e TV",
-        description: "Instalacao de antenas, TV a cabo e satelite",
-        icon: "tv",
-      },
-      {
-        name: "Redes e Internet",
-        description: "Instalacao de redes, cabeamento e configuracao",
-        icon: "wifi",
-      },
-      {
-        name: "Fechaduras e Seguranca",
-        description: "Instalacao de fechaduras, cameras e alarmes",
-        icon: "lock",
-      },
-      {
-        name: "Aquecedores",
-        description: "Instalacao de aquecedores a gas, eletricos e solares",
-        icon: "flame",
-      },
-      {
-        name: "Chuveiros e Torneiras",
-        description: "Instalacao e reparo de chuveiros, torneiras e duchas",
-        icon: "shower-head",
-      },
+      { name: "Ar Condicionado", description: "Instalacao, manutencao e limpeza de ar condicionado", icon: "air-vent" },
+      { name: "Antenas e TV", description: "Instalacao de antenas, TV a cabo e satelite", icon: "tv" },
+      { name: "Redes e Internet", description: "Instalacao de redes, cabeamento e configuracao", icon: "wifi" },
+      { name: "Cameras de Seguranca", description: "Instalacao de cameras e sistemas de monitoramento", icon: "camera" },
+      { name: "Fechaduras", description: "Instalacao e troca de fechaduras e trancas", icon: "lock" },
+      { name: "Chuveiros e Torneiras", description: "Instalacao e reparo de chuveiros e torneiras", icon: "shower-head" },
+      { name: "Aquecedores", description: "Instalacao de aquecedores a gas, eletricos e solares", icon: "flame" },
+      { name: "Energia Solar", description: "Instalacao de paineis solares e sistemas fotovoltaicos", icon: "sun" },
     ],
   },
+
+  // ==================== 4. CONSTRUCAO E REFORMA ====================
   {
-    name: "Mudancas e Fretes",
-    description: "Transporte de moveis, mudancas e carretos",
-    icon: "truck",
+    name: "Construcao e Reforma",
+    description: "Servicos de construcao, reforma e acabamento",
+    icon: "hard-hat",
     type: "BOTH",
     subcategories: [
-      {
-        name: "Mudanca Residencial",
-        description: "Mudanca completa de casas e apartamentos",
-        icon: "package",
-      },
-      {
-        name: "Carreto",
-        description: "Transporte de itens e pequenas cargas",
-        icon: "box",
-      },
-      {
-        name: "Montagem de Moveis",
-        description: "Montagem e desmontagem de moveis",
-        icon: "puzzle",
-      },
+      { name: "Reforma Residencial", description: "Reforma completa de casas e apartamentos", icon: "home" },
+      { name: "Reforma Comercial", description: "Reforma de lojas, escritorios e comercios", icon: "building" },
+      { name: "Alvenaria", description: "Construcao de paredes, muros e estruturas", icon: "brick-wall" },
+      { name: "Acabamento", description: "Acabamentos finos, rodapes e detalhes", icon: "paintbrush" },
+      { name: "Piso e Revestimento", description: "Instalacao de pisos, azulejos e porcelanatos", icon: "grid-3x3" },
+      { name: "Impermeabilizacao", description: "Impermeabilizacao de lajes, paredes e piscinas", icon: "shield" },
+      { name: "Projeto Arquitetonico", description: "Projetos arquitetonicos e plantas", icon: "ruler" },
     ],
   },
 
-  // ==================== SERVICOS EMPRESARIAIS ====================
+  // ==================== 5. BELEZA E ESTETICA ====================
   {
-    name: "Manutencao de Escritorio",
-    description: "Servicos de manutencao para ambientes corporativos",
-    icon: "building",
-    type: "BUSINESS_SERVICES",
+    name: "Beleza e Estetica",
+    description: "Servicos de beleza, estetica e cuidados pessoais",
+    icon: "scissors",
+    type: "HOME_SERVICES",
     subcategories: [
-      {
-        name: "Manutencao Predial",
-        description: "Manutencao geral de edificios comerciais",
-        icon: "building-2",
-      },
-      {
-        name: "Manutencao de Elevadores",
-        description: "Manutencao preventiva e corretiva de elevadores",
-        icon: "move-vertical",
-      },
-      {
-        name: "Sistemas de Seguranca",
-        description: "Instalacao e manutencao de sistemas de seguranca",
-        icon: "shield",
-      },
-    ],
-  },
-  {
-    name: "Limpeza Comercial",
-    description: "Servicos de limpeza para empresas e comercios",
-    icon: "building",
-    type: "BUSINESS_SERVICES",
-    subcategories: [
-      {
-        name: "Limpeza de Escritorios",
-        description: "Limpeza diaria ou periodica de escritorios",
-        icon: "briefcase",
-      },
-      {
-        name: "Limpeza de Lojas",
-        description: "Limpeza de estabelecimentos comerciais",
-        icon: "store",
-      },
-      {
-        name: "Limpeza de Fachadas",
-        description: "Limpeza de fachadas e areas externas",
-        icon: "building-2",
-      },
-    ],
-  },
-  {
-    name: "Servicos de TI",
-    description: "Suporte tecnico e servicos de tecnologia",
-    icon: "laptop",
-    type: "BUSINESS_SERVICES",
-    subcategories: [
-      {
-        name: "Suporte Tecnico",
-        description: "Suporte a computadores, impressoras e redes",
-        icon: "headphones",
-      },
-      {
-        name: "Infraestrutura de Rede",
-        description: "Instalacao e configuracao de redes corporativas",
-        icon: "network",
-      },
-      {
-        name: "Backup e Recuperacao",
-        description: "Servicos de backup e recuperacao de dados",
-        icon: "database",
-      },
-    ],
-  },
-  {
-    name: "Manutencao de Equipamentos",
-    description: "Reparo e manutencao de equipamentos comerciais",
-    icon: "cog",
-    type: "BUSINESS_SERVICES",
-    subcategories: [
-      {
-        name: "Equipamentos de Cozinha Industrial",
-        description: "Manutencao de fogoes, fornos, refrigeradores industriais",
-        icon: "chef-hat",
-      },
-      {
-        name: "Maquinas de Cafe",
-        description: "Manutencao de maquinas de cafe e bebidas",
-        icon: "coffee",
-      },
-      {
-        name: "Impressoras e Copiadoras",
-        description: "Manutencao de impressoras, copiadoras e scanners",
-        icon: "printer",
-      },
+      { name: "Cabeleireiro", description: "Corte, coloracao, tratamentos e penteados", icon: "scissors" },
+      { name: "Manicure e Pedicure", description: "Cuidados com unhas das maos e pes", icon: "hand" },
+      { name: "Maquiagem", description: "Maquiagem profissional para eventos e dia a dia", icon: "palette" },
+      { name: "Design de Sobrancelhas", description: "Modelagem e design de sobrancelhas", icon: "eye" },
+      { name: "Depilacao", description: "Depilacao com cera, laser e outros metodos", icon: "sparkles" },
+      { name: "Barbearia", description: "Corte, barba e cuidados masculinos", icon: "scissors" },
+      { name: "Estetica Facial", description: "Limpeza de pele, peeling e tratamentos faciais", icon: "smile" },
+      { name: "Massagem", description: "Massagem relaxante, terapeutica e desportiva", icon: "heart" },
     ],
   },
 
-  // ==================== SERVICOS ESPECIALIZADOS ====================
+  // ==================== 6. SAUDE E BEM-ESTAR ====================
+  {
+    name: "Saude e Bem-Estar",
+    description: "Profissionais de saude e bem-estar",
+    icon: "heart-pulse",
+    type: "HOME_SERVICES",
+    subcategories: [
+      { name: "Fisioterapia", description: "Fisioterapia domiciliar e reabilitacao", icon: "activity" },
+      { name: "Nutricionista", description: "Consultoria nutricional e dietas personalizadas", icon: "apple" },
+      { name: "Psicologo", description: "Atendimento psicologico presencial e online", icon: "brain" },
+      { name: "Enfermagem Domiciliar", description: "Servicos de enfermagem em domicilio", icon: "stethoscope" },
+      { name: "Personal Trainer", description: "Treinamento fisico personalizado", icon: "dumbbell" },
+      { name: "Cuidador de Idosos", description: "Acompanhamento e cuidados com idosos", icon: "heart" },
+      { name: "Fonoaudiologo", description: "Tratamento de fala, audicao e linguagem", icon: "mic" },
+    ],
+  },
+
+  // ==================== 7. AULAS E EDUCACAO ====================
+  {
+    name: "Aulas e Educacao",
+    description: "Aulas particulares e cursos",
+    icon: "book-open",
+    type: "HOME_SERVICES",
+    subcategories: [
+      { name: "Reforco Escolar", description: "Aulas de reforco em todas as materias", icon: "book" },
+      { name: "Aulas de Idiomas", description: "Ingles, espanhol e outros idiomas", icon: "languages" },
+      { name: "Aulas de Musica", description: "Aulas de violao, piano, bateria e outros", icon: "music" },
+      { name: "Aulas de Informatica", description: "Aulas de computacao e tecnologia", icon: "laptop" },
+      { name: "Preparatorio Concursos", description: "Preparacao para concursos publicos", icon: "file-text" },
+      { name: "Preparatorio Vestibular", description: "Preparacao para vestibular e ENEM", icon: "graduation-cap" },
+      { name: "Educacao Especial", description: "Atendimento educacional especializado", icon: "heart" },
+    ],
+  },
+
+  // ==================== 8. EVENTOS E FESTAS ====================
+  {
+    name: "Eventos e Festas",
+    description: "Servicos para festas e eventos",
+    icon: "party-popper",
+    type: "BOTH",
+    subcategories: [
+      { name: "Buffet", description: "Servicos de alimentacao para eventos", icon: "utensils-crossed" },
+      { name: "Decoracao de Eventos", description: "Decoracao de festas, casamentos e eventos", icon: "sparkles" },
+      { name: "DJ e Sonorizacao", description: "DJ, som e iluminacao para eventos", icon: "music" },
+      { name: "Fotografia de Eventos", description: "Cobertura fotografica de eventos", icon: "camera" },
+      { name: "Filmagem", description: "Filmagem profissional de eventos", icon: "video" },
+      { name: "Garcom", description: "Servicos de garcom e atendimento", icon: "user" },
+      { name: "Cerimonialista", description: "Organizacao e cerimonial de eventos", icon: "clipboard" },
+      { name: "Aluguel de Equipamentos", description: "Aluguel de mesas, cadeiras, tendas e equipamentos", icon: "package" },
+    ],
+  },
+
+  // ==================== 9. SERVICOS DOMESTICOS ====================
   {
     name: "Servicos Domesticos",
     description: "Profissionais para tarefas domesticas",
     icon: "home",
     type: "HOME_SERVICES",
     subcategories: [
-      {
-        name: "Diarista",
-        description: "Servicos de limpeza e organizacao por diaria",
-        icon: "sparkles",
-      },
-      {
-        name: "Passadeira",
-        description: "Servicos de passar roupas",
-        icon: "shirt",
-      },
-      {
-        name: "Cozinheira",
-        description: "Preparo de refeicoes e eventos",
-        icon: "utensils",
-      },
-      {
-        name: "Babá",
-        description: "Cuidados com criancas",
-        icon: "baby",
-      },
-      {
-        name: "Cuidador de Idosos",
-        description: "Acompanhamento e cuidados com idosos",
-        icon: "heart",
-      },
+      { name: "Diarista", description: "Servicos de limpeza e organizacao por diaria", icon: "sparkles" },
+      { name: "Passadeira", description: "Servicos de passar roupas", icon: "shirt" },
+      { name: "Cozinheira", description: "Preparo de refeicoes e eventos", icon: "utensils" },
+      { name: "Baba", description: "Cuidados com criancas", icon: "baby" },
+      { name: "Cuidador de Idosos Domiciliar", description: "Acompanhamento domiciliar de idosos", icon: "heart" },
+      { name: "Lavanderia", description: "Servicos de lavagem e passagem de roupas", icon: "shirt" },
+      { name: "Organizacao de Ambientes", description: "Organizacao profissional de espacos", icon: "layout" },
     ],
   },
+
+  // ==================== 10. PETS E ANIMAIS ====================
   {
-    name: "Servicos para Pets",
+    name: "Pets e Animais",
     description: "Cuidados e servicos para animais de estimacao",
     icon: "paw-print",
     type: "HOME_SERVICES",
     subcategories: [
-      {
-        name: "Dog Walker",
-        description: "Passeios com caes",
-        icon: "dog",
-      },
-      {
-        name: "Pet Sitter",
-        description: "Cuidados com pets enquanto voce viaja",
-        icon: "cat",
-      },
-      {
-        name: "Banho e Tosa",
-        description: "Higiene e estetica animal",
-        icon: "scissors",
-      },
+      { name: "Banho e Tosa", description: "Higiene e estetica animal", icon: "scissors" },
+      { name: "Pet Sitter", description: "Cuidados com pets enquanto voce viaja", icon: "cat" },
+      { name: "Dog Walker", description: "Passeios com caes", icon: "dog" },
+      { name: "Veterinario Domiciliar", description: "Atendimento veterinario em domicilio", icon: "stethoscope" },
+      { name: "Adestramento", description: "Treinamento e adestramento de animais", icon: "award" },
     ],
   },
+
+  // ==================== 11. JARDINAGEM E PAISAGISMO ====================
   {
-    name: "Eventos",
-    description: "Servicos para festas e eventos",
-    icon: "party-popper",
+    name: "Jardinagem e Paisagismo",
+    description: "Cuidados com jardim, plantas e areas externas",
+    icon: "leaf",
+    type: "HOME_SERVICES",
+    subcategories: [
+      { name: "Corte de Grama", description: "Corte e manutencao de gramados", icon: "scissors" },
+      { name: "Poda de Arvores", description: "Poda, remocao e tratamento de arvores", icon: "tree-pine" },
+      { name: "Paisagismo", description: "Projeto e execucao de paisagismo", icon: "flower" },
+      { name: "Limpeza de Terreno", description: "Limpeza e preparacao de terrenos", icon: "shovel" },
+      { name: "Irrigacao", description: "Instalacao e manutencao de sistemas de irrigacao", icon: "droplet" },
+      { name: "Manutencao de Jardim", description: "Cuidados gerais, adubacao e tratamento", icon: "sprout" },
+    ],
+  },
+
+  // ==================== 12. MUDANCAS E FRETES ====================
+  {
+    name: "Mudancas e Fretes",
+    description: "Transporte de moveis, mudancas e carretos",
+    icon: "truck",
     type: "BOTH",
     subcategories: [
-      {
-        name: "Buffet",
-        description: "Servicos de alimentacao para eventos",
-        icon: "utensils-crossed",
-      },
-      {
-        name: "Decoracao",
-        description: "Decoracao de festas e eventos",
-        icon: "sparkles",
-      },
-      {
-        name: "DJ",
-        description: "Servicos de DJ e sonorizacao",
-        icon: "music",
-      },
-      {
-        name: "Fotografia",
-        description: "Cobertura fotografica de eventos",
-        icon: "camera",
-      },
-      {
-        name: "Garcom",
-        description: "Servicos de garcom e atendimento",
-        icon: "user",
-      },
+      { name: "Mudanca Residencial", description: "Mudanca completa de casas e apartamentos", icon: "package" },
+      { name: "Mudanca Comercial", description: "Mudanca de escritorios e empresas", icon: "building" },
+      { name: "Carreto", description: "Transporte de itens e pequenas cargas", icon: "box" },
+      { name: "Montagem de Moveis", description: "Montagem e desmontagem de moveis", icon: "puzzle" },
+      { name: "Embalagem", description: "Servico de embalagem para mudanca", icon: "package" },
+    ],
+  },
+
+  // ==================== 13. AUTOMOTIVO ====================
+  {
+    name: "Automotivo",
+    description: "Servicos automotivos e veiculares",
+    icon: "car",
+    type: "BOTH",
+    subcategories: [
+      { name: "Mecanica", description: "Manutencao e reparo mecanico de veiculos", icon: "wrench" },
+      { name: "Auto Eletrica", description: "Servicos de eletrica automotiva", icon: "zap" },
+      { name: "Funilaria e Pintura", description: "Reparo de lataria e pintura automotiva", icon: "paintbrush" },
+      { name: "Vidracaria Automotiva", description: "Troca e reparo de vidros automotivos", icon: "panel-top" },
+      { name: "Estetica Automotiva", description: "Polimento, lavagem detalhada e higienizacao", icon: "sparkles" },
+      { name: "Borracharia", description: "Troca e reparo de pneus", icon: "circle" },
+      { name: "Guincho", description: "Servico de guincho e reboque", icon: "truck" },
+    ],
+  },
+
+  // ==================== 14. TECNOLOGIA E INFORMATICA ====================
+  {
+    name: "Tecnologia e Informatica",
+    description: "Servicos de tecnologia, suporte e manutencao",
+    icon: "laptop",
+    type: "BOTH",
+    subcategories: [
+      { name: "Conserto de Celular", description: "Reparo de smartphones e tablets", icon: "smartphone" },
+      { name: "Conserto de Computador", description: "Reparo de desktops e notebooks", icon: "monitor" },
+      { name: "Suporte Tecnico", description: "Suporte tecnico em TI para empresas e residencias", icon: "headphones" },
+      { name: "Formatacao", description: "Formatacao, backup e reinstalacao de sistemas", icon: "hard-drive" },
+      { name: "Redes", description: "Instalacao e configuracao de redes locais", icon: "network" },
+      { name: "Desenvolvimento Web", description: "Criacao de sites, sistemas e aplicativos", icon: "code" },
+      { name: "Marketing Digital", description: "Gestao de midias sociais e marketing online", icon: "megaphone" },
+    ],
+  },
+
+  // ==================== 15. CONSERTOS E ASSISTENCIA TECNICA ====================
+  {
+    name: "Consertos e Assistencia Tecnica",
+    description: "Reparos em eletrodomesticos e eletronicos",
+    icon: "settings",
+    type: "BOTH",
+    subcategories: [
+      { name: "Eletrodomesticos", description: "Reparo de geladeiras, maquinas de lavar, fogoes", icon: "refrigerator" },
+      { name: "Eletronicos", description: "Reparo de TVs, caixas de som e equipamentos", icon: "monitor" },
+      { name: "Maquinas de Costura", description: "Reparo e manutencao de maquinas de costura", icon: "scissors" },
+      { name: "Celulares", description: "Assistencia tecnica especializada em celulares", icon: "smartphone" },
+      { name: "Notebooks", description: "Assistencia tecnica em notebooks e ultrabooks", icon: "laptop" },
+      { name: "Impressoras", description: "Reparo e manutencao de impressoras e scanners", icon: "printer" },
+    ],
+  },
+
+  // ==================== 16. MODA E COSTURA ====================
+  {
+    name: "Moda e Costura",
+    description: "Servicos de costura, ajustes e confeccao",
+    icon: "scissors",
+    type: "HOME_SERVICES",
+    subcategories: [
+      { name: "Costureira", description: "Confeccao e ajuste de roupas", icon: "scissors" },
+      { name: "Alfaiate", description: "Confeccao e ajuste de roupas masculinas", icon: "shirt" },
+      { name: "Customizacao", description: "Customizacao e personalizacao de pecas", icon: "palette" },
+      { name: "Bordado", description: "Bordados manuais e industriais", icon: "pen-tool" },
+      { name: "Conserto de Roupas", description: "Reparos em roupas e tecidos", icon: "scissors" },
+    ],
+  },
+
+  // ==================== 17. SERVICOS RURAIS E AGRICOLAS ====================
+  {
+    name: "Servicos Rurais e Agricolas",
+    description: "Servicos para zona rural e agricultura",
+    icon: "tractor",
+    type: "BOTH",
+    subcategories: [
+      { name: "Perfuracao de Poco", description: "Perfuracao de pocos artesianos e semi-artesianos", icon: "droplet" },
+      { name: "Cerca e Alambrado", description: "Instalacao de cercas, alambrados e porteiras", icon: "fence" },
+      { name: "Trator e Terraplanagem", description: "Servicos de trator, terraplanagem e nivelamento", icon: "tractor" },
+      { name: "Consultoria Agricola", description: "Consultoria tecnica para agricultura", icon: "sprout" },
+      { name: "Irrigacao Rural", description: "Sistemas de irrigacao para propriedades rurais", icon: "droplet" },
+    ],
+  },
+
+  // ==================== 18. DESIGN E COMUNICACAO ====================
+  {
+    name: "Design e Comunicacao",
+    description: "Servicos de design, comunicacao visual e midia",
+    icon: "palette",
+    type: "BOTH",
+    subcategories: [
+      { name: "Design Grafico", description: "Logotipos, cartoes, banners e material grafico", icon: "palette" },
+      { name: "Social Media", description: "Gestao de redes sociais e criacao de conteudo", icon: "share-2" },
+      { name: "Fotografia Profissional", description: "Fotografia de produtos, retratos e ensaios", icon: "camera" },
+      { name: "Filmagem Profissional", description: "Producao de videos institucionais e comerciais", icon: "video" },
+      { name: "Impressao e Grafica", description: "Servicos de impressao, plotagem e acabamento grafico", icon: "printer" },
+    ],
+  },
+
+  // ==================== 19. CONSULTORIA E SERVICOS PROFISSIONAIS ====================
+  {
+    name: "Consultoria e Servicos Profissionais",
+    description: "Servicos profissionais especializados",
+    icon: "briefcase",
+    type: "BUSINESS_SERVICES",
+    subcategories: [
+      { name: "Contabilidade", description: "Servicos contabeis e fiscais", icon: "calculator" },
+      { name: "Advocacia", description: "Consultoria e assessoria juridica", icon: "scale" },
+      { name: "Despachante", description: "Servicos de despachante e documentacao", icon: "file-text" },
+      { name: "Corretor de Imoveis", description: "Intermediacao de compra, venda e aluguel", icon: "home" },
+      { name: "Consultoria Financeira", description: "Planejamento e consultoria financeira", icon: "trending-up" },
+      { name: "RH", description: "Recrutamento, selecao e gestao de pessoas", icon: "users" },
+    ],
+  },
+
+  // ==================== 20. SEGURANCA ====================
+  {
+    name: "Seguranca",
+    description: "Servicos de seguranca patrimonial e pessoal",
+    icon: "shield",
+    type: "BOTH",
+    subcategories: [
+      { name: "Porteiro", description: "Servicos de portaria e controle de acesso", icon: "door-open" },
+      { name: "Vigilante", description: "Vigilancia patrimonial e seguranca armada", icon: "shield" },
+      { name: "Instalacao de Alarmes", description: "Instalacao de sistemas de alarme", icon: "bell" },
+      { name: "Monitoramento", description: "Monitoramento eletronico 24h", icon: "eye" },
+      { name: "Escolta", description: "Servicos de escolta e seguranca pessoal", icon: "shield-check" },
     ],
   },
 ];
