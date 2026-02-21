@@ -35,9 +35,9 @@ const CompanyAnalytics: React.FC = () => {
           api.get("/company/analytics/revenue"),
           api.get("/company/analytics/members"),
           api.get("/company/analytics/services"),
-          api.get("/api/company/analytics/conversion-funnel"),
-          api.get("/api/company/analytics/team-occupancy"),
-          api.get("/api/company/analytics/nps"),
+          api.get("/company/analytics/conversion-funnel"),
+          api.get("/company/analytics/team-occupancy"),
+          api.get("/company/analytics/nps"),
         ]);
         setOverview(overviewRes.data.data);
         setRevenue(revenueRes.data.data);
@@ -230,10 +230,10 @@ const CompanyAnalytics: React.FC = () => {
             return (
               <div className="space-y-3">
                 {occupancy.map(entry => (
-                  <div key={entry.userId}>
+                  <div key={entry.memberId}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-slate-600 dark:text-slate-400 truncate max-w-[140px]">
-                        {entry.name}
+                        {entry.memberName}
                       </span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap ml-2">
                         {entry.activeOrders} {entry.activeOrders === 1 ? "pedido" : "pedidos"}
@@ -263,14 +263,14 @@ const CompanyAnalytics: React.FC = () => {
               <span
                 className={[
                   "text-6xl font-extrabold leading-none mb-4",
-                  nps.score > 50
+                  nps.nps > 50
                     ? "text-green-500"
-                    : nps.score >= 0
+                    : nps.nps >= 0
                     ? "text-amber-500"
                     : "text-red-500",
                 ].join(" ")}
               >
-                {nps.score > 0 ? `+${nps.score}` : nps.score}
+                {nps.nps > 0 ? `+${nps.nps}` : nps.nps}
               </span>
               <div className="w-full grid grid-cols-3 gap-2 text-center text-sm mt-2">
                 <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2">

@@ -306,13 +306,15 @@ export interface ConversionFunnel {
 }
 
 export interface TeamOccupancyEntry {
-  userId: number;
-  name: string;
+  memberId: number;
+  memberName: string;
+  profileImage?: string | null;
   activeOrders: number;
+  isActive: boolean;
 }
 
 export interface NPSData {
-  score: number;
+  nps: number;
   promoters: number;
   passives: number;
   detractors: number;
