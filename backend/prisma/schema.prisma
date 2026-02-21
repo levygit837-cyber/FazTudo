@@ -94,6 +94,13 @@ enum StorefrontBlockType {
   TESTIMONIALS
 }
 
+
+enum CompanyTier {
+  EMPRESA
+  PARCEIRO
+  ELITE
+}
+
 // Models
 model User {
   id            Int        @id @default(autoincrement())
@@ -152,6 +159,8 @@ model User {
   listingViews           ServiceListingView[] @relation("ListingViewer")
   orderEvents            ServiceOrderEvent[]  @relation("OrderEventActor")
   devices                UserDevice[]
+  createdInviteTokens    CompanyInviteToken[] @relation("InviteTokenCreator")
+  usedInviteTokens       CompanyInviteToken[] @relation("InviteTokenUser")
 
   @@index([email])
   @@index([role])
@@ -692,6 +701,13 @@ model CompanyProfile {
   storefrontSections  CompanyStorefrontSection[]
   storefrontBlocks    CompanyStorefrontBlock[]
   pinnedTestimonials  CompanyPinnedTestimonial[]
+
+  // Tier & onboarding
+  tier              CompanyTier        @default(EMPRESA)
+  onboardingStep    Int                @default(0)
+  onboardingDone    Boolean            @default(false)
+  inviteTokens      CompanyInviteToken[]
+  salaryRules       CompanySalaryRule[]
 }
 
 model CompanyRole {
@@ -729,6 +745,7 @@ model CompanyMember {
 model CompanySalaryRule {
   id          Int            @id @default(autoincrement())
   companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
   roleId      Int?
   role        CompanyRole?   @relation(fields: [roleId], references: [id])
   memberId    Int?
@@ -986,4 +1003,21 @@ model CompanyPinnedTestimonial {
   createdAt   DateTime @default(now())
   @@unique([companyId, reviewId])
   @@index([companyId, order])
+}
+
+model CompanyInviteToken {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  role        String   @default("MEMBER")
+  createdById Int
+  createdBy   User     @relation("InviteTokenCreator", fields: [createdById], references: [id])
+  usedById    Int?
+  usedBy      User?    @relation("InviteTokenUser", fields: [usedById], references: [id])
+  usedAt      DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  @@index([companyId])
+  @@index([token])
 }
