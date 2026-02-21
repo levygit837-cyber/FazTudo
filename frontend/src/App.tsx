@@ -56,7 +56,7 @@ import CompanyStorefront from "./pages/CompanyStorefront";
 import CompanyAnalytics from "./pages/company/Analytics";
 import StorefrontEditor from "./pages/company/StorefrontEditor";
 import ProfessionalStorefrontPage from "./pages/ProfessionalStorefront";
-import StorefrontSetup from "./pages/professional/StorefrontSetup";
+import StorefrontWizard from "./pages/professional/StorefrontWizard";
 import StorefrontManager from "./pages/professional/StorefrontManager";
 import ExplorePage from "./pages/services/ExplorePage";
 import StorefrontViewPage from "./pages/services/StorefrontViewPage";
@@ -150,7 +150,7 @@ const App: React.FC = () => {
                 <Route path="services/:id/mapa" element={<MapView />} />
                 <Route path="catalog" element={<Navigate to="/professional/vitrine" replace />} />
                 <Route path="catalog/*" element={<Navigate to="/professional/vitrine" replace />} />
-                <Route path="vitrine/setup" element={<StorefrontSetup />} />
+                <Route path="vitrine/setup" element={<StorefrontWizard />} />
                 <Route path="vitrine" element={<StorefrontManager />} />
                 <Route
                   path="messages"
