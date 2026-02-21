@@ -494,8 +494,8 @@ export const cancelOrderSchema = z.object({
 });
 
 export const rescheduleOrderSchema = z.object({
-  scheduledDate: z.string().datetime("Data inválida"),
-  message: z.string().max(500).optional(),
+  newDate: z.string().min(1, "Data é obrigatória"),
+  reason: z.string().max(500).optional(),
 });
 
 // ============================================
