@@ -17,9 +17,6 @@ async function cleanup() {
       await prisma.companyStorefrontSection.deleteMany({ where: { companyId: company.id } });
       await prisma.companyStorefrontBlock.deleteMany({ where: { companyId: company.id } });
       await prisma.companyPinnedTestimonial.deleteMany({ where: { companyId: company.id } });
-      await prisma.companyInviteToken.deleteMany({ where: { companyId: company.id } });
-      await prisma.companyMember.deleteMany({ where: { companyId: company.id } });
-      await prisma.companyRole.deleteMany({ where: { companyId: company.id } });
       await prisma.companyProfile.delete({ where: { id: company.id } });
     }
     await prisma.user.delete({ where: { id: user.id } });
