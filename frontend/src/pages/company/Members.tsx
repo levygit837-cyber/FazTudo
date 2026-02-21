@@ -6,10 +6,14 @@ import {
   AlertCircle,
   X,
   Mail,
+  Link2,
+  Copy,
+  Check,
 } from "lucide-react";
 import api from "../../services/api";
 import { CompanyMember, CompanyRole } from "../../types";
 import MemberCard from "../../components/company/MemberCard";
+import companyInviteService from "../../services/companyInviteService";
 
 const CompanyMembers: React.FC = () => {
   const [members, setMembers] = useState<CompanyMember[]>([]);
@@ -22,6 +26,13 @@ const CompanyMembers: React.FC = () => {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+
+  // invite-by-link state
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteExpiry, setInviteExpiry] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const fetchData = () => {
     setLoading(true);
@@ -48,6 +59,36 @@ const CompanyMembers: React.FC = () => {
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
     } catch (err: any) {
       setError(err.response?.data?.message || "Erro ao remover membro");
+    }
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setLinkError(null);
+    try {
+      const res = await companyInviteService.generateInviteLink({ role: "MEMBER" });
+      if (res.success && res.data) {
+        setInviteLink(res.data.link);
+        setInviteExpiry(res.data.expiresAt);
+      } else {
+        setLinkError("Não foi possível gerar o link. Tente novamente.");
+      }
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : "Erro ao gerar link de convite";
+      setLinkError(msg);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (inviteLink) {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
     }
   };
 
@@ -111,6 +152,80 @@ const CompanyMembers: React.FC = () => {
           <span>{error}</span>
         </div>
       )}
+
+      {/* Invite by link card */}
+      <div className="card p-5 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Link2 className="h-5 w-5 text-blue-600" />
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            Convidar novo membro
+          </h2>
+        </div>
+
+        {linkError && (
+          <div className="alert alert-error mb-3">
+            <AlertCircle className="h-4 w-4 mr-2 shrink-0" />
+            <span>{linkError}</span>
+          </div>
+        )}
+
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="btn btn-primary flex items-center gap-2"
+        >
+          {generating ? (
+            <Loader className="h-4 w-4 animate-spin" />
+          ) : (
+            <Link2 className="h-4 w-4" />
+          )}
+          {generating ? "Gerando…" : "Gerar link de convite"}
+        </button>
+
+        {inviteLink && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={inviteLink}
+                className="input flex-1 bg-slate-50 dark:bg-slate-900 text-sm"
+                aria-label="Link de convite"
+              />
+              <button
+                onClick={handleCopy}
+                className="btn flex items-center gap-1.5 shrink-0"
+                title={copySuccess ? "Copiado!" : "Copiar link"}
+              >
+                {copySuccess ? (
+                  <>
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span className="text-green-600">Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copiar link
+                  </>
+                )}
+              </button>
+            </div>
+
+            {inviteExpiry && (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Expira em:{" "}
+                <span className="font-medium text-slate-700 dark:text-slate-300">
+                  {new Date(inviteExpiry).toLocaleDateString("pt-BR", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       {members.length === 0 ? (
         <div className="card p-12 text-center">
