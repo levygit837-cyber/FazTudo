@@ -177,7 +177,7 @@ const EditService: React.FC = () => {
         tags: parsedTags,
       });
       setSuccess(true);
-      setTimeout(() => navigate("/professional/catalog"), 1500);
+      setTimeout(() => navigate("/professional/vitrine"), 1500);
     } catch (err: any) {
       setError(
         err?.response?.data?.message || "Nao foi possivel atualizar o servico.",
@@ -444,7 +444,7 @@ const EditService: React.FC = () => {
             <button
               type="button"
               className="btn btn-outline"
-              onClick={() => navigate("/professional/catalog")}
+              onClick={() => navigate("/professional/vitrine")}
             >
               Cancelar
             </button>

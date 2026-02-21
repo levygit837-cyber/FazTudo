@@ -187,11 +187,6 @@ const Layout: React.FC = () => {
             icon: <FileText size={20} />,
           },
           {
-            path: "/professional/catalog",
-            label: "Meus Servicos",
-            icon: <LayoutGrid size={20} />,
-          },
-          {
             path: "/professional/vitrine",
             label: "Minha Vitrine",
             icon: <Store size={20} />,

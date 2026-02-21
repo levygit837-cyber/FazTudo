@@ -41,8 +41,8 @@ const roleConfigs: Record<"client" | "professional", RoleConfig> = {
     title: "Meus Servicos",
     subtitle: "Gerencie os pedidos de servicos que voce recebeu",
     emptyDescription: "Voce ainda nao recebeu pedidos.",
-    emptyActionLabel: "Gerenciar catalogo",
-    emptyActionPath: "/professional/catalog",
+    emptyActionLabel: "Gerenciar vitrine",
+    emptyActionPath: "/professional/vitrine",
     statusLabels: {
       [ServiceOrderStatus.PENDING]: "Novos",
       [ServiceOrderStatus.ACCEPTED]: "Aceitos",
@@ -232,7 +232,7 @@ const ServiceOrdersList: React.FC<ServiceOrdersListProps> = ({ role }) => {
             title="Nenhum pedido recebido ainda"
             description="Quando clientes solicitarem seus serviços, os pedidos aparecerão aqui. Certifique-se de ter serviços publicados e um perfil completo."
             actions={[
-              { label: "Criar serviço", to: "/professional/create-service" },
+              { label: "Criar serviço", to: "/professional/vitrine" },
               { label: "Completar perfil", to: "/profile", variant: "secondary" },
             ]}
             tip="Perfis com foto e descrição completa recebem 3x mais pedidos!"

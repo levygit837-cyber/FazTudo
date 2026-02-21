@@ -156,7 +156,7 @@ const ProfessionalDashboard: React.FC = () => {
       <div data-tour="tour-create-service-btn">
         <QuickActionBar
           actions={[
-            { label: "Criar serviço", to: "/professional/create-service", icon: PlusCircle, variant: "primary" },
+            { label: "Criar serviço", to: "/professional/vitrine", icon: PlusCircle, variant: "primary" },
             { label: "Pedidos recebidos", to: "/professional/services", icon: FileText, variant: "secondary" },
             { label: "Agenda", to: "/professional/agenda", icon: Calendar, variant: "secondary" },
             { label: "Mensagens", to: "/messages", icon: MessageSquare, variant: "ghost" },
@@ -411,10 +411,10 @@ const ProfessionalDashboard: React.FC = () => {
           <EmptyState
             icon="package"
             title="Nenhum pedido ainda"
-            description="Voce ainda nao recebeu pedidos. Cadastre servicos no seu catalogo para comecar a receber!"
+            description="Voce ainda nao recebeu pedidos. Configure sua vitrine para comecar a receber!"
             action={{
-              label: "Gerenciar catalogo",
-              onClick: () => navigate("/professional/catalog"),
+              label: "Gerenciar vitrine",
+              onClick: () => navigate("/professional/vitrine"),
             }}
           />
         ) : (
