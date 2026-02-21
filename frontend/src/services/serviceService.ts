@@ -759,6 +759,25 @@ export const delayResponse = async (
   return extractData(response);
 };
 
+/**
+ * Faz upload de imagens para um listing.
+ * Retorna array de URLs públicas.
+ */
+export const uploadListingImages = async (files: File[]): Promise<string[]> => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("images", file));
+
+  const response = await api.post<{
+    success: boolean;
+    data: { urls: string[]; failed: string[] };
+    message: string;
+  }>("/services/listings/upload-images", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  return response.data.data.urls;
+};
+
 export default {
   // Listings
   listServices,

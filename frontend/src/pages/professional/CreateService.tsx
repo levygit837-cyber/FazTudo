@@ -3,21 +3,30 @@ import { useNavigate } from "react-router";
 import { ArrowLeft, PlusCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTour } from "../../context/TourContext";
+import { useToast } from "../../context/ToastContext";
 import { CategoryWithCounts, getMainCategories } from "../../services/categoryService";
 import {
   CreateServiceListingData,
   createService,
+  uploadListingImages,
 } from "../../services/serviceService";
+
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 const CreateService: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isActive, onTourTargetReady } = useTour();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const [categories, setCategories] = useState<CategoryWithCounts[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Upload state
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   // Notify tour when this page's data-tour target finishes mounting
   useEffect(() => {
@@ -84,6 +93,31 @@ const CreateService: React.FC = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleImageFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (fileArray.length === 0) {
+      toastError("Selecione apenas arquivos de imagem (JPEG, PNG, WebP, GIF)");
+      return;
+    }
+    if (uploadedImages.length + fileArray.length > 8) {
+      toastError("Máximo de 8 imagens por serviço");
+      return;
+    }
+
+    setUploadingImages(true);
+    try {
+      const urls = await uploadListingImages(fileArray);
+      setUploadedImages((prev) => [...prev, ...urls]);
+      toastSuccess(`${urls.length} imagem(ns) enviada(s) com sucesso`);
+    } catch {
+      toastError("Erro ao enviar imagens. Tente novamente.");
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
@@ -98,10 +132,12 @@ const CreateService: React.FC = () => {
       return;
     }
 
-    const parsedImages = imagesInput
+    const urlImages = imagesInput
       .split("\n")
       .map((item) => item.trim())
       .filter(Boolean);
+    const parsedImages = [...uploadedImages, ...urlImages];
+
     const parsedTags = tagsInput
       .split(",")
       .map((item) => item.trim())
@@ -236,16 +272,90 @@ const CreateService: React.FC = () => {
               />
             </div>
 
+            {/* ─── Upload de Imagens ─────────────────────────────────────── */}
             <div className="md:col-span-2">
-              <label className="label">
-                Imagens (uma URL por linha, opcional)
-              </label>
-              <textarea
-                className="input min-h-28"
-                value={imagesInput}
-                onChange={(event) => setImagesInput(event.target.value)}
-                placeholder={"https://.../imagem-1.jpg\nhttps://.../imagem-2.jpg"}
-              />
+              <label className="label">Imagens do Serviço (máx. 8)</label>
+
+              {/* Área de drop */}
+              <div
+                className={[
+                  "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+                  uploadingImages
+                    ? "border-primary/40 bg-primary/5 cursor-wait"
+                    : "border-slate-300 dark:border-slate-600 hover:border-primary/60 hover:bg-primary/5 cursor-pointer",
+                ].join(" ")}
+                onClick={() =>
+                  !uploadingImages &&
+                  document.getElementById("listing-image-input")?.click()
+                }
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleImageFiles(e.dataTransfer.files);
+                }}
+              >
+                <input
+                  id="listing-image-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleImageFiles(e.target.files)}
+                  disabled={uploadingImages}
+                />
+                {uploadingImages ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Enviando imagens...
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Clique ou arraste imagens aqui
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      JPEG, PNG, WebP, GIF — máx. 5 MB cada
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Preview das imagens enviadas */}
+              {uploadedImages.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {uploadedImages.map((url, idx) => (
+                    <div key={idx} className="relative group">
+                      <img
+                        src={`${BACKEND_URL}${url}`}
+                        alt={`Imagem ${idx + 1}`}
+                        className="w-20 h-20 object-cover rounded-md border border-slate-200 dark:border-slate-700"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setUploadedImages((prev) => prev.filter((_, i) => i !== idx))
+                        }
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5
+                                   flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* URLs externas (opcional) */}
+              <details className="mt-3">
+                <summary className="text-xs text-slate-500 dark:text-slate-400 cursor-pointer select-none">
+                  Ou adicionar URLs externas (opcional)
+                </summary>
+                <textarea
+                  className="input min-h-20 mt-2 text-sm"
+                  value={imagesInput}
+                  onChange={(event) => setImagesInput(event.target.value)}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                />
+              </details>
             </div>
           </div>
 
@@ -260,7 +370,7 @@ const CreateService: React.FC = () => {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={submitting}
+              disabled={submitting || uploadingImages}
             >
               {submitting ? "Salvando..." : "Criar servico"}
             </button>
