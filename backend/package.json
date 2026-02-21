@@ -13,7 +13,8 @@
     "db:seed": "ts-node prisma/seed.ts",
     "db:reset": "npx prisma migrate reset --force",
     "db:push": "npx prisma db push",
-    "db:studio": "npx prisma studio"
+    "db:studio": "npx prisma studio",
+    "db:migrate-storefronts": "ts-node prisma/migrate-to-storefronts.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
