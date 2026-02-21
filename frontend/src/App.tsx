@@ -59,6 +59,7 @@ import CompanyStorefront from "./pages/CompanyStorefront";
 import CompanyAnalytics from "./pages/company/Analytics";
 import StorefrontEditor from "./pages/company/StorefrontEditor";
 import ProfessionalStorefrontPage from "./pages/ProfessionalStorefront";
+import StorefrontSetup from "./pages/professional/StorefrontSetup";
 import ExplorePage from "./pages/services/ExplorePage";
 import StorefrontViewPage from "./pages/services/StorefrontViewPage";
 import { UserRole } from "./types";
@@ -155,6 +156,7 @@ const App: React.FC = () => {
                 />
                 <Route path="catalog/new" element={<CreateService />} />
                 <Route path="catalog/:id/edit" element={<EditService />} />
+                <Route path="vitrine/setup" element={<StorefrontSetup />} />
                 <Route
                   path="messages"
                   element={<Messages />}
