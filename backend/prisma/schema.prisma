@@ -1050,6 +1050,11 @@ model Storefront {
   totalReviews    Int     @default(0)
   totalServices   Int     @default(0)
 
+  serviceLocation    String?
+  teamSize           Int?      @default(1)
+  workingHours       String?
+  averageServiceTime String?
+
   categories  StorefrontCategory[]
 
   createdAt   DateTime @default(now())
@@ -1087,6 +1092,7 @@ model StorefrontService {
   price        Float
   images       Json?
   isAvailable  Boolean            @default(true)
+  serviceLocation    String?
   order        Int
 
   options      StorefrontServiceOption[]

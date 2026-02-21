@@ -60,7 +60,7 @@ export async function getMyStorefront(req: AuthRequest, res: Response) {
 export async function createStorefront(req: AuthRequest, res: Response) {
   try {
     const userId = req.user!.id;
-    const { name, slug, description, mainCategoryId } = req.body;
+    const { name, slug, description, mainCategoryId, serviceLocation, teamSize, workingHours, averageServiceTime } = req.body;
 
     // Check if user already has a storefront
     const existing = await getOwnStorefront(userId);
@@ -85,6 +85,10 @@ export async function createStorefront(req: AuthRequest, res: Response) {
         slug: finalSlug,
         description,
         mainCategoryId,
+        serviceLocation,
+        teamSize,
+        workingHours,
+        averageServiceTime,
       },
     });
 
@@ -107,7 +111,7 @@ export async function updateStorefront(req: AuthRequest, res: Response) {
       return;
     }
 
-    const { name, slug, description, logo, banner, mainCategoryId, isActive } = req.body;
+    const { name, slug, description, logo, banner, mainCategoryId, isActive, serviceLocation, teamSize, workingHours, averageServiceTime } = req.body;
 
     // If slug changed, ensure uniqueness
     if (slug && slug !== storefront.slug) {
@@ -128,6 +132,10 @@ export async function updateStorefront(req: AuthRequest, res: Response) {
         ...(banner !== undefined && { banner }),
         ...(mainCategoryId !== undefined && { mainCategoryId }),
         ...(isActive !== undefined && { isActive }),
+        ...(serviceLocation !== undefined && { serviceLocation }),
+        ...(teamSize !== undefined && { teamSize }),
+        ...(workingHours !== undefined && { workingHours }),
+        ...(averageServiceTime !== undefined && { averageServiceTime }),
       },
     });
 
@@ -407,7 +415,7 @@ export async function createService(req: AuthRequest, res: Response) {
       return;
     }
 
-    const { categoryId, title, description, price, images, order } = req.body;
+    const { categoryId, title, description, price, images, order, serviceLocation } = req.body;
 
     // Verify category belongs to storefront
     const category = await prisma.storefrontCategory.findFirst({
@@ -436,6 +444,7 @@ export async function createService(req: AuthRequest, res: Response) {
         price,
         images: images || null,
         order: finalOrder,
+        serviceLocation,
       },
     });
 
@@ -474,7 +483,7 @@ export async function updateService(req: AuthRequest, res: Response) {
       return;
     }
 
-    const { categoryId, title, description, price, images, isAvailable, order } = req.body;
+    const { categoryId, title, description, price, images, isAvailable, order, serviceLocation } = req.body;
 
     // If changing category, verify new category belongs to storefront
     if (categoryId && categoryId !== service.categoryId) {
@@ -497,6 +506,7 @@ export async function updateService(req: AuthRequest, res: Response) {
         ...(images !== undefined && { images }),
         ...(isAvailable !== undefined && { isAvailable }),
         ...(order !== undefined && { order }),
+        ...(serviceLocation !== undefined && { serviceLocation }),
       },
     });
 
