@@ -60,6 +60,7 @@ import CompanyAnalytics from "./pages/company/Analytics";
 import StorefrontEditor from "./pages/company/StorefrontEditor";
 import ProfessionalStorefrontPage from "./pages/ProfessionalStorefront";
 import ExplorePage from "./pages/services/ExplorePage";
+import StorefrontViewPage from "./pages/services/StorefrontViewPage";
 import { UserRole } from "./types";
 import { useSessionTracking } from "./hooks/useSessionTracking";
 
@@ -109,6 +110,7 @@ const App: React.FC = () => {
               <Route path="services" element={<ServiceSearch />} />
               <Route path="services/:id" element={<ServiceDetails />} />
               <Route path="explorar" element={<ExplorePage />} />
+              <Route path="explorar/:slug" element={<StorefrontViewPage />} />
               <Route path="mapa" element={<MapView />} />
               <Route path="seguranca" element={<Security />} />
               <Route path="termos" element={<TermsOfService />} />
