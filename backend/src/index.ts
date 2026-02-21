@@ -36,6 +36,7 @@ import companyChannelRoutes from "./routes/companyChannelRoutes";
 import companyStorefrontRoutes from "./routes/companyStorefrontRoutes";
 import companyInviteRoutes from "./routes/companyInviteRoutes";
 import { getPublicStorefront } from "./controllers/companyStorefrontController";
+import { getCompanyStorefront } from "./controllers/companyController";
 import locationRoutes from "./routes/locationRoutes";
 import geocodingRoutes from "./routes/geocodingRoutes";
 import sessionRoutes from "./routes/sessionRoutes";
@@ -195,14 +196,24 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/wallet", walletRoutes);
-app.use("/api/company", companyRoutes);
+// More-specific /api/company/* sub-paths must be registered BEFORE the
+// general /api/company router, otherwise Express will match the wildcard
+// route (e.g. GET /storefront/:companyId) before the sub-routers.
+// The old public storefront endpoint for numeric company IDs must be explicitly
+// registered using a regex guard so it does NOT shadow keyword routes like /editor.
+app.get(/^\/api\/company\/storefront\/(\d+)$/, (req, res, next) => {
+  // Map the capture group back to params.companyId for the controller
+  req.params.companyId = (req as any).params[0];
+  return getCompanyStorefront(req as any, res);
+});
+app.use("/api/company/storefront", companyStorefrontRoutes);
+app.use("/api/company/invite", companyInviteRoutes);
 app.use("/api/company/members", companyMemberRoutes);
 app.use("/api/company/salary", companySalaryRoutes);
 app.use("/api/company/teams", companyTeamRoutes);
 app.use("/api/company/channels", companyChannelRoutes);
-app.use("/api/company/invite", companyInviteRoutes);
+app.use("/api/company", companyRoutes);
 app.get("/api/storefront/:companyId", getPublicStorefront);
-app.use("/api/company/storefront", companyStorefrontRoutes);
 
 // ============================================
 // ERROR HANDLING
