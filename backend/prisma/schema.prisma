@@ -946,6 +946,7 @@ model CompanyStorefrontSection {
   items       CompanyStorefrontItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  @@index([companyId, order])
 }
 
 model CompanyStorefrontItem {
@@ -957,6 +958,8 @@ model CompanyStorefrontItem {
   order       Int
   isFeatured  Boolean  @default(false)
   createdAt   DateTime @default(now())
+  @@unique([sectionId, listingId])
+  @@index([sectionId, order])
 }
 
 model CompanyStorefrontBlock {
@@ -969,6 +972,8 @@ model CompanyStorefrontBlock {
   content     Json
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  @@unique([companyId, type])
+  @@index([companyId])
 }
 
 model CompanyPinnedTestimonial {
@@ -979,4 +984,6 @@ model CompanyPinnedTestimonial {
   review      Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   order       Int
   createdAt   DateTime @default(now())
+  @@unique([companyId, reviewId])
+  @@index([companyId, order])
 }
