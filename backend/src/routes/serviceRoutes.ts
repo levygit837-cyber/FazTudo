@@ -8,6 +8,7 @@ import {
 } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { createServiceSchema, updateServiceSchema } from "../middleware/validation";
+import { listingUpload, uploadListingImages } from "../controllers/service/listingUploadController";
 
 const router = Router();
 
@@ -30,6 +31,16 @@ router.param("id", (req, res, next, value) => {
 
 // Listar todos os servicos disponiveis (publico)
 router.get("/", serviceController.listServices);
+
+// Upload de imagens para listagem (profissionais verificados)
+// DEVE ficar antes das rotas com /:id para não conflitar
+router.post(
+  "/listings/upload-images",
+  verifyToken,
+  requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
+  listingUpload.array("images", 8),
+  uploadListingImages
+);
 
 // Criar nova listagem de servico (apenas profissionais verificados)
 router.post(
