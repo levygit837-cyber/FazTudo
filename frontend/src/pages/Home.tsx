@@ -78,7 +78,7 @@ const Home: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                to="/services"
+                to="/explorar"
                 className="btn text-lg px-8 py-4 rounded-xl font-semibold bg-primary-600 text-white hover:bg-primary-500 shadow-glow-blue-lg hover:-translate-y-0.5 transition-all no-underline"
               >
                 <Search className="w-5 h-5 mr-2" />
@@ -160,7 +160,7 @@ const Home: React.FC = () => {
             </p>
           </div>
           <Link
-            to="/services"
+            to="/explorar"
             className="hidden md:flex items-center text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 font-semibold no-underline"
           >
             Ver todos
@@ -189,7 +189,7 @@ const Home: React.FC = () => {
         </div>
 
         <div className="mt-8 md:hidden text-center">
-          <Link to="/services" className="btn btn-outline w-full no-underline">
+          <Link to="/explorar" className="btn btn-outline w-full no-underline">
             Explorar todos os servicos
           </Link>
         </div>
@@ -265,7 +265,7 @@ const Home: React.FC = () => {
             </ul>
 
             <Link
-              to="/services"
+              to="/explorar"
               className="btn btn-secondary w-full justify-center no-underline"
             >
               Encontrar Servicos

@@ -145,8 +145,8 @@ const Layout: React.FC = () => {
 
   const navLinks = [
     {
-      path: "/services",
-      label: "Servicos",
+      path: "/explorar",
+      label: "Explorar",
       icon: <Search size={20} />,
       visible: true,
     },
@@ -190,6 +190,11 @@ const Layout: React.FC = () => {
             path: "/professional/catalog",
             label: "Meus Servicos",
             icon: <LayoutGrid size={20} />,
+          },
+          {
+            path: "/professional/vitrine",
+            label: "Minha Vitrine",
+            icon: <Store size={20} />,
           },
           {
             path: "/professional/carteira",
@@ -603,10 +608,10 @@ const Layout: React.FC = () => {
                 <ul className="space-y-2">
                   <li>
                     <Link
-                      to="/services"
+                      to="/explorar"
                       className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
                     >
-                      Servicos
+                      Explorar
                     </Link>
                   </li>
                   <li>
@@ -712,10 +717,10 @@ const Layout: React.FC = () => {
                 </p>
                 <div className="flex items-center space-x-6">
                   <Link
-                    to="/services"
+                    to="/explorar"
                     className="text-sm text-slate-600 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline"
                   >
-                    Explorar Servicos
+                    Explorar Vitrines
                   </Link>
                   <Link
                     to="/seguranca"

@@ -109,7 +109,7 @@ const App: React.FC = () => {
               <Route path="reset-password/:token" element={<ResetPassword />} />
               <Route path="verify-email" element={<VerifyAccount />} />
               <Route path="verify-email/:token" element={<VerifyEmail />} />
-              <Route path="services" element={<ServiceSearch />} />
+              <Route path="services" element={<Navigate to="/explorar" replace />} />
               <Route path="services/:id" element={<ServiceDetails />} />
               <Route path="explorar" element={<ExplorePage />} />
               <Route path="explorar/:slug" element={<StorefrontViewPage />} />

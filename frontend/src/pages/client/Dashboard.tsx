@@ -235,7 +235,7 @@ const ClientDashboard: React.FC = () => {
 
         {/* CTA Principal */}
         <Link
-          to="/services"
+          to="/explorar"
           data-tour="tour-search-services"
           className="
             group inline-flex items-center gap-3 px-6 py-3.5
@@ -307,7 +307,7 @@ const ClientDashboard: React.FC = () => {
               </h2>
             </div>
             <Link
-              to="/services"
+              to="/explorar"
               className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1 group"
             >
               Ver mais
