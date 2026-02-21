@@ -41,6 +41,7 @@ import geocodingRoutes from "./routes/geocodingRoutes";
 import sessionRoutes from "./routes/sessionRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
+import { scheduleDailySalaries, stopSalaryCron } from "./services/companyCronService";
 
 const app = express();
 const httpServer = createServer(app);
@@ -223,6 +224,7 @@ const gracefulShutdown = async (signal: string) => {
   log.info({ signal }, "Shutting down gracefully...");
   try {
     stopScheduledTasks();
+    stopSalaryCron();
     server.close(() => {
       log.info("HTTP server closed");
     });
@@ -260,6 +262,7 @@ initializeSocket(httpServer);
 const server = httpServer.listen(PORT, () => {
   log.info({ port: PORT, env: env.NODE_ENV }, "Server started");
   startScheduledTasks();
+  scheduleDailySalaries();
 });
 
 export default app;
