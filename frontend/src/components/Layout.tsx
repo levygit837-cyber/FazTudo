@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   BarChart3,
   Building2,
+  Store,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -233,6 +234,11 @@ const Layout: React.FC = () => {
             path: "/company/analytics",
             label: "Analytics",
             icon: <BarChart3 size={20} />,
+          },
+          {
+            path: "/company/storefront-editor",
+            label: "Vitrine",
+            icon: <Store size={20} />,
           },
         ]
       : []),

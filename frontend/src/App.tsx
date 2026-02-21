@@ -57,6 +57,7 @@ import CompanyChannels from "./pages/company/Channels";
 import ChannelDetail from "./pages/company/ChannelDetail";
 import CompanyStorefront from "./pages/CompanyStorefront";
 import CompanyAnalytics from "./pages/company/Analytics";
+import StorefrontEditor from "./pages/company/StorefrontEditor";
 import ProfessionalStorefrontPage from "./pages/ProfessionalStorefront";
 import { UserRole } from "./types";
 import { useSessionTracking } from "./hooks/useSessionTracking";
@@ -174,6 +175,7 @@ const App: React.FC = () => {
                 <Route path="channels" element={<CompanyChannels />} />
                 <Route path="channels/:channelId" element={<ChannelDetail />} />
                 <Route path="analytics" element={<CompanyAnalytics />} />
+                <Route path="storefront-editor" element={<StorefrontEditor />} />
                 <Route path="orders/:id/chat" element={<ServiceChat />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="carteira" element={<Wallet />} />
