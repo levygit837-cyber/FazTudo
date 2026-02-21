@@ -196,3 +196,159 @@ export async function getAnalyticsOverview(req: AuthRequest, res: Response) {
     throw err;
   }
 }
+
+/** GET /api/company/analytics/conversion-funnel — order counts at each pipeline stage */
+export async function getConversionFunnel(req: AuthRequest, res: Response) {
+  try {
+    const companyProfile = await prisma.companyProfile.findUnique({
+      where: { id: req.companyId! },
+      select: { userId: true },
+    });
+    if (!companyProfile) return res.status(404).json({ success: false, message: "Empresa não encontrada" });
+
+    // Collect userIds of all active members plus the company owner
+    const members = await prisma.companyMember.findMany({
+      where: { companyId: req.companyId!, isActive: true },
+      select: { userId: true },
+    });
+    const memberUserIds = members.map(m => m.userId);
+    const allProfessionalIds = Array.from(new Set([companyProfile.userId, ...memberUserIds]));
+
+    // Count orders at each funnel stage (orders where the professional is a company member/owner)
+    const [received, accepted, inProgress, completed] = await Promise.all([
+      // received = all orders ever assigned to the company
+      prisma.serviceOrder.count({
+        where: { professionalId: { in: allProfessionalIds } },
+      }),
+      // accepted = progressed past initial PENDING (accepted + further along)
+      prisma.serviceOrder.count({
+        where: {
+          professionalId: { in: allProfessionalIds },
+          status: {
+            in: [
+              "ACCEPTED",
+              "IN_PROGRESS",
+              "AWAITING_CLIENT_CONFIRMATION",
+              "AWAITING_PROFESSIONAL_CONFIRMATION",
+              "COMPLETED",
+            ],
+          },
+        },
+      }),
+      // inProgress = currently being worked on
+      prisma.serviceOrder.count({
+        where: { professionalId: { in: allProfessionalIds }, status: "IN_PROGRESS" },
+      }),
+      // completed = fully done
+      prisma.serviceOrder.count({
+        where: { professionalId: { in: allProfessionalIds }, status: "COMPLETED" },
+      }),
+    ]);
+
+    return res.json({
+      success: true,
+      message: "Funil de conversão obtido",
+      data: { received, accepted, inProgress, completed },
+    });
+  } catch (err) {
+    log.error({ err }, "getConversionFunnel error");
+    throw err;
+  }
+}
+
+/** GET /api/company/analytics/team-occupancy — active order count per team member */
+export async function getTeamOccupancy(req: AuthRequest, res: Response) {
+  try {
+    const members = await prisma.companyMember.findMany({
+      where: { companyId: req.companyId!, isActive: true },
+      include: {
+        user: { select: { id: true, name: true, profileImage: true } },
+      },
+    });
+
+    // For each member, count their IN_PROGRESS orders in parallel
+    const occupancyData = await Promise.all(
+      members.map(async member => {
+        const activeOrders = await prisma.serviceOrder.count({
+          where: { professionalId: member.userId, status: "IN_PROGRESS" },
+        });
+        return {
+          memberId: member.id,
+          memberName: member.user.name,
+          profileImage: member.user.profileImage,
+          activeOrders,
+          isActive: true,
+        };
+      })
+    );
+
+    // Sort descending by active orders so the busiest members appear first
+    occupancyData.sort((a, b) => b.activeOrders - a.activeOrders);
+
+    return res.json({
+      success: true,
+      message: "Ocupação da equipe obtida",
+      data: occupancyData,
+    });
+  } catch (err) {
+    log.error({ err }, "getTeamOccupancy error");
+    throw err;
+  }
+}
+
+/** GET /api/company/analytics/nps — Net Promoter Score from last 30 reviews */
+export async function getNPS(req: AuthRequest, res: Response) {
+  try {
+    const companyProfile = await prisma.companyProfile.findUnique({
+      where: { id: req.companyId! },
+      select: { userId: true },
+    });
+    if (!companyProfile) return res.status(404).json({ success: false, message: "Empresa não encontrada" });
+
+    // Collect userIds of all active members plus the company owner
+    const members = await prisma.companyMember.findMany({
+      where: { companyId: req.companyId!, isActive: true },
+      select: { userId: true },
+    });
+    const memberUserIds = members.map(m => m.userId);
+    const allProfessionalIds = Array.from(new Set([companyProfile.userId, ...memberUserIds]));
+
+    // Fetch the last 30 reviews targeting any company professional
+    const reviews = await prisma.review.findMany({
+      where: {
+        targetId: { in: allProfessionalIds },
+        isProfessional: true,
+      },
+      select: { rating: true },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    });
+
+    const total = reviews.length;
+    let promoters = 0;
+    let passives = 0;
+    let detractors = 0;
+
+    for (const review of reviews) {
+      if (review.rating === 5) {
+        promoters++;
+      } else if (review.rating === 4) {
+        passives++;
+      } else {
+        // rating 1–3
+        detractors++;
+      }
+    }
+
+    const nps = total > 0 ? Math.round(((promoters - detractors) / total) * 100) : 0;
+
+    return res.json({
+      success: true,
+      message: "NPS obtido",
+      data: { nps, promoters, passives, detractors, total },
+    });
+  } catch (err) {
+    log.error({ err }, "getNPS error");
+    throw err;
+  }
+}

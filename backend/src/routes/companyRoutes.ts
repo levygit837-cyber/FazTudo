@@ -10,6 +10,9 @@ import {
   getMemberPerformance,
   getTopServices,
   getAnalyticsOverview,
+  getConversionFunnel,
+  getTeamOccupancy,
+  getNPS,
 } from "../controllers/companyAnalyticsController";
 
 const router = Router();
@@ -33,5 +36,8 @@ router.get("/analytics/overview", requireCompanyPermission("metrics.view"), getA
 router.get("/analytics/revenue", requireCompanyPermission("metrics.view"), getRevenueAnalytics);
 router.get("/analytics/members", requireCompanyPermission("metrics.viewTeam"), getMemberPerformance);
 router.get("/analytics/services", requireCompanyPermission("metrics.view"), getTopServices);
+router.get("/analytics/conversion-funnel", requireCompanyPermission("metrics.view"), getConversionFunnel);
+router.get("/analytics/team-occupancy", requireCompanyPermission("metrics.view"), getTeamOccupancy);
+router.get("/analytics/nps", requireCompanyPermission("metrics.view"), getNPS);
 
 export default router;
