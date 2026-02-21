@@ -29,21 +29,21 @@ router.use(authLogger);
 // ROTAS DE SERVICE ORDERS (PEDIDOS)
 // ============================================
 
-// Criar pedido a partir do carrinho da vitrine (clientes verificados)
+// Criar pedido a partir do carrinho da vitrine (clientes e profissionais verificados)
 router.post(
   "/orders/from-cart",
   verifyToken,
-  requireRole("CLIENT"),
+  requireRole("CLIENT", "PROFESSIONAL"),
   requireVerified,
   validateBody(cartCheckoutSchema),
   createOrderFromCart,
 );
 
-// Criar novo pedido de servico (apenas clientes verificados)
+// Criar novo pedido de servico (clientes e profissionais verificados)
 router.post(
   "/orders",
   verifyToken,
-  requireRole("CLIENT"),
+  requireRole("CLIENT", "PROFESSIONAL"),
   requireVerified,
   validateBody(createOrderSchema),
   serviceController.createServiceOrder,

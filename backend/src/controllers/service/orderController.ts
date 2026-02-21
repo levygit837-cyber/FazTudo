@@ -106,7 +106,7 @@ const calculateDeadlineDate = (days: number): Date => {
   return deadline;
 };
 
-// Criar novo pedido de serviço (apenas clientes)
+// Criar novo pedido de serviço (clientes e profissionais)
 export const createServiceOrder = async (
   req: AuthRequest,
   res: Response,
@@ -117,10 +117,10 @@ export const createServiceOrder = async (
       return;
     }
 
-    if (req.user.role !== "CLIENT") {
+    if (req.user.role !== "CLIENT" && req.user.role !== "PROFESSIONAL") {
       res
         .status(403)
-        .json(errorResponse("Only clients can create service orders"));
+        .json(errorResponse("Only clients and professionals can create service orders"));
       return;
     }
 
@@ -161,6 +161,14 @@ export const createServiceOrder = async (
 
     if (!serviceListing.isAvailable) {
       res.status(400).json(errorResponse("This service is not available"));
+      return;
+    }
+
+    // Impedir pedidos no próprio serviço
+    if (serviceListing.professionalId === req.user.id) {
+      res
+        .status(403)
+        .json(errorResponse("Voce nao pode fazer pedidos dos seus proprios servicos"));
       return;
     }
 
