@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, Link } from "react-router";
+import { useParams, useNavigate, useLocation } from "react-router";
 import {
   ArrowLeft,
   Star,
@@ -17,6 +17,7 @@ import {
 import { Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
 import { getStorefrontBySlug } from "../../services/storefrontService";
+import api from "../../services/api";
 import { useStorefrontCart } from "../../hooks/useStorefrontCart";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
@@ -42,11 +43,13 @@ interface ServiceItemProps {
     qty: number,
     options: StorefrontServiceOption[],
   ) => void;
+  onAskQuestion: (service: StorefrontService) => void;
 }
 
 const ServiceItem: React.FC<ServiceItemProps> = ({
   service,
   onAddToCart,
+  onAskQuestion,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<StorefrontServiceOption[]>([]);
@@ -174,6 +177,17 @@ const ServiceItem: React.FC<ServiceItemProps> = ({
               <ShoppingCart className="w-4 h-4" />
               Adicionar {formatCurrency(calcPrice() * quantity)}
             </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAskQuestion(service);
+              }}
+              className="btn btn-outline btn-sm flex items-center gap-1.5"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Tirar duvida
+            </button>
           </div>
         </div>
       )}
@@ -194,6 +208,7 @@ interface CategorySectionProps {
     qty: number,
     options: StorefrontServiceOption[],
   ) => void;
+  onAskQuestion: (service: StorefrontService) => void;
 }
 
 const CategorySection: React.FC<CategorySectionProps> = ({
@@ -202,6 +217,7 @@ const CategorySection: React.FC<CategorySectionProps> = ({
   storefrontName,
   storefrontSlug,
   onAddToCart,
+  onAskQuestion,
 }) => {
   if (category.services.length === 0) return null;
 
@@ -222,6 +238,7 @@ const CategorySection: React.FC<CategorySectionProps> = ({
             storefrontName={storefrontName}
             storefrontSlug={storefrontSlug}
             onAddToCart={onAddToCart}
+            onAskQuestion={onAskQuestion}
           />
         ))}
       </div>
@@ -275,6 +292,7 @@ const CartBar: React.FC<CartBarProps> = ({
 const StorefrontViewPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user } = useAuth();
   const toast = useToast();
 
@@ -386,6 +404,30 @@ const StorefrontViewPage: React.FC = () => {
       } catch {
         toast.error("Erro ao copiar link");
       }
+    }
+  };
+
+  // Ask question about a specific storefront service
+  const handleAskQuestion = async (service: StorefrontService) => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+    try {
+      const response = await api.post("/api/services/orders/draft", {
+        storefrontServiceId: service.id,
+      });
+      const draft = response.data.data.serviceOrder;
+      const basePath =
+        user?.role === "PROFESSIONAL"
+          ? "/professional/services"
+          : "/client/services";
+      navigate(`${basePath}/${draft.id}/chat`);
+    } catch (err: any) {
+      toast.error(
+        "Erro",
+        err?.response?.data?.message || "Erro ao iniciar conversa",
+      );
     }
   };
 
@@ -536,25 +578,6 @@ const StorefrontViewPage: React.FC = () => {
               {storefront.description}
             </p>
           )}
-
-          {/* Contact */}
-          <div className="mt-4">
-            <Link
-              to={isAuthenticated ? "#" : "/login"}
-              className="btn btn-outline btn-sm flex items-center gap-2 w-fit"
-              onClick={(e) => {
-                if (!isAuthenticated) return;
-                e.preventDefault();
-                toast.info(
-                  "Tirar duvidas",
-                  "Adicione servicos ao carrinho e faca o pedido para conversar com o profissional",
-                );
-              }}
-            >
-              <MessageCircle className="w-4 h-4" />
-              Tirar duvidas
-            </Link>
-          </div>
         </div>
       </div>
 
@@ -595,6 +618,7 @@ const StorefrontViewPage: React.FC = () => {
               storefrontName={storefront.name}
               storefrontSlug={storefront.slug}
               onAddToCart={handleAddToCart}
+              onAskQuestion={handleAskQuestion}
             />
           ))
         )}

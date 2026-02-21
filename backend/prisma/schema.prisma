@@ -287,6 +287,10 @@ model ServiceOrder {
   events        ServiceOrderEvent[] // analytics
   items         ServiceOrderItem[]
 
+  // Storefront service (vitrine) reference for draft orders
+  storefrontServiceId Int?
+  storefrontService   StorefrontService? @relation("OrderStorefrontService", fields: [storefrontServiceId], references: [id])
+
   // Reschedule approval flow
   rescheduleProposedDate DateTime?
   rescheduleReason       String?
@@ -1097,6 +1101,7 @@ model StorefrontService {
 
   options      StorefrontServiceOption[]
   orderItems   ServiceOrderItem[]
+  draftOrders  ServiceOrder[] @relation("OrderStorefrontService")
 
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
