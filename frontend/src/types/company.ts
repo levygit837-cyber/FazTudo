@@ -25,6 +25,9 @@ export interface CompanyProfile {
   industry?: string;
   foundedAt?: string;
   createdAt: string;
+  tier?: CompanyTier;
+  onboardingStep?: number;
+  onboardingDone?: boolean;
 }
 
 export interface CompanyRole {

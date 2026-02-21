@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import TierBadge from "../../components/company/TierBadge";
+import OnboardingWizard from "../../components/company/OnboardingWizard";
+import type { CompanyProfile, CompanyTier } from "../../types";
 
 interface DashboardData {
   totalOrders: number;
@@ -49,13 +52,19 @@ const StatCard: React.FC<{
 const CompanyDashboard: React.FC = () => {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .get("/company/dashboard")
-      .then((r) => setData(r.data.data))
+    Promise.all([
+      api.get("/company/dashboard"),
+      api.get("/company/profile"),
+    ])
+      .then(([dashRes, profileRes]) => {
+        setData(dashRes.data.data);
+        setCompany(profileRes.data.data ?? profileRes.data);
+      })
       .catch((err) => setError(err.response?.data?.message || "Erro ao carregar dashboard"))
       .finally(() => setLoading(false));
   }, []);
@@ -106,9 +115,12 @@ const CompanyDashboard: React.FC = () => {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <Building2 className="h-7 w-7 text-blue-600" />
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            Dashboard Empresarial
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              Dashboard Empresarial
+            </h1>
+            <TierBadge tier={(company?.tier ?? "EMPRESA") as CompanyTier} />
+          </div>
         </div>
         <p className="text-slate-500 dark:text-slate-400 ml-10">
           Bem-vindo, {user?.name}. Aqui está um resumo da sua empresa.
@@ -161,6 +173,12 @@ const CompanyDashboard: React.FC = () => {
           subtitle="Disponível para saque"
         />
       </div>
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        currentStep={company?.onboardingStep ?? 0}
+        onboardingDone={company?.onboardingDone ?? false}
+      />
 
       {/* Quick Navigation */}
       <div>
