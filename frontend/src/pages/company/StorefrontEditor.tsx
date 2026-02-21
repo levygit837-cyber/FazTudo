@@ -21,7 +21,14 @@ import type {
 type BlockState = {
   type: StorefrontBlockType;
   isActive: boolean;
+  // HERO + ABOUT
   headline: string;
+  // HERO-specific
+  subText: string;
+  heroImageUrl: string;
+  bgColor: string;
+  // ABOUT-specific
+  body: string;
 };
 
 const BLOCK_LABELS: Record<StorefrontBlockType, string> = {
@@ -57,6 +64,7 @@ const BlockCard: React.FC<{
       </label>
     </div>
 
+    {/* Título principal — todos os tipos */}
     <div>
       <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
         Título principal
@@ -69,6 +77,84 @@ const BlockCard: React.FC<{
         className="input w-full text-sm"
       />
     </div>
+
+    {/* HERO: subtítulo, imagem, cor de fundo */}
+    {state.type === "HERO" && (
+      <>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            Subtítulo
+          </label>
+          <input
+            type="text"
+            value={state.subText}
+            onChange={(e) => onChange({ subText: e.target.value })}
+            placeholder="Ex: Sua empresa de confiança há 10 anos"
+            className="input w-full text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            URL da imagem de destaque
+          </label>
+          <input
+            type="url"
+            value={state.heroImageUrl}
+            onChange={(e) => onChange({ heroImageUrl: e.target.value })}
+            placeholder="https://exemplo.com/banner.jpg"
+            className="input w-full text-sm"
+          />
+          {state.heroImageUrl && (
+            <img
+              src={state.heroImageUrl}
+              alt="Preview hero"
+              className="mt-2 w-full h-24 object-cover rounded-lg border border-slate-200 dark:border-slate-700"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            Cor de fundo (hex)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={state.bgColor || "#ffffff"}
+              onChange={(e) => onChange({ bgColor: e.target.value })}
+              className="w-9 h-9 rounded border border-slate-300 cursor-pointer p-0.5"
+            />
+            <input
+              type="text"
+              value={state.bgColor}
+              onChange={(e) => onChange({ bgColor: e.target.value })}
+              placeholder="#ffffff"
+              className="input flex-1 text-sm font-mono"
+              maxLength={7}
+            />
+          </div>
+        </div>
+      </>
+    )}
+
+    {/* ABOUT: corpo de texto */}
+    {state.type === "ABOUT" && (
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Texto sobre a empresa
+        </label>
+        <textarea
+          value={state.body}
+          onChange={(e) => onChange({ body: e.target.value })}
+          placeholder="Conte a história da sua empresa, valores, missão e diferenciais..."
+          className="input w-full text-sm min-h-28 resize-y"
+          maxLength={2000}
+        />
+        <p className="text-xs text-slate-400 text-right mt-0.5">
+          {state.body.length}/2000
+        </p>
+      </div>
+    )}
 
     {error && (
       <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
@@ -100,7 +186,15 @@ const StorefrontEditor: React.FC = () => {
 
   // Blocks
   const [blocks, setBlocks] = useState<BlockState[]>(
-    BLOCK_TYPES.map((type) => ({ type, isActive: false, headline: "" })),
+    BLOCK_TYPES.map((type) => ({
+      type,
+      isActive: false,
+      headline: "",
+      subText: "",
+      heroImageUrl: "",
+      bgColor: "",
+      body: "",
+    })),
   );
   const [blockSaving, setBlockSaving] = useState<
     Record<StorefrontBlockType, boolean>
@@ -131,10 +225,15 @@ const StorefrontEditor: React.FC = () => {
         setBlocks(
           BLOCK_TYPES.map((type) => {
             const found = serverBlocks.find((b) => b.type === type);
+            const content = found?.content as Record<string, unknown> | undefined;
             return {
               type,
               isActive: found?.isActive ?? false,
-              headline: (found?.content?.headline as string) ?? "",
+              headline: (content?.headline as string) ?? "",
+              subText: (content?.subText as string) ?? "",
+              heroImageUrl: (content?.heroImageUrl as string) ?? "",
+              bgColor: (content?.bgColor as string) ?? "",
+              body: (content?.body as string) ?? "",
             };
           }),
         );
@@ -173,7 +272,17 @@ const StorefrontEditor: React.FC = () => {
         type,
         order: BLOCK_TYPES.indexOf(type),
         isActive: block.isActive,
-        content: { headline: block.headline },
+        content: {
+          headline: block.headline,
+          ...(type === "HERO" && {
+            subText: block.subText,
+            heroImageUrl: block.heroImageUrl,
+            bgColor: block.bgColor,
+          }),
+          ...(type === "ABOUT" && {
+            body: block.body,
+          }),
+        },
       });
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       setBlockErrors((e) => ({
@@ -270,7 +379,7 @@ const StorefrontEditor: React.FC = () => {
         <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-4">
           Blocos de Conteúdo
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {blocks.map((block) => (
             <BlockCard
               key={block.type}
