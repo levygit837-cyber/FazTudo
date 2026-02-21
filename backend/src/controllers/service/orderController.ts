@@ -1149,6 +1149,53 @@ export const confirmProfessionalCompletion = async (
       status: "COMPLETED",
     });
 
+    // NON-FATAL: auto-upgrade company tier after order completion
+    try {
+      const professional = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        include: { companyMember: { include: { company: true } } },
+      });
+
+      const membership = professional?.companyMember;
+      if (membership?.company) {
+        const company = membership.company;
+
+        const allMemberIds = await prisma.companyMember.findMany({
+          where: { companyId: company.id, isActive: true },
+          select: { userId: true },
+        });
+        const memberUserIds = allMemberIds.map((m) => m.userId);
+
+        const completedCount = await prisma.serviceOrder.count({
+          where: { professionalId: { in: memberUserIds }, status: "COMPLETED" },
+        });
+
+        let newTier: "EMPRESA" | "PARCEIRO" | "ELITE" | null = null;
+
+        if (company.tier === "EMPRESA" && completedCount >= 50) {
+          newTier = "PARCEIRO";
+        } else if (company.tier === "PARCEIRO" && completedCount >= 200) {
+          const avgRatingResult = await prisma.review.aggregate({
+            where: { targetId: { in: memberUserIds }, isProfessional: true },
+            _avg: { rating: true },
+          });
+          if ((avgRatingResult._avg.rating ?? 0) >= 4.5) {
+            newTier = "ELITE";
+          }
+        }
+
+        if (newTier && newTier !== company.tier) {
+          await prisma.companyProfile.update({
+            where: { id: company.id },
+            data: { tier: newTier as any },
+          });
+          log.info({ companyId: company.id, oldTier: company.tier, newTier }, "Company tier upgraded");
+        }
+      }
+    } catch (tierErr) {
+      log.warn({ tierErr }, "Tier upgrade check failed — non-fatal");
+    }
+
     res.status(200).json(
       successResponse(
         { serviceOrder: updatedOrder },
