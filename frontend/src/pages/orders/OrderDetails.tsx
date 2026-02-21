@@ -43,6 +43,7 @@ import {
   delayResponse,
 } from "../../services/serviceService";
 import { ServiceOrder } from "../../types";
+import { PaymentStatus } from "../../types";
 import {
   formatCurrency,
   formatDate,
@@ -56,13 +57,14 @@ import {
 // CHECKOUT STEPPER (pedidos sem pagamento)
 // =====================================
 interface CheckoutStepperProps {
-  currentStep: number; // 0=criado, 1=horario, 2=pagamento
+  currentStep: number; // 0=solicitado, 1=agendar, 2=aguardando pagamento, 3=pagamento realizado
 }
 
 const CHECKOUT_STEPS = [
-  { label: "Pedido Criado", icon: <CheckCircle className="w-4 h-4" /> },
-  { label: "Horario", icon: <Calendar className="w-4 h-4" /> },
-  { label: "Pagamento", icon: <CreditCard className="w-4 h-4" /> },
+  { label: "Pedido Solicitado",    icon: <CheckCircle className="w-4 h-4" /> },
+  { label: "Agendar Horário",      icon: <Calendar className="w-4 h-4" /> },
+  { label: "Aguardando Pagamento", icon: <CreditCard className="w-4 h-4" /> },
+  { label: "Pagamento Realizado",  icon: <DollarSign className="w-4 h-4" /> },
 ];
 
 const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ currentStep }) => {
@@ -122,14 +124,14 @@ const OrderProgressStepper: React.FC<OrderProgressStepperProps> = ({ order }) =>
   const getSteps = () => {
     const steps = [
       {
-        label: "Servico Iniciado",
-        description: "Pagamento aprovado",
+        label: "Pagamento Aprovado",
+        description: "Pagamento processado com sucesso",
         done: true, // Sempre verde pois pagamento ja foi aprovado
         icon: <CheckCircle className="w-4 h-4" />,
       },
       {
-        label: "Aguardando Profissional",
-        description: "Profissional precisa confirmar o servico",
+        label: "Profissional Notificado",
+        description: "Profissional recebeu a notificação do pedido",
         done: [
           "ACCEPTED", "IN_PROGRESS",
           "AWAITING_CLIENT_CONFIRMATION",
@@ -139,10 +141,20 @@ const OrderProgressStepper: React.FC<OrderProgressStepperProps> = ({ order }) =>
         icon: <User className="w-4 h-4" />,
       },
       {
+        label: "Profissional a Caminho",
+        description: "Profissional confirmou e está se deslocando",
+        done: [
+          "IN_PROGRESS",
+          "AWAITING_CLIENT_CONFIRMATION",
+          "AWAITING_PROFESSIONAL_CONFIRMATION",
+          "COMPLETED",
+        ].includes(order.status),
+        icon: <CalendarClock className="w-4 h-4" />,
+      },
+      {
         label: "Servico em Andamento",
         description: "Profissional esta realizando o servico",
         done: [
-          "IN_PROGRESS",
           "AWAITING_CLIENT_CONFIRMATION",
           "AWAITING_PROFESSIONAL_CONFIRMATION",
           "COMPLETED",
@@ -160,8 +172,8 @@ const OrderProgressStepper: React.FC<OrderProgressStepperProps> = ({ order }) =>
         icon: <CheckCircle className="w-4 h-4" />,
       },
       {
-        label: "Concluido",
-        description: "Servico finalizado com sucesso",
+        label: "Servico Concluido",
+        description: "Servico finalizado com sucesso — pagamento liberado",
         done: order.status === "COMPLETED",
         icon: <Star className="w-4 h-4" />,
       },
@@ -521,7 +533,12 @@ const OrderDetails: React.FC = () => {
       {/* CHECKOUT STEPPER (pre-pagamento) */}
       {isCheckoutPhase && (
         <div className="card">
-          <CheckoutStepper currentStep={order.scheduledDate ? 2 : 1} />
+          <CheckoutStepper currentStep={
+            order.payments?.[0]?.status === PaymentStatus.HELD ||
+            order.payments?.[0]?.status === PaymentStatus.RELEASED ? 3 :
+            order.scheduledDate ? 2 :
+            1
+          } />
         </div>
       )}
 
