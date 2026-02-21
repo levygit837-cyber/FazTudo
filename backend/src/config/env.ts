@@ -81,6 +81,7 @@ export interface EnvConfig {
 
   // Frontend
   FRONTEND_URL: string;
+  BACKEND_URL?: string;
 
   // Google Maps
   PLACES_API_KEY: string;
@@ -202,6 +203,7 @@ function getEnvConfig(): EnvConfig {
 
     // Frontend
     FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+    BACKEND_URL: process.env.BACKEND_URL || undefined,
 
     // Google Maps
     PLACES_API_KEY: process.env.PLACES_API || '',

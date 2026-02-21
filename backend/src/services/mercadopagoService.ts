@@ -1,6 +1,19 @@
 import { getPreferenceClient, getPaymentClient } from "../config/mercadopago";
 import { env } from "../config/env";
 
+/**
+ * Retorna a notification_url para o MercadoPago.
+ * MercadoPago rejeita localhost (code 4020).
+ * Em dev sem BACKEND_URL configurado, omitimos o campo.
+ */
+function getNotificationUrl(): string | undefined {
+  const backendUrl = process.env.BACKEND_URL;
+  if (!backendUrl || backendUrl.includes("localhost")) {
+    return undefined; // MP não aceita localhost — webhook será ignorado em dev local
+  }
+  return `${backendUrl}/api/services/payments/webhook`;
+}
+
 // ============================================
 // SECURITY: Webhook Secret Guard (VULN-01)
 // ============================================
@@ -66,7 +79,7 @@ export async function createPaymentPreference(
         pending: `${frontendUrl}/client/orders/${params.orderId}?payment=pending`,
       },
       auto_return: "approved",
-      notification_url: `${backendUrl}/api/payments/webhook`,
+      ...(getNotificationUrl() && { notification_url: getNotificationUrl() }),
       external_reference: params.externalReference,
       statement_descriptor: "FAZTUDO",
     },
@@ -149,7 +162,7 @@ export async function createCardPayment(
         },
       },
       external_reference: params.externalReference,
-      notification_url: `${process.env.BACKEND_URL || `http://localhost:${env.PORT}`}/api/services/payments/webhook`,
+      ...(getNotificationUrl() && { notification_url: getNotificationUrl() }),
       statement_descriptor: "FAZTUDO",
     },
     requestOptions: {
@@ -211,7 +224,7 @@ export async function createPixPayment(
         },
       },
       external_reference: params.externalReference,
-      notification_url: `${process.env.BACKEND_URL || `http://localhost:${env.PORT}`}/api/services/payments/webhook`,
+      ...(getNotificationUrl() && { notification_url: getNotificationUrl() }),
     },
     requestOptions: {
       idempotencyKey: `pix-${params.externalReference}`,
@@ -273,7 +286,7 @@ export async function createBoletoPayment(
         },
       },
       external_reference: params.externalReference,
-      notification_url: `${process.env.BACKEND_URL || `http://localhost:${env.PORT}`}/api/services/payments/webhook`,
+      ...(getNotificationUrl() && { notification_url: getNotificationUrl() }),
     },
     requestOptions: {
       idempotencyKey: `boleto-${params.externalReference}`,
