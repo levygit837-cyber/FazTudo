@@ -17,6 +17,8 @@ import {
   cancelOrderSchema,
   rescheduleOrderSchema,
 } from "../middleware/validation";
+import { cartCheckoutSchema } from "../middleware/storefrontValidation";
+import { createOrderFromCart } from "../controllers/cartCheckoutController";
 
 const router = Router();
 
@@ -26,6 +28,16 @@ router.use(authLogger);
 // ============================================
 // ROTAS DE SERVICE ORDERS (PEDIDOS)
 // ============================================
+
+// Criar pedido a partir do carrinho da vitrine (clientes verificados)
+router.post(
+  "/orders/from-cart",
+  verifyToken,
+  requireRole("CLIENT"),
+  requireVerified,
+  validateBody(cartCheckoutSchema),
+  createOrderFromCart,
+);
 
 // Criar novo pedido de servico (apenas clientes verificados)
 router.post(
