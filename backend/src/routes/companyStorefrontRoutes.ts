@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { verifyToken } from "../middleware/auth";
+import { requireCompanyPermission } from "../middleware/companyPermission";
 import {
   getStorefrontEditor,
   createSection,
@@ -14,23 +15,26 @@ import {
 
 const router = Router();
 
-// Editor (authenticated)
-router.get("/editor", verifyToken, getStorefrontEditor);
+// All routes require company membership / ownership
+router.use(verifyToken, requireCompanyPermission("catalog.edit"));
+
+// Editor
+router.get("/editor", getStorefrontEditor);
 
 // Sections
-router.post("/sections", verifyToken, createSection);
-router.patch("/sections/:sectionId", verifyToken, updateSection);
-router.delete("/sections/:sectionId", verifyToken, deleteSection);
+router.post("/sections", createSection);
+router.patch("/sections/:sectionId", updateSection);
+router.delete("/sections/:sectionId", deleteSection);
 
 // Section items
-router.post("/sections/:sectionId/items", verifyToken, addItemToSection);
-router.delete("/sections/:sectionId/items/:itemId", verifyToken, removeItemFromSection);
+router.post("/sections/:sectionId/items", addItemToSection);
+router.delete("/sections/:sectionId/items/:itemId", removeItemFromSection);
 
 // Blocks
-router.put("/blocks", verifyToken, upsertBlock);
+router.put("/blocks", upsertBlock);
 
 // Pinned testimonials
-router.post("/testimonials/pin", verifyToken, pinTestimonial);
-router.delete("/testimonials/:pinnedId", verifyToken, unpinTestimonial);
+router.post("/testimonials/pin", pinTestimonial);
+router.delete("/testimonials/:pinnedId", unpinTestimonial);
 
 export default router;

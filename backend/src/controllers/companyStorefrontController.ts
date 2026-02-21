@@ -3,6 +3,7 @@ import prisma from "../lib/prisma";
 import { createLogger } from "../lib/logger";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import type { AuthRequest } from "../middleware/auth";
 
 const log = createLogger("companyStorefront");
 
@@ -73,9 +74,16 @@ export async function getPublicStorefront(req: Request, res: Response) {
       return res.status(404).json({ success: false, message: "Empresa não encontrada" });
     }
 
+    const allMemberIds = company.members.map((m) => m.user);
+    const ownerAndMemberUserIds = await prisma.companyMember.findMany({
+      where: { companyId: company.id, isActive: true },
+      select: { userId: true },
+    });
+    const professionalIds = [company.userId, ...ownerAndMemberUserIds.map((m) => m.userId)];
+
     const ordersCount = await prisma.serviceOrder.count({
       where: {
-        professional: { companyMember: { companyId: company.id } },
+        professionalId: { in: Array.from(new Set(professionalIds)) },
         status: "COMPLETED",
       },
     });
@@ -93,38 +101,31 @@ export async function getPublicStorefront(req: Request, res: Response) {
 
 // ──────────────────────────────────────────────
 // EDITOR: get storefront data for editing
+// Auth + requireCompanyPermission sets req.companyId
 // ──────────────────────────────────────────────
-export async function getStorefrontEditor(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+export async function getStorefrontEditor(req: AuthRequest, res: Response) {
+  const companyId = req.companyId!;
   try {
-    const member = await prisma.companyMember.findFirst({
-      where: { userId, isActive: true },
+    const company = await prisma.companyProfile.findUnique({
+      where: { id: companyId },
       include: {
-        company: {
-          include: {
-            storefrontSections: {
-              orderBy: { order: "asc" },
-              include: { items: { orderBy: { order: "asc" }, include: { listing: true } } },
-            },
-            storefrontBlocks: { orderBy: { order: "asc" } },
-            pinnedTestimonials: {
-              orderBy: { order: "asc" },
-              include: {
-                review: {
-                  include: { author: { select: { name: true } } },
-                },
-              },
-            },
-          },
+        storefrontSections: {
+          orderBy: { order: "asc" },
+          include: { items: { orderBy: { order: "asc" }, include: { listing: true } } },
+        },
+        storefrontBlocks: { orderBy: { order: "asc" } },
+        pinnedTestimonials: {
+          orderBy: { order: "asc" },
+          include: { review: { include: { author: { select: { name: true } } } } },
         },
       },
     });
 
-    if (!member) {
-      return res.status(403).json({ success: false, message: "Sem permissão" });
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Empresa não encontrada" });
     }
 
-    return res.json({ success: true, message: "Editor carregado", data: member.company });
+    return res.json({ success: true, message: "Editor carregado", data: company });
   } catch (err) {
     log.error({ err }, "getStorefrontEditor error");
     return res.status(500).json({ success: false, message: "Erro interno" });
@@ -141,8 +142,8 @@ const sectionSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export async function createSection(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+export async function createSection(req: AuthRequest, res: Response) {
+  const companyId = req.companyId!;
   const body = sectionSchema.safeParse(req.body);
   if (!body.success)
     return res
@@ -150,11 +151,8 @@ export async function createSection(req: Request, res: Response) {
       .json({ success: false, message: "Dados inválidos", data: body.error.flatten() });
 
   try {
-    const member = await prisma.companyMember.findFirst({ where: { userId, isActive: true } });
-    if (!member) return res.status(403).json({ success: false, message: "Sem permissão" });
-
     const section = await prisma.companyStorefrontSection.create({
-      data: { ...body.data, companyId: member.companyId },
+      data: { ...body.data, companyId },
     });
     return res.status(201).json({ success: true, message: "Seção criada", data: section });
   } catch (err) {
@@ -163,19 +161,16 @@ export async function createSection(req: Request, res: Response) {
   }
 }
 
-export async function updateSection(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+export async function updateSection(req: AuthRequest, res: Response) {
+  const companyId = req.companyId!;
   const sectionId = parseInt(req.params.sectionId as string);
   const body = sectionSchema.partial().safeParse(req.body);
   if (!body.success)
     return res.status(400).json({ success: false, message: "Dados inválidos" });
 
   try {
-    const member = await prisma.companyMember.findFirst({ where: { userId, isActive: true } });
-    if (!member) return res.status(403).json({ success: false, message: "Sem permissão" });
-
     const section = await prisma.companyStorefrontSection.findFirst({
-      where: { id: sectionId, companyId: member.companyId },
+      where: { id: sectionId, companyId },
     });
     if (!section)
       return res.status(404).json({ success: false, message: "Seção não encontrada" });
@@ -191,16 +186,13 @@ export async function updateSection(req: Request, res: Response) {
   }
 }
 
-export async function deleteSection(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+export async function deleteSection(req: AuthRequest, res: Response) {
+  const companyId = req.companyId!;
   const sectionId = parseInt(req.params.sectionId as string);
 
   try {
-    const member = await prisma.companyMember.findFirst({ where: { userId, isActive: true } });
-    if (!member) return res.status(403).json({ success: false, message: "Sem permissão" });
-
     const section = await prisma.companyStorefrontSection.findFirst({
-      where: { id: sectionId, companyId: member.companyId },
+      where: { id: sectionId, companyId },
     });
     if (!section)
       return res.status(404).json({ success: false, message: "Seção não encontrada" });
@@ -213,8 +205,8 @@ export async function deleteSection(req: Request, res: Response) {
   }
 }
 
-export async function addItemToSection(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+export async function addItemToSection(req: AuthRequest, res: Response) {
+  const companyId = req.companyId!;
   const sectionId = parseInt(req.params.sectionId as string);
   const bodySchema = z.object({
     listingId: z.number().int(),
@@ -226,11 +218,8 @@ export async function addItemToSection(req: Request, res: Response) {
     return res.status(400).json({ success: false, message: "Dados inválidos" });
 
   try {
-    const member = await prisma.companyMember.findFirst({ where: { userId, isActive: true } });
-    if (!member) return res.status(403).json({ success: false, message: "Sem permissão" });
-
     const section = await prisma.companyStorefrontSection.findFirst({
-      where: { id: sectionId, companyId: member.companyId },
+      where: { id: sectionId, companyId },
     });
     if (!section)
       return res.status(404).json({ success: false, message: "Seção não encontrada" });
@@ -245,20 +234,17 @@ export async function addItemToSection(req: Request, res: Response) {
   }
 }
 
-export async function removeItemFromSection(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+export async function removeItemFromSection(req: AuthRequest, res: Response) {
+  const companyId = req.companyId!;
   const sectionId = parseInt(req.params.sectionId as string);
   const itemId = parseInt(req.params.itemId as string);
 
   try {
-    const member = await prisma.companyMember.findFirst({ where: { userId, isActive: true } });
-    if (!member) return res.status(403).json({ success: false, message: "Sem permissão" });
-
     const item = await prisma.companyStorefrontItem.findFirst({
       where: { id: itemId, sectionId },
       include: { section: true },
     });
-    if (!item || item.section.companyId !== member.companyId) {
+    if (!item || item.section.companyId !== companyId) {
       return res.status(404).json({ success: false, message: "Item não encontrado" });
     }
 
@@ -280,18 +266,15 @@ const blockSchema = z.object({
   content: z.record(z.string(), z.unknown()),
 });
 
-export async function upsertBlock(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+export async function upsertBlock(req: AuthRequest, res: Response) {
+  const companyId = req.companyId!;
   const body = blockSchema.safeParse(req.body);
   if (!body.success)
     return res.status(400).json({ success: false, message: "Dados inválidos" });
 
   try {
-    const member = await prisma.companyMember.findFirst({ where: { userId, isActive: true } });
-    if (!member) return res.status(403).json({ success: false, message: "Sem permissão" });
-
     const existing = await prisma.companyStorefrontBlock.findFirst({
-      where: { companyId: member.companyId, type: body.data.type },
+      where: { companyId, type: body.data.type },
     });
 
     const content = body.data.content as Prisma.InputJsonValue;
@@ -309,7 +292,7 @@ export async function upsertBlock(req: Request, res: Response) {
     } else {
       block = await prisma.companyStorefrontBlock.create({
         data: {
-          companyId: member.companyId,
+          companyId,
           type: body.data.type,
           order: body.data.order,
           isActive: body.data.isActive,
@@ -328,8 +311,8 @@ export async function upsertBlock(req: Request, res: Response) {
 // ──────────────────────────────────────────────
 // PINNED TESTIMONIALS
 // ──────────────────────────────────────────────
-export async function pinTestimonial(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+export async function pinTestimonial(req: AuthRequest, res: Response) {
+  const companyId = req.companyId!;
   const bodySchema = z.object({
     reviewId: z.number().int(),
     order: z.number().int().min(0),
@@ -339,11 +322,8 @@ export async function pinTestimonial(req: Request, res: Response) {
     return res.status(400).json({ success: false, message: "Dados inválidos" });
 
   try {
-    const member = await prisma.companyMember.findFirst({ where: { userId, isActive: true } });
-    if (!member) return res.status(403).json({ success: false, message: "Sem permissão" });
-
     const count = await prisma.companyPinnedTestimonial.count({
-      where: { companyId: member.companyId },
+      where: { companyId },
     });
     if (count >= 6) {
       return res
@@ -352,7 +332,7 @@ export async function pinTestimonial(req: Request, res: Response) {
     }
 
     const pinned = await prisma.companyPinnedTestimonial.create({
-      data: { companyId: member.companyId, ...body.data },
+      data: { companyId, ...body.data },
     });
     return res.status(201).json({ success: true, message: "Depoimento fixado", data: pinned });
   } catch (err) {
@@ -361,16 +341,13 @@ export async function pinTestimonial(req: Request, res: Response) {
   }
 }
 
-export async function unpinTestimonial(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+export async function unpinTestimonial(req: AuthRequest, res: Response) {
+  const companyId = req.companyId!;
   const pinnedId = parseInt(req.params.pinnedId as string);
 
   try {
-    const member = await prisma.companyMember.findFirst({ where: { userId, isActive: true } });
-    if (!member) return res.status(403).json({ success: false, message: "Sem permissão" });
-
     const pinned = await prisma.companyPinnedTestimonial.findFirst({
-      where: { id: pinnedId, companyId: member.companyId },
+      where: { id: pinnedId, companyId },
     });
     if (!pinned)
       return res.status(404).json({ success: false, message: "Depoimento não encontrado" });
