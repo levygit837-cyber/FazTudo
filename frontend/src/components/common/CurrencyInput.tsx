@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import { useCallback, useId, useRef, useState, useEffect } from "react";
 
 interface CurrencyInputProps {
   value: number;
@@ -20,10 +20,6 @@ const formatter = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 2,
 });
 
-function reaisToCentavos(reais: number): number {
-  return Math.round(reais * 100);
-}
-
 function centavosToReais(centavos: number): number {
   return centavos / 100;
 }
@@ -32,7 +28,7 @@ function formatCentavos(centavos: number): string {
   return formatter.format(centavosToReais(centavos));
 }
 
-export const CurrencyInput: React.FC<CurrencyInputProps> = ({
+export function CurrencyInput({
   value,
   onChange,
   label,
@@ -43,10 +39,32 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
   name,
   required = false,
   helperText,
-}) => {
+}: CurrencyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastEmittedRef = useRef<number | null>(null);
 
-  const centavos = reaisToCentavos(value);
+  // Internal state in centavos to avoid floating-point round-trip corruption
+  const [centavos, setCentavos] = useState<number>(() =>
+    Math.round(value * 100),
+  );
+
+  // Sync internal state from prop when value changes externally
+  useEffect(() => {
+    const externalCentavos = Math.round(value * 100);
+    if (lastEmittedRef.current !== externalCentavos) {
+      setCentavos(externalCentavos);
+    }
+  }, [value]);
+
+  const emitChange = useCallback(
+    (newCentavos: number) => {
+      setCentavos(newCentavos);
+      lastEmittedRef.current = newCentavos;
+      onChange(centavosToReais(newCentavos));
+    },
+    [onChange],
+  );
+
   const displayValue = formatCentavos(centavos);
 
   const handleKeyDown = useCallback(
@@ -67,7 +85,7 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
 
       if (e.key === "Backspace") {
         const newCentavos = Math.floor(centavos / 10);
-        onChange(centavosToReais(newCentavos));
+        emitChange(newCentavos);
         return;
       }
 
@@ -83,9 +101,9 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
         return;
       }
 
-      onChange(centavosToReais(newCentavos));
+      emitChange(newCentavos);
     },
-    [centavos, onChange],
+    [centavos, emitChange],
   );
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
@@ -97,7 +115,8 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
     // no-op: input is fully controlled via onKeyDown
   }, []);
 
-  const inputId = id || name || "currency-input";
+  const uid = useId();
+  const inputId = id || name || uid;
 
   const borderClass = error
     ? "border-red-500 focus-within:ring-red-500 focus-within:border-red-500"
@@ -169,6 +188,6 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
       )}
     </div>
   );
-};
+}
 
 export default CurrencyInput;
