@@ -92,6 +92,9 @@ export interface EnvConfig {
   // Development
   ENABLE_SWAGGER: boolean;
   ALLOW_LOCAL_PAYMENT_FALLBACK: boolean;
+
+  // MFA
+  MFA_ENCRYPTION_KEY: string;
 }
 
 /**
@@ -217,6 +220,15 @@ function getEnvConfig(): EnvConfig {
     // Development
     ENABLE_SWAGGER: process.env.ENABLE_SWAGGER === 'true',
     ALLOW_LOCAL_PAYMENT_FALLBACK: process.env.ALLOW_LOCAL_PAYMENT_FALLBACK === 'true',
+
+    // MFA
+    MFA_ENCRYPTION_KEY: (() => {
+      const key = process.env.MFA_ENCRYPTION_KEY;
+      if (nodeEnv === 'production' && (!key || key.length < 32)) {
+        throw new Error('FATAL: MFA_ENCRYPTION_KEY must be set (min 32 chars) in production');
+      }
+      return key || crypto.randomBytes(32).toString('hex');
+    })(),
   };
 
   return config;

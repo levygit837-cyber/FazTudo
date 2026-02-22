@@ -302,6 +302,26 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Check if user has MFA enabled
+    const userMfa = await prisma.userMFA.findUnique({
+      where: { userId: user.id },
+    });
+
+    if (userMfa?.isEnabled) {
+      // Issue temporary MFA challenge token (5 min TTL)
+      const mfaToken = jwt.sign(
+        { id: user.id, type: "mfa-challenge" },
+        env.JWT_ACCESS_SECRET,
+        { expiresIn: "5m" as any },
+      );
+      res.status(200).json({
+        success: true,
+        message: "MFA required",
+        data: { mfaRequired: true, mfaToken },
+      });
+      return;
+    }
+
     // Remove password, tokenVersion and refreshToken from response
     const { password: _, tokenVersion: _tv, refreshToken: _rt, ...userWithoutPassword } = user;
 

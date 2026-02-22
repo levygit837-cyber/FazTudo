@@ -41,6 +41,7 @@ import locationRoutes from "./routes/locationRoutes";
 import geocodingRoutes from "./routes/geocodingRoutes";
 import sessionRoutes from "./routes/sessionRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
+import mfaRoutes from "./routes/mfaRoutes";
 import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
 import { scheduleDailySalaries, stopSalaryCron } from "./services/companyCronService";
 import { startWorkers, stopWorkers } from "./workers";
@@ -181,6 +182,7 @@ app.get("/health", localOnlyMiddleware, async (_req, res) => {
 // ============================================
 
 app.use("/api/auth", authRoutes);
+app.use("/api/auth/mfa", mfaRoutes);
 app.use("/api/services", serviceRoutes);           // Listings + briefs
 app.use("/api/services", orderRoutes);             // Orders (pedidos)
 app.use("/api/services", paymentRoutes);           // Payments (webhook, config, order payments)

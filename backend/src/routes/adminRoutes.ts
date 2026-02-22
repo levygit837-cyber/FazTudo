@@ -13,13 +13,14 @@ import {
   verifyCompanySchema,
 } from "../middleware/validation";
 import { auditLog } from "../middleware/auditLog";
+import { requireMFA } from "../middleware/mfa";
 
 const router = Router();
 
 // Public admin login (no auth required)
 router.post("/login", authLimiter, auditLog("ADMIN_LOGIN"), validateBody(adminLoginSchema), adminController.adminLogin);
 
-// All routes below require admin auth
+// All routes below require admin auth + MFA
 router.use(verifyToken, requireRole("ADMIN"));
 
 // Platform statistics
