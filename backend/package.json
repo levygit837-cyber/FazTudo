@@ -24,6 +24,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.995.0",
+    "@aws-sdk/s3-request-presigner": "^3.995.0",
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.0",
     "bcrypt": "^6.0.0",

@@ -95,6 +95,29 @@ export interface EnvConfig {
 
   // MFA
   MFA_ENCRYPTION_KEY: string;
+
+  // Object Storage
+  STORAGE_PROVIDER: 'local' | 's3';
+  S3_BUCKET: string;
+  S3_REGION: string;
+  S3_ENDPOINT: string;
+  S3_ACCESS_KEY_ID: string;
+  S3_SECRET_ACCESS_KEY: string;
+  S3_PUBLIC_URL: string;
+  UPLOAD_PRESIGN_EXPIRY_SECONDS: number;
+  DOWNLOAD_PRESIGN_EXPIRY_SECONDS: number;
+
+  // Health & Metrics
+  HEALTH_AUTH_TOKEN: string;
+
+  // Trust Proxy
+  TRUST_PROXY: string | number | boolean;
+
+  // Rate Limiting (additional)
+  SENSITIVE_RATE_LIMIT_MAX: number;
+  FINANCIAL_RATE_LIMIT_MAX: number;
+  WEBHOOK_RATE_LIMIT_MAX: number;
+  MFA_RATE_LIMIT_MAX: number;
 }
 
 /**
@@ -229,6 +252,37 @@ function getEnvConfig(): EnvConfig {
       }
       return key || crypto.randomBytes(32).toString('hex');
     })(),
+
+    // Object Storage
+    STORAGE_PROVIDER: (process.env.STORAGE_PROVIDER as 'local' | 's3') || 'local',
+    S3_BUCKET: process.env.S3_BUCKET || 'faztudo-uploads',
+    S3_REGION: process.env.S3_REGION || 'us-east-1',
+    S3_ENDPOINT: process.env.S3_ENDPOINT || '',
+    S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID || '',
+    S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY || '',
+    S3_PUBLIC_URL: process.env.S3_PUBLIC_URL || '',
+    UPLOAD_PRESIGN_EXPIRY_SECONDS: parseInt(process.env.UPLOAD_PRESIGN_EXPIRY_SECONDS || '300', 10),
+    DOWNLOAD_PRESIGN_EXPIRY_SECONDS: parseInt(process.env.DOWNLOAD_PRESIGN_EXPIRY_SECONDS || '3600', 10),
+
+    // Health & Metrics
+    HEALTH_AUTH_TOKEN: process.env.HEALTH_AUTH_TOKEN || '',
+
+    // Trust Proxy
+    TRUST_PROXY: (() => {
+      const raw = process.env.TRUST_PROXY;
+      if (!raw) return nodeEnv === 'production' ? 0 : 1;
+      if (raw === 'true') return true;
+      if (raw === 'false') return false;
+      const num = parseInt(raw, 10);
+      if (!isNaN(num)) return num;
+      return raw; // 'loopback', 'uniquelocal', or CIDR like '10.0.0.0/8'
+    })(),
+
+    // Rate Limiting (additional)
+    SENSITIVE_RATE_LIMIT_MAX: parseInt(process.env.SENSITIVE_RATE_LIMIT_MAX || '5', 10),
+    FINANCIAL_RATE_LIMIT_MAX: parseInt(process.env.FINANCIAL_RATE_LIMIT_MAX || '3', 10),
+    WEBHOOK_RATE_LIMIT_MAX: parseInt(process.env.WEBHOOK_RATE_LIMIT_MAX || '100', 10),
+    MFA_RATE_LIMIT_MAX: parseInt(process.env.MFA_RATE_LIMIT_MAX || '5', 10),
   };
 
   return config;
