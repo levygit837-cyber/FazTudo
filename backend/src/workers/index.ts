@@ -4,6 +4,7 @@ import { createEmailWorker } from "./emailWorker";
 import { createPaymentWorker } from "./paymentWorker";
 import { createReconciliationWorker } from "./reconciliationWorker";
 import { createAntiFraudWorker } from "./antiFraudWorker";
+import { createSchedulerWorker } from "./schedulerWorker";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("workers");
@@ -21,7 +22,8 @@ export function startWorkers(): void {
     createEmailWorker(),
     createPaymentWorker(),
     createReconciliationWorker(),
-    createAntiFraudWorker()
+    createAntiFraudWorker(),
+    createSchedulerWorker()
   );
 
   log.info({ count: workers.length }, "All workers started");

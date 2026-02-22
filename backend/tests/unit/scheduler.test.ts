@@ -1,31 +1,29 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock node-cron
-vi.mock("node-cron", () => ({
-  default: {
-    schedule: vi.fn(),
-    validate: vi.fn(() => true),
-  },
-}));
+// Mock bullmq Queue
+const mockAdd = vi.fn().mockResolvedValue({ id: "test-job-id" });
+const mockGetRepeatableJobs = vi.fn().mockResolvedValue([]);
+const mockRemoveRepeatableByKey = vi.fn().mockResolvedValue(undefined);
+const mockClose = vi.fn().mockResolvedValue(undefined);
 
-// Mock escrow service
-vi.mock("../../src/services/escrowService", () => ({
-  checkAutoReleasablePayments: vi.fn().mockResolvedValue(0),
-  checkExpiredOrders: vi.fn().mockResolvedValue(0),
-  sendDeadlineWarnings: vi.fn().mockResolvedValue(0),
-}));
+vi.mock("bullmq", () => {
+  return {
+    Queue: vi.fn().mockImplementation(function (this: any) {
+      this.add = mockAdd;
+      this.getRepeatableJobs = mockGetRepeatableJobs;
+      this.removeRepeatableByKey = mockRemoveRepeatableByKey;
+      this.close = mockClose;
+    }),
+  };
+});
 
-// Mock socket
-vi.mock("../../src/lib/socket", () => ({
-  emitToUser: vi.fn(),
-}));
-
-// Mock prisma
-vi.mock("../../src/lib/prisma", () => ({
-  default: {
-    serviceOrder: { findMany: vi.fn().mockResolvedValue([]) },
-    notification: { create: vi.fn() },
-  },
+// Mock Redis connection
+vi.mock("../../src/queues/connection", () => ({
+  getRedisConnectionOpts: vi.fn(() => ({
+    host: "localhost",
+    port: 6379,
+    maxRetriesPerRequest: null,
+  })),
 }));
 
 // Mock logger
@@ -38,55 +36,71 @@ vi.mock("../../src/lib/logger", () => ({
   }),
 }));
 
-import cron from "node-cron";
 import { startScheduledTasks, stopScheduledTasks } from "../../src/lib/scheduler";
 
-describe("Scheduler", () => {
+describe("Scheduler (BullMQ)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should register 4 cron jobs when started", () => {
-    startScheduledTasks();
-    expect(cron.schedule).toHaveBeenCalledTimes(4);
+  it("should register 5 repeatable jobs when started", async () => {
+    await startScheduledTasks();
+    expect(mockAdd).toHaveBeenCalledTimes(5);
   });
 
-  it("should schedule auto-release payments every hour", () => {
-    startScheduledTasks();
-    const calls = (cron.schedule as any).mock.calls;
-    // First call: every hour at minute 0
-    expect(calls[0][0]).toBe("0 * * * *");
-    expect(typeof calls[0][1]).toBe("function");
+  it("should schedule auto-release payments every hour", async () => {
+    await startScheduledTasks();
+    const calls = mockAdd.mock.calls;
+    const autoRelease = calls.find((c: any[]) => c[0] === "auto-release-escrow");
+    expect(autoRelease).toBeDefined();
+    expect(autoRelease![2].repeat.pattern).toBe("0 * * * *");
   });
 
-  it("should schedule expired orders check every 6 hours", () => {
-    startScheduledTasks();
-    const calls = (cron.schedule as any).mock.calls;
-    expect(calls[1][0]).toBe("0 */6 * * *");
-    expect(typeof calls[1][1]).toBe("function");
+  it("should schedule expired orders check every 6 hours", async () => {
+    await startScheduledTasks();
+    const calls = mockAdd.mock.calls;
+    const expired = calls.find((c: any[]) => c[0] === "check-expired-orders");
+    expect(expired).toBeDefined();
+    expect(expired![2].repeat.pattern).toBe("0 */6 * * *");
   });
 
-  it("should schedule deadline warnings every 12 hours", () => {
-    startScheduledTasks();
-    const calls = (cron.schedule as any).mock.calls;
-    expect(calls[2][0]).toBe("0 */12 * * *");
-    expect(typeof calls[2][1]).toBe("function");
+  it("should schedule deadline warnings every 12 hours", async () => {
+    await startScheduledTasks();
+    const calls = mockAdd.mock.calls;
+    const warnings = calls.find((c: any[]) => c[0] === "deadline-warnings");
+    expect(warnings).toBeDefined();
+    expect(warnings![2].repeat.pattern).toBe("0 */12 * * *");
   });
 
-  it("should schedule delay check every minute", () => {
-    startScheduledTasks();
-    const calls = (cron.schedule as any).mock.calls;
-    expect(calls[3][0]).toBe("* * * * *");
-    expect(typeof calls[3][1]).toBe("function");
+  it("should schedule delay check every minute", async () => {
+    await startScheduledTasks();
+    const calls = mockAdd.mock.calls;
+    const delay = calls.find((c: any[]) => c[0] === "delay-check");
+    expect(delay).toBeDefined();
+    expect(delay![2].repeat.pattern).toBe("* * * * *");
   });
 
-  it("should stop all tasks when stopScheduledTasks is called", () => {
-    const mockTask = { stop: vi.fn() };
-    (cron.schedule as any).mockReturnValue(mockTask);
+  it("should schedule daily reconciliation at 02:00 UTC", async () => {
+    await startScheduledTasks();
+    const calls = mockAdd.mock.calls;
+    const recon = calls.find((c: any[]) => c[0] === "daily-reconciliation");
+    expect(recon).toBeDefined();
+    expect(recon![2].repeat.pattern).toBe("0 2 * * *");
+  });
 
-    startScheduledTasks();
-    stopScheduledTasks();
+  it("should clean stale repeatable jobs before registering new ones", async () => {
+    const staleJob = { key: "stale-key" };
+    mockGetRepeatableJobs.mockResolvedValueOnce([staleJob]);
 
-    expect(mockTask.stop).toHaveBeenCalledTimes(4);
+    await startScheduledTasks();
+
+    expect(mockGetRepeatableJobs).toHaveBeenCalled();
+    expect(mockRemoveRepeatableByKey).toHaveBeenCalledWith("stale-key");
+  });
+
+  it("should stop all tasks when stopScheduledTasks is called", async () => {
+    await startScheduledTasks();
+    await stopScheduledTasks();
+    expect(mockClose).toHaveBeenCalled();
   });
 });

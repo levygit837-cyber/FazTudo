@@ -233,8 +233,8 @@ const gracefulShutdown = async (signal: string) => {
 
   log.info({ signal }, "Shutting down gracefully...");
   try {
-    stopScheduledTasks();
     stopSalaryCron();
+    await stopScheduledTasks();
     await stopWorkers();
     await closeAllQueues();
     server.close(() => {
@@ -272,9 +272,9 @@ const PORT = env.PORT;
 // Initialize Socket.io before starting server
 initializeSocket(httpServer);
 
-const server = httpServer.listen(PORT, () => {
+const server = httpServer.listen(PORT, async () => {
   log.info({ port: PORT, env: env.NODE_ENV }, "Server started");
-  startScheduledTasks();
+  await startScheduledTasks();
   scheduleDailySalaries();
   startWorkers();
 });
