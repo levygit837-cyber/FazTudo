@@ -169,3 +169,21 @@ export const webhookLimiter = rateLimit({
     statusCode: 429,
   },
 });
+
+/**
+ * MFA-specific rate limiter.
+ * Configurable via MFA_RATE_LIMIT_MAX (default: 5 per 15min per IP).
+ * Prevents brute-forcing TOTP codes (10^6 space = 1M, 5 guesses is safe).
+ */
+export const mfaLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: env.MFA_RATE_LIMIT_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  ...createRedisStore("mfa"),
+  message: {
+    success: false,
+    message: "Muitas tentativas de MFA. Tente novamente em 15 minutos.",
+    statusCode: 429,
+  },
+});

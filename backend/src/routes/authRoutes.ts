@@ -6,7 +6,7 @@ import {
   authLogger,
   handleAuthError,
 } from "../middleware/auth";
-import { authLimiter, sensitiveLimiter } from "../middleware/rateLimiter";
+import { authLimiter, sensitiveLimiter, userSensitiveLimiter } from "../middleware/rateLimiter";
 import { validateBody } from "../middleware/validate";
 import {
   registerSchema,
@@ -30,14 +30,14 @@ router.post("/login", authLimiter, validateBody(loginSchema), authController.log
 router.post("/forgot-password", sensitiveLimiter, validateBody(forgotPasswordSchema), authController.forgotPassword);
 router.post("/reset-password", sensitiveLimiter, validateBody(resetPasswordSchema), authController.resetPassword);
 router.post("/verify-email", sensitiveLimiter, authController.verifyEmail);
-router.post("/resend-verification", verifyToken, sensitiveLimiter, authController.resendVerificationEmail);
+router.post("/resend-verification", verifyToken, sensitiveLimiter, userSensitiveLimiter, authController.resendVerificationEmail);
 router.post("/refresh", authLimiter, authController.refreshAccessToken);
 router.post("/logout", verifyToken, authController.logout);
 
 // Rotas protegidas (requerem autenticacao + validacao)
 router.get("/profile", verifyToken, authController.getProfile);
 router.put("/profile", verifyToken, validateBody(updateProfileSchema), authController.updateProfile);
-router.post("/change-password", verifyToken, sensitiveLimiter, validateBody(changePasswordSchema), authController.changePassword);
+router.post("/change-password", verifyToken, sensitiveLimiter, userSensitiveLimiter, validateBody(changePasswordSchema), authController.changePassword);
 router.post(
   "/verification/document",
   verifyToken,

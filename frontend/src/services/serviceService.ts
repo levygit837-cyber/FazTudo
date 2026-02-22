@@ -428,7 +428,8 @@ export const getUserChats = async (): Promise<ChatConversation[]> => {
 };
 
 /**
- * Upload de arquivo para o chat
+ * Upload de arquivo para o chat.
+ * Uses presigned URL flow (direct-to-storage) with fallback to legacy FormData upload.
  */
 export const uploadChatFile = async (
   orderId: number,
@@ -439,6 +440,20 @@ export const uploadChatFile = async (
   mimeType: string;
   size: number;
 }> => {
+  // Try presigned upload first
+  try {
+    const { uploadChatAttachment } = await import("./storageService");
+    const result = await uploadChatAttachment(file, orderId);
+    return {
+      url: result.file?.downloadUrl || result.url,
+      originalName: file.name,
+      mimeType: file.type,
+      size: file.size,
+    };
+  } catch {
+    // Fallback to legacy FormData upload
+  }
+
   const formData = new FormData();
   formData.append("file", file);
 
@@ -764,9 +779,18 @@ export const delayResponse = async (
 
 /**
  * Faz upload de imagens para um listing.
+ * Uses presigned URL flow with fallback to legacy FormData upload.
  * Retorna array de URLs públicas.
  */
 export const uploadListingImages = async (files: File[]): Promise<string[]> => {
+  // Try presigned upload first
+  try {
+    const { uploadListingImagesPresigned } = await import("./storageService");
+    return await uploadListingImagesPresigned(files);
+  } catch {
+    // Fallback to legacy FormData upload
+  }
+
   const formData = new FormData();
   files.forEach((file) => formData.append("images", file));
 

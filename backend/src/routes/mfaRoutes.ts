@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { verifyToken } from "../middleware/auth";
+import { mfaLimiter } from "../middleware/rateLimiter";
 import {
   setupMFA,
   verifyMFASetup,
@@ -14,13 +15,13 @@ const router = Router();
 router.post("/setup", verifyToken, setupMFA);
 
 // Verify first TOTP code to enable MFA
-router.post("/verify-setup", verifyToken, verifyMFASetup);
+router.post("/verify-setup", verifyToken, mfaLimiter, verifyMFASetup);
 
 // Validate MFA code during login (uses mfaToken, not verifyToken)
-router.post("/validate", validateMFA);
+router.post("/validate", mfaLimiter, validateMFA);
 
 // Disable MFA (requires current code)
-router.post("/disable", verifyToken, disableMFA);
+router.post("/disable", verifyToken, mfaLimiter, disableMFA);
 
 // Regenerate backup codes
 router.post("/backup-codes/regenerate", verifyToken, regenerateBackupCodes);
