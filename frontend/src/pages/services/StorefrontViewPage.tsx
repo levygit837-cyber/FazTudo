@@ -112,7 +112,11 @@ const ServiceItem: React.FC<ServiceItemProps> = ({
         </div>
       </button>
 
-      {expanded && (
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          expanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
         <div className="px-5 md:px-6 pb-5 md:pb-6 border-t border-slate-100 dark:border-slate-700/50 pt-4 space-y-4">
           {/* Options */}
           {hasOptions && (
@@ -193,7 +197,7 @@ const ServiceItem: React.FC<ServiceItemProps> = ({
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
