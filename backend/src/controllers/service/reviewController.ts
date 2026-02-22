@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
-import { NotificationType } from "@prisma/client";
+import { createNotification, NotificationType } from "../../services/notificationService";
 import { SAFE_USER_SELECT } from "../../lib/safeSelect";
 
 import { createLogger } from "../../lib/logger";
@@ -28,31 +28,6 @@ const errorResponse = (message: string, statusCode: number = 400) => ({
   message,
   statusCode,
 });
-
-// Utilitário para criar notificações
-const createNotification = async (
-  userId: number,
-  type: NotificationType,
-  title: string,
-  message: string,
-  serviceOrderId?: number,
-  metadata?: any,
-) => {
-  try {
-    await prisma.notification.create({
-      data: {
-        userId,
-        type,
-        title,
-        message,
-        serviceOrderId: serviceOrderId || null,
-        metadata,
-      },
-    });
-  } catch (error) {
-    log.error({ err: error }, "Failed to create notification");
-  }
-};
 
 // Criar avaliação para um pedido concluído
 export const createReview = async (

@@ -1,9 +1,9 @@
 import prisma from "../lib/prisma";
 import { NotificationStatus, NotificationType as PrismaNotificationType } from "@prisma/client";
 import { env } from "../config/env";
-import { sendEmail } from "./emailService";
 import { emitToUser } from "../lib/socket";
 import { createLogger } from "../lib/logger";
+import { enqueueNotification } from "../queues/producers";
 
 const log = createLogger("notificationService");
 
@@ -38,6 +38,26 @@ export const createNotification = async (
   serviceOrderId?: number,
   metadata?: Record<string, any>
 ): Promise<any> => {
+  // Try to enqueue (async via BullMQ)
+  try {
+    const jobId = await enqueueNotification({
+      userId,
+      type,
+      title,
+      message,
+      serviceOrderId,
+      metadata,
+    });
+
+    if (jobId) {
+      // Return placeholder — notification will be created by the worker
+      return { id: 0, queued: true, jobId };
+    }
+  } catch (err) {
+    log.warn({ err }, "Notification enqueue failed — falling back to sync mode");
+  }
+
+  // FALLBACK: Redis unavailable — execute inline (original behavior)
   const notification = await prisma.notification.create({
     data: {
       type,
@@ -46,43 +66,20 @@ export const createNotification = async (
       status: "UNREAD",
       userId,
       serviceOrderId: serviceOrderId || null,
-      metadata: metadata ?? undefined,
+      metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined,
     },
   });
 
-  // Real-time Socket.io emission
-  emitToUser(userId, "notification:new", {
-    id: notification.id,
-    type,
-    title,
-    message,
-    serviceOrderId,
-  });
-
-  // TODO: Integrar com sistema de push notifications (Firebase, OneSignal, etc.)
-
-  // Enviar email se habilitado
-  if (env.ENABLE_EMAIL_NOTIFICATIONS) {
-    // Buscar email do usuário
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, name: true },
+  try {
+    emitToUser(userId, "notification:new", {
+      id: notification.id,
+      type,
+      title,
+      message,
+      serviceOrderId,
     });
-
-    if (user?.email) {
-      sendEmail({
-        to: user.email,
-        subject: `FazTudo - ${title}`,
-        html: `<div style="font-family:sans-serif;padding:16px;">
-          <h2 style="color:#1e293b;">${title}</h2>
-          <p style="color:#475569;">${message}</p>
-          <hr style="border-color:#e2e8f0;" />
-          <p style="color:#94a3b8;font-size:12px;">FazTudo - Marketplace de Serviços</p>
-        </div>`,
-      }).catch((err) => {
-        log.error({ err, userId, type }, "Failed to send notification email");
-      });
-    }
+  } catch (err) {
+    log.warn({ err }, "Socket emit failed in fallback mode");
   }
 
   return notification;

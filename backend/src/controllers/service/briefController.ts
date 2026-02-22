@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
-import { NotificationType } from "@prisma/client";
+import { createNotification, NotificationType } from "../../services/notificationService";
 
 import { createLogger } from "../../lib/logger";
 
@@ -197,16 +197,14 @@ export const createOrderWithBrief = async (
 
     // Notificar profissional se atribuído
     if (professionalId) {
-      await prisma.notification.create({
-        data: {
-          userId: professionalId,
-          type: NotificationType.ORDER_CREATED,
-          title: "Novo pedido recebido",
-          message: `Novo pedido "${title}" de ${req.user.name}`,
-          serviceOrderId: result.serviceOrder.id,
-          metadata: { clientId: req.user.id, urgencyLevel },
-        },
-      });
+      await createNotification(
+        professionalId,
+        NotificationType.ORDER_CREATED,
+        "Novo pedido recebido",
+        `Novo pedido "${title}" de ${req.user.name}`,
+        result.serviceOrder.id,
+        { clientId: req.user.id, urgencyLevel },
+      );
     }
 
     res.status(201).json(successResponse(result, "Order with brief created successfully"));

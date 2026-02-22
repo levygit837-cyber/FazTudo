@@ -2,8 +2,8 @@ import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { env } from "../../config/env";
-import { NotificationType } from "@prisma/client";
 import { SAFE_USER_SELECT } from "../../lib/safeSelect";
+import { createNotification, NotificationType } from "../../services/notificationService";
 import {
   createPaymentPreference,
   getMPPaymentStatus,
@@ -47,31 +47,6 @@ const errorResponse = (message: string, statusCode: number = 400) => ({
   message,
   statusCode,
 });
-
-// Utilitário para criar notificações
-const createNotification = async (
-  userId: number,
-  type: NotificationType,
-  title: string,
-  message: string,
-  serviceOrderId?: number,
-  metadata?: any,
-) => {
-  try {
-    await prisma.notification.create({
-      data: {
-        userId,
-        type,
-        title,
-        message,
-        serviceOrderId: serviceOrderId || null,
-        metadata,
-      },
-    });
-  } catch (error) {
-    log.error({ err: error }, "Failed to create notification");
-  }
-};
 
 // Retorna public key do MercadoPago para o frontend
 export const getMercadoPagoPublicKey = async (

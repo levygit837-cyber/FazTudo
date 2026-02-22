@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
-import { NotificationType } from "@prisma/client";
+import { createNotification, NotificationType } from "../../services/notificationService";
 
 import { createLogger } from "../../lib/logger";
 
@@ -98,16 +98,14 @@ export const createProposal = async (
     });
 
     // Notificar o cliente
-    await prisma.notification.create({
-      data: {
-        userId: serviceOrder.clientId,
-        type: NotificationType.ORDER_ACCEPTED,
-        title: "Nova proposta recebida",
-        message: `${req.user.name} enviou uma proposta de R$${parseFloat(String(price)).toFixed(2)} para "${serviceOrder.title}"`,
-        serviceOrderId: orderId,
-        metadata: { proposalId: proposal.id, professionalId: req.user.id },
-      },
-    });
+    await createNotification(
+      serviceOrder.clientId,
+      NotificationType.ORDER_ACCEPTED,
+      "Nova proposta recebida",
+      `${req.user.name} enviou uma proposta de R$${parseFloat(String(price)).toFixed(2)} para "${serviceOrder.title}"`,
+      orderId,
+      { proposalId: proposal.id, professionalId: req.user.id },
+    );
 
     res.status(201).json(successResponse({ proposal }, "Proposal submitted successfully"));
   } catch (error) {
@@ -253,16 +251,14 @@ export const acceptProposal = async (
     ]);
 
     // Notificar profissional aceito
-    await prisma.notification.create({
-      data: {
-        userId: proposal.professionalId,
-        type: NotificationType.ORDER_ACCEPTED,
-        title: "Proposta aceita!",
-        message: `Sua proposta de R$${proposal.price.toFixed(2)} para "${serviceOrder.title}" foi aceita!`,
-        serviceOrderId: orderId,
-        metadata: { proposalId },
-      },
-    });
+    await createNotification(
+      proposal.professionalId,
+      NotificationType.ORDER_ACCEPTED,
+      "Proposta aceita!",
+      `Sua proposta de R$${proposal.price.toFixed(2)} para "${serviceOrder.title}" foi aceita!`,
+      orderId,
+      { proposalId },
+    );
 
     res.status(200).json(successResponse({ proposal: updatedProposal, serviceOrder: updatedOrder }, "Proposal accepted"));
   } catch (error) {

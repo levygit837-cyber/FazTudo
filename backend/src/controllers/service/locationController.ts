@@ -2,8 +2,7 @@ import type { Response } from "express";
 import prisma from "../../lib/prisma";
 import type { AuthRequest } from "../../middleware/auth";
 import { createLogger } from "../../lib/logger";
-import { createNotification } from "../../services/notificationService";
-import { NotificationType } from "@prisma/client";
+import { createNotification, NotificationType } from "../../services/notificationService";
 import { calculateBearing } from "../../utils/geo";
 
 const log = createLogger("locationController");

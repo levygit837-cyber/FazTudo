@@ -3,7 +3,7 @@ import prisma from "../../lib/prisma";
 import { SAFE_USER_SELECT } from "../../lib/safeSelect";
 import type { AuthRequest } from "../../middleware/auth";
 import { env } from "../../config/env";
-import { NotificationType } from "@prisma/client";
+import { createNotification, NotificationType } from "../../services/notificationService";
 import { emitToUser, emitToOrder } from "../../lib/socket";
 import { releasePaymentFromEscrow } from "../../services/escrowService";
 
@@ -62,42 +62,6 @@ const errorResponse = (message: string, statusCode: number = 400) => ({
   message,
   statusCode,
 });
-
-// Utilitário para criar notificações (+ emit via Socket)
-const createNotification = async (
-  userId: number,
-  type: NotificationType,
-  title: string,
-  message: string,
-  serviceOrderId?: number,
-  metadata?: any,
-) => {
-  try {
-    const notification = await prisma.notification.create({
-      data: {
-        userId,
-        type,
-        title,
-        message,
-        serviceOrderId: serviceOrderId || null,
-        metadata,
-      },
-    });
-
-    // Emit real-time notification via Socket.io
-    emitToUser(userId, "notification:new", {
-      id: notification.id,
-      type,
-      title,
-      message,
-      serviceOrderId,
-    });
-
-    return notification;
-  } catch (error) {
-    log.error({ err: error }, "Failed to create notification");
-  }
-};
 
 // Utilitário para calcular data limite
 const calculateDeadlineDate = (days: number): Date => {
