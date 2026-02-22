@@ -43,6 +43,28 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED // Parcialmente reembolsado
 }
 
+enum PaymentEventType {
+  CREATED
+  WEBHOOK_RECEIVED
+  STATUS_CHANGED
+  HELD
+  RELEASED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  FAILED
+  FRAUD_FLAGGED
+  RECONCILED
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
+}
+
+enum EventSource {
+  WEBHOOK
+  INTERNAL
+  ADMIN
+  SCHEDULER
+}
+
 enum NotificationType {
   ORDER_CREATED
   ORDER_ACCEPTED
@@ -334,6 +356,7 @@ model Payment {
   professional User?        @relation("PaymentProfessional", fields: [professionalId], references: [id], onDelete: SetNull)
 
   transactions Transaction[]
+  events       PaymentEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1142,4 +1165,25 @@ model ServiceOrderItem {
 
   @@index([serviceOrderId])
   @@index([serviceId])
+}
+
+// ==================== PAYMENT EVENT STORE ====================
+
+model PaymentEvent {
+  id              Int              @id @default(autoincrement())
+  paymentId       Int
+  payment         Payment          @relation(fields: [paymentId], references: [id])
+  eventType       PaymentEventType
+  previousStatus  String?
+  newStatus       String
+  idempotencyKey  String           @unique
+  amount          Float?
+  metadata        Json?
+  source          EventSource
+  actorId         Int?
+  ipAddress       String?
+  createdAt       DateTime         @default(now())
+
+  @@index([paymentId, createdAt])
+  @@index([eventType, createdAt])
 }

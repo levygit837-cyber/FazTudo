@@ -14,6 +14,10 @@ import {
 
 import { validateMercadoPagoSignature } from "../../lib/webhookValidator";
 import { createLogger } from "../../lib/logger";
+import {
+  transitionPaymentStatus,
+  appendPaymentEvent,
+} from "../../lib/paymentStateMachine";
 
 const log = createLogger("paymentController");
 
@@ -546,10 +550,13 @@ export const releasePayment = async (
 };
 
 // Webhook do MercadoPago (v1 + v2 notification formats)
+// Uses Payment Event Store for idempotency
 export const mercadoPagoWebhook = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
+  const ip = req.ip || req.socket?.remoteAddress || "unknown";
+
   try {
     // SECURITY: Validate MercadoPago HMAC-SHA256 signature BEFORE any processing
     const xSignature = req.headers["x-signature"] as string | null;
@@ -565,7 +572,7 @@ export const mercadoPagoWebhook = async (
 
     if (!signatureCheck.valid) {
       log.warn(
-        { reason: signatureCheck.reason, ip: req.ip },
+        { reason: signatureCheck.reason, ip },
         "Webhook rejected: invalid or missing HMAC signature"
       );
       // Always return 200 to MP (so it doesn't retry), but don't process
@@ -591,6 +598,9 @@ export const mercadoPagoWebhook = async (
       res.status(200).json({ received: true });
       return;
     }
+
+    // Generate idempotency key from webhook data
+    const idempotencyKey = `webhook:${mpPaymentId}:${action || type}:${xRequestId || Date.now()}`;
 
     // Buscar status real do pagamento no MP
     let mpPayment;
@@ -631,14 +641,61 @@ export const mercadoPagoWebhook = async (
       return;
     }
 
+    // Log webhook receipt as event (idempotent)
+    await appendPaymentEvent({
+      paymentId: payment.id,
+      eventType: "WEBHOOK_RECEIVED",
+      source: "WEBHOOK",
+      idempotencyKey: `recv:${idempotencyKey}`,
+      metadata: {
+        mpPaymentId,
+        mpStatus: mpPayment.status,
+        mpStatusDetail: mpPayment.statusDetail,
+        action: action || type,
+        ip,
+      },
+    });
+
     const orderId = payment.serviceOrderId;
 
     if (mpPayment.status === "approved") {
+      // Transition payment PENDING -> HELD via state machine (idempotent)
+      const transitionKey = `approve:${payment.id}:${mpPaymentId}`;
+      const result = await transitionPaymentStatus({
+        paymentId: payment.id,
+        newStatus: "HELD",
+        eventType: "HELD",
+        source: "WEBHOOK",
+        idempotencyKey: transitionKey,
+        amount: payment.amount,
+        metadata: {
+          mpPaymentId,
+          mpStatus: mpPayment.status,
+          mpStatusDetail: mpPayment.statusDetail,
+          mpPaymentMethod: mpPayment.paymentMethodId,
+          mpDateApproved: mpPayment.dateApproved,
+        },
+        ipAddress: ip,
+      });
+
+      if (result.duplicate) {
+        log.info({ paymentId: payment.id, mpPaymentId }, "Duplicate webhook approval ignored");
+        res.status(200).json({ received: true });
+        return;
+      }
+
+      if (!result.success) {
+        log.warn({ paymentId: payment.id, error: result.error }, "Payment transition failed");
+        res.status(200).json({ received: true });
+        return;
+      }
+
+      // Update payment metadata and dates
       const now = new Date();
       const heldUntil = new Date();
       heldUntil.setDate(heldUntil.getDate() + env.DEFAULT_ESCROW_HOLD_DAYS);
 
-      // Snapshot real do saldo do cliente antes da transação do webhook
+      // Snapshot real do saldo do cliente antes da transacao do webhook
       const webhookClientWallet = await prisma.user.findUnique({
         where: { id: payment.clientId },
         select: { balance: true },
@@ -650,7 +707,6 @@ export const mercadoPagoWebhook = async (
         prisma.payment.update({
           where: { id: payment.id },
           data: {
-            status: "HELD",
             transactionId: String(mpPaymentId),
             paidAt: now,
             heldUntil,
@@ -675,7 +731,7 @@ export const mercadoPagoWebhook = async (
             paymentId: payment.id,
           },
         }),
-        // Criar mensagem de sistema automática no chat
+        // Criar mensagem de sistema automatica no chat
         ...(payment.serviceOrder.professionalId
           ? [
               prisma.message.create({
@@ -715,28 +771,33 @@ export const mercadoPagoWebhook = async (
       );
 
     } else if (mpPayment.status === "rejected" || mpPayment.status === "cancelled") {
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: "FAILED",
-          metadata: {
-            ...(payment.metadata as any || {}),
-            mpPaymentId,
-            mpStatus: mpPayment.status,
-            mpStatusDetail: mpPayment.statusDetail,
-          },
+      // Transition payment to FAILED via state machine (idempotent)
+      const failKey = `fail:${payment.id}:${mpPaymentId}`;
+      const result = await transitionPaymentStatus({
+        paymentId: payment.id,
+        newStatus: "FAILED",
+        eventType: "FAILED",
+        source: "WEBHOOK",
+        idempotencyKey: failKey,
+        metadata: {
+          mpPaymentId,
+          mpStatus: mpPayment.status,
+          mpStatusDetail: mpPayment.statusDetail,
         },
+        ipAddress: ip,
       });
 
-      // Notificar cliente sobre falha
-      await createNotification(
-        payment.clientId,
-        NotificationType.SYSTEM_ALERT,
-        "❌ Pagamento recusado",
-        `Seu pagamento para "${payment.serviceOrder.title}" foi recusado. Tente novamente com outro método de pagamento.`,
-        orderId,
-        { reason: mpPayment.statusDetail },
-      );
+      if (!result.duplicate) {
+        // Only notify if this is not a duplicate
+        await createNotification(
+          payment.clientId,
+          NotificationType.SYSTEM_ALERT,
+          "❌ Pagamento recusado",
+          `Seu pagamento para "${payment.serviceOrder.title}" foi recusado. Tente novamente com outro método de pagamento.`,
+          orderId,
+          { reason: mpPayment.statusDetail },
+        );
+      }
     }
     // For "pending" or "in_process", we keep the payment as PENDING
 
