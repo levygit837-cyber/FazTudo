@@ -52,6 +52,28 @@ describe("Prometheus Metrics Instrumentation", () => {
     });
   });
 
+  describe("SLO Metrics", () => {
+    it("exports httpErrorsTotal counter for 5xx tracking", () => {
+      expect(metrics.httpErrorsTotal).toBeDefined();
+      expect(typeof metrics.httpErrorsTotal.inc).toBe("function");
+    });
+
+    it("exports paymentOutcomesTotal counter for success/failure/timeout", () => {
+      expect(metrics.paymentOutcomesTotal).toBeDefined();
+      expect(typeof metrics.paymentOutcomesTotal.inc).toBe("function");
+    });
+
+    it("exports queueWaitDuration histogram for queue wait SLO", () => {
+      expect(metrics.queueWaitDuration).toBeDefined();
+      expect(typeof metrics.queueWaitDuration.observe).toBe("function");
+    });
+
+    it("exports uploadDuration histogram for presign latency SLO", () => {
+      expect(metrics.uploadDuration).toBeDefined();
+      expect(typeof metrics.uploadDuration.observe).toBe("function");
+    });
+  });
+
   describe("Registry", () => {
     it("exports registry for /metrics endpoint", () => {
       expect(metrics.register).toBeDefined();
@@ -65,6 +87,11 @@ describe("Prometheus Metrics Instrumentation", () => {
       expect(output).toContain("payment_transitions_total");
       expect(output).toContain("circuit_breaker_state");
       expect(output).toContain("mfa_validations_total");
+      // SLO metrics
+      expect(output).toContain("http_errors_total");
+      expect(output).toContain("payment_outcomes_total");
+      expect(output).toContain("queue_wait_duration_seconds");
+      expect(output).toContain("upload_presign_duration_seconds");
     });
   });
 });

@@ -48,7 +48,7 @@ import { scheduleDailySalaries, stopSalaryCron } from "./services/companyCronSer
 import { startWorkers, stopWorkers } from "./workers";
 import { closeAllQueues } from "./queues";
 import { closeRedisConnection, isRedisHealthy, initRedisConnection } from "./queues/connection";
-import { register, httpRequestDuration, httpRequestTotal } from "./lib/metrics";
+import { register, httpRequestDuration, httpRequestTotal, httpErrorsTotal } from "./lib/metrics";
 import { QUEUE_NAMES, getQueueStatus, type QueueName } from "./queues/queues";
 import { getCircuitBreakerStatus } from "./services/mercadopagoService";
 import { initDatabaseConnection } from "./lib/prisma";
@@ -75,6 +75,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     const labels = { method: req.method, route, status_code: String(res.statusCode) };
     httpRequestDuration.observe(labels, durationMs);
     httpRequestTotal.inc(labels);
+    if (res.statusCode >= 500) {
+      httpErrorsTotal.inc({ method: req.method, route });
+    }
   });
   next();
 });

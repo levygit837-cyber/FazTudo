@@ -6,7 +6,7 @@ import prisma from "../lib/prisma";
 import { getMPPaymentStatus } from "../services/mercadopagoService";
 import { transitionPaymentStatus } from "../lib/paymentStateMachine";
 import { createLogger } from "../lib/logger";
-import { queueJobsTotal, queueJobDuration } from "../lib/metrics";
+import { queueJobsTotal, queueJobDuration, queueWaitDuration } from "../lib/metrics";
 
 const log = createLogger("worker:reconciliation");
 
@@ -207,6 +207,9 @@ export function createReconciliationWorker(): Worker<ReconciliationJobData> {
     queueJobsTotal.inc({ queue: "reconciliation", status: "completed" });
     if (job.processedOn && job.finishedOn) {
       queueJobDuration.observe({ queue: "reconciliation" }, (job.finishedOn - job.processedOn) / 1000);
+    }
+    if (job.processedOn && job.timestamp) {
+      queueWaitDuration.observe({ queue: "reconciliation" }, (job.processedOn - job.timestamp) / 1000);
     }
   });
 

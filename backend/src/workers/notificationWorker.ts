@@ -4,7 +4,7 @@ import { QUEUE_NAMES, type NotificationJobData } from "../queues/queues";
 import prisma from "../lib/prisma";
 import { emitToUser } from "../lib/socket";
 import { createLogger } from "../lib/logger";
-import { queueJobsTotal, queueJobDuration } from "../lib/metrics";
+import { queueJobsTotal, queueJobDuration, queueWaitDuration } from "../lib/metrics";
 
 const log = createLogger("worker:notification");
 
@@ -57,6 +57,9 @@ export function createNotificationWorker(): Worker<NotificationJobData> {
     queueJobsTotal.inc({ queue: "notification", status: "completed" });
     if (job.processedOn && job.finishedOn) {
       queueJobDuration.observe({ queue: "notification" }, (job.finishedOn - job.processedOn) / 1000);
+    }
+    if (job.processedOn && job.timestamp) {
+      queueWaitDuration.observe({ queue: "notification" }, (job.processedOn - job.timestamp) / 1000);
     }
   });
 

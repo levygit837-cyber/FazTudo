@@ -3,6 +3,7 @@ import type { AuthRequest } from "../middleware/auth";
 import { getStorage } from "../lib/storage";
 import prisma from "../lib/prisma";
 import { createLogger } from "../lib/logger";
+import { uploadDuration } from "../lib/metrics";
 import crypto from "crypto";
 import path from "path";
 
@@ -81,11 +82,14 @@ export async function presignUpload(req: AuthRequest, res: Response): Promise<vo
 
   try {
     const storage = getStorage();
+    const presignStart = process.hrtime.bigint();
     const presigned = await storage.getUploadUrl({
       key,
       contentType,
       maxSizeBytes: fileSize,
     });
+    const presignDurationSec = Number(process.hrtime.bigint() - presignStart) / 1e9;
+    uploadDuration.observe({ context }, presignDurationSec);
 
     log.info({ userId, context, key, contentType, fileSize }, "Presigned upload URL generated");
 

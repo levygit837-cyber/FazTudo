@@ -147,6 +147,7 @@ faztudo-main/
 | `/api/dashboard` | dashboardRoutes.ts | Stats, CRM, reputacao |
 | `/api/admin` | adminRoutes.ts | Usuarios, verificacoes |
 | `/api/wallet` | walletRoutes.ts | Saldo, transacoes, saques |
+| `/api/storage` | storageRoutes.ts | Presigned upload URLs, upload confirmation |
 
 **Nota**: Todos os routers de `/api/services` sao montados no mesmo prefixo. Cada router define seus sub-paths (ex: `orderRoutes` define `/orders`, `/orders/:id`, etc.).
 
@@ -171,8 +172,8 @@ faztudo-main/
 - **Payment State Machine**: Transicoes de pagamento via `transitionPaymentStatus()` em `lib/paymentStateMachine.ts`. Idempotencia dupla: Redis NX SET + UNIQUE constraint DB
 - **Audit Log**: Middleware automatico em `middleware/auditLog.ts` + funcao `createAuditLog()` para uso direto em controllers
 - **Secrets**: Abstracted via `config/secrets.ts`. `getSecret("KEY")` com cache TTL 1h. Suporta env/aws/gcp/azure
-- **Metricas**: Prometheus via `lib/metrics.ts`. Endpoint `/metrics` (localhost only). Custom: HTTP, queues, payments, circuit breaker, MFA
-- **Health Check**: `/health` retorna status de database, Redis, queues, circuit breaker
+- **Metricas**: Prometheus via `lib/metrics.ts`. Endpoint `/metrics` (localhost + VPC via HEALTH_AUTH_TOKEN). Custom: HTTP, queues, payments, circuit breaker, MFA, SLO (error rate, payment outcomes, queue wait, upload latency). Dashboard PromQL queries em `docs/slo-dashboard-definitions.md`
+- **Health Check**: K8s-ready probes: `/health/live` (liveness), `/health/ready` (DB + Redis + queues), `/health/startup`. Legacy `/health` alias for readiness. Auth via `HEALTH_AUTH_TOKEN` or localhost.
 
 ### Frontend
 - Paginas em `src/pages/` organizadas por dominio (client/, professional/, admin/, checkout/, services/, orders/)
@@ -236,7 +237,12 @@ SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME, SMTP_FROM_EMAIL,
 FRONTEND_URL,
 REDIS_URL (redis://localhost:6379),
 MFA_ENCRYPTION_KEY (32-byte hex para AES-256-GCM),
-SECRETS_PROVIDER (env | aws | gcp | azure)
+SECRETS_PROVIDER (env | aws | gcp | azure),
+TRUST_PROXY (number of proxy hops, default: 1),
+SENSITIVE_RATE_LIMIT_MAX, FINANCIAL_RATE_LIMIT_MAX, WEBHOOK_RATE_LIMIT_MAX, MFA_RATE_LIMIT_MAX,
+STORAGE_PROVIDER (local | s3), S3_BUCKET, S3_REGION, S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_PUBLIC_URL,
+UPLOAD_PRESIGN_EXPIRY_SECONDS (300), DOWNLOAD_PRESIGN_EXPIRY_SECONDS (3600),
+HEALTH_AUTH_TOKEN (token for VPC health/metrics access)
 ```
 
 ### Frontend (`frontend/.env`) - ver `frontend/.env.example`
@@ -303,6 +309,16 @@ VITE_API_URL=http://localhost:3001
 
 18. **jwt.sign expiresIn type**: `@types/jsonwebtoken` mais recente exige `StringValue`, nao `string`. Usar `as any` para contornar: `{ expiresIn: env.JWT_EXPIRES_IN as any }`. Padrao ja usado no codebase.
 
+19. **Object Storage abstraction**: `lib/storage.ts` abstrai local disk vs S3-compatible providers. `STORAGE_PROVIDER=local` usa `uploads/` dir, `STORAGE_PROVIDER=s3` usa AWS SDK v3. Frontend `storageService.ts` usa 3-step presigned flow com fallback para legacy FormData upload.
+
+20. **Health probes com auth**: `/health/*` e `/metrics` aceitam requests de localhost OU com header `Authorization: Bearer <HEALTH_AUTH_TOKEN>`. Sem token configurado, apenas localhost funciona.
+
+21. **Trust Proxy parametrizavel**: `TRUST_PROXY` aceita apenas inteiros puros (regex `/^\d+$/`). Strings CIDR como `10.0.0.0/8` NAO sao parseadas como numero — sao passadas como string ao Express.
+
+22. **Rate limiting Redis-backed**: Todos os rate limiters usam Redis store (`rate-limit-redis`) com fallback gracioso para in-memory se Redis estiver indisponivel. Prefixos: `rl:general:`, `rl:auth:`, `rl:sensitive:`, `rl:financial:`, `rl:webhook:`, `rl:mfa:`.
+
+23. **SLO metrics**: 4 metricas SLO em `lib/metrics.ts`: `httpErrorsTotal` (5xx por rota), `paymentOutcomesTotal` (success/failure/timeout), `queueWaitDuration` (tempo na fila), `uploadDuration` (latencia de presign). PromQL queries em `docs/slo-dashboard-definitions.md`.
+
 ---
 
 ## Mapa de Arquivos por Funcionalidade (Para Trabalho em Equipe)
@@ -332,6 +348,7 @@ VITE_API_URL=http://localhost:3001
 | **Circuit Breaker** | `lib/circuitBreaker.ts` (usado por `services/mercadopagoService.ts`) | SIM |
 | **Payment State Machine** | `lib/paymentStateMachine.ts` | CUIDADO - conecta com payments e reconciliacao |
 | **Audit Log** | `middleware/auditLog.ts` | SIM |
+| **Storage** | `lib/storage.ts`, `controllers/storageController.ts`, `routes/storageRoutes.ts` | SIM |
 
 ### FRONTEND - Zonas Independentes
 
@@ -453,7 +470,7 @@ git push origin feat/nome-da-feature
 
 8. **Sem cache no backend**: Requests frequentes (categorias, config) nao tem cache HTTP.
 
-9. **Sem rate limiting por usuario**: Rate limiting atual e por IP, nao por usuario autenticado.
+9. **Sem rate limiting por usuario**: ~~Rate limiting atual e por IP, nao por usuario autenticado.~~ → **RESOLVIDO**: Rate limiting agora usa Redis-backed stores + limiters por userId (`userFinancialLimiter`, `userSensitiveLimiter`). MFA rate limiting adicionado.
 
 10. **Acessibilidade parcial**: Layout tem boa base (skip links, aria labels, focus trap) mas paginas internas podem nao seguir o mesmo padrao.
 

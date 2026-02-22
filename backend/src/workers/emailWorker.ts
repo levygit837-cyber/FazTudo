@@ -3,7 +3,7 @@ import { getRedisConnectionOpts } from "../queues/connection";
 import { QUEUE_NAMES, type EmailJobData } from "../queues/queues";
 import { sendEmail, sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from "../services/emailService";
 import { createLogger } from "../lib/logger";
-import { queueJobsTotal, queueJobDuration } from "../lib/metrics";
+import { queueJobsTotal, queueJobDuration, queueWaitDuration } from "../lib/metrics";
 
 const log = createLogger("worker:email");
 
@@ -83,6 +83,9 @@ export function createEmailWorker(): Worker<EmailJobData> {
     queueJobsTotal.inc({ queue: "email", status: "completed" });
     if (job.processedOn && job.finishedOn) {
       queueJobDuration.observe({ queue: "email" }, (job.finishedOn - job.processedOn) / 1000);
+    }
+    if (job.processedOn && job.timestamp) {
+      queueWaitDuration.observe({ queue: "email" }, (job.processedOn - job.timestamp) / 1000);
     }
   });
 
