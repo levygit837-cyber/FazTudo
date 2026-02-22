@@ -465,7 +465,7 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                         onChange={(e) =>
                           handlePriceFilter(e.target.value, maxPrice || "")
                         }
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm dark:text-slate-100"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm dark:text-slate-100 focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
                       />
                       <span aria-hidden="true" className="text-slate-400 dark:text-slate-500 self-center">-</span>
                       <input
@@ -476,7 +476,7 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                         onChange={(e) =>
                           handlePriceFilter(minPrice || "", e.target.value)
                         }
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm dark:text-slate-100"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm dark:text-slate-100 focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
                       />
                     </div>
                   </div>
@@ -716,7 +716,7 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                       onChange={(e) =>
                         handlePriceFilter(e.target.value, maxPrice || "")
                       }
-                      className="w-full rounded-lg border px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
                     />
                     <input
                       type="number"
@@ -725,7 +725,7 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                       onChange={(e) =>
                         handlePriceFilter(minPrice || "", e.target.value)
                       }
-                      className="w-full rounded-lg border px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
                     />
                   </div>
                 </div>

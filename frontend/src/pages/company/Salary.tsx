@@ -10,6 +10,7 @@ import {
 import api from "../../services/api";
 import { CompanySalaryRule, CompanyMember, CompanyRole } from "../../types";
 import SalaryRuleCard from "../../components/company/SalaryRuleCard";
+import { CurrencyInput } from "../../components/common/CurrencyInput";
 
 const CompanySalary: React.FC = () => {
   const [rules, setRules] = useState<CompanySalaryRule[]>([]);
@@ -197,30 +198,28 @@ const CompanySalary: React.FC = () => {
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Valor (R$)</label>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={ruleForm.amount}
-                    onChange={(e) => setRuleForm((p) => ({ ...p, amount: e.target.value }))}
-                    className="input"
-                    placeholder="0,00"
-                    required
+                  <CurrencyInput
+                    label="Valor (R$)"
+                    value={ruleForm.amount ? Number(ruleForm.amount) : 0}
+                    onChange={(reais) => setRuleForm((p) => ({ ...p, amount: String(reais) }))}
                     disabled={ruleLoading}
+                    required
                   />
                 </div>
                 <div>
                   <label className="label">Dia do Mês</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="28"
+                  <select
                     value={ruleForm.dayOfMonth}
                     onChange={(e) => setRuleForm((p) => ({ ...p, dayOfMonth: e.target.value }))}
                     className="input"
                     disabled={ruleLoading}
-                  />
+                  >
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                      <option key={day} value={String(day)}>
+                        {day}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>
@@ -309,17 +308,12 @@ const CompanySalary: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="label">Valor (R$)</label>
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={transferForm.amount}
-                      onChange={(e) => setTransferForm((p) => ({ ...p, amount: e.target.value }))}
-                      className="input"
-                      placeholder="0,00"
-                      required
+                    <CurrencyInput
+                      label="Valor (R$)"
+                      value={transferForm.amount ? Number(transferForm.amount) : 0}
+                      onChange={(reais) => setTransferForm((p) => ({ ...p, amount: String(reais) }))}
                       disabled={transferLoading}
+                      required
                     />
                   </div>
                   <div>

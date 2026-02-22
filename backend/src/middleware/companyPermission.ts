@@ -112,7 +112,7 @@ export const requireCompanyPermission = (permissionPath: PermissionPath) => {
       // Resolve permission: customPermissions takes priority over role permissions
       const permissionsSource =
         (member.customPermissions as Record<string, Record<string, boolean>> | null) ??
-        (member.role.permissions as Record<string, Record<string, boolean>>);
+        ((member.role?.permissions ?? {}) as Record<string, Record<string, boolean>>);
 
       const parts = permissionPath.split(".");
       const section = parts[0];

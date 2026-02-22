@@ -101,7 +101,6 @@ const CompanyDashboard: React.FC = () => {
   const walletBalance = stats.availableBalance ?? stats.walletBalance ?? 0;
 
   const quickLinks = [
-    { to: "/company/profile", icon: <Building2 className="h-5 w-5" />, label: "Perfil da Empresa", desc: "Editar informações" },
     { to: "/company/members", icon: <Users className="h-5 w-5" />, label: "Membros", desc: "Gerenciar equipe" },
     { to: "/company/orders", icon: <ShoppingBag className="h-5 w-5" />, label: "Pedidos", desc: "Ver todos os pedidos" },
     { to: "/company/salary", icon: <DollarSign className="h-5 w-5" />, label: "Salários", desc: "Regras e pagamentos" },

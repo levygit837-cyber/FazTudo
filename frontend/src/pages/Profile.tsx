@@ -314,13 +314,13 @@ const Profile: React.FC = () => {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Cover Banner */}
       <div className="relative rounded-xl overflow-hidden h-40 sm:h-48 bg-gradient-to-r from-primary-500 via-primary-600 to-indigo-600">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAyMGgyME0yMCAwdjIwTTIwIDIwaDIwTTIwIDIwdjIwIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIi8+PC9zdmc+')] opacity-30" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAyMGgyME0yMCAwdjIwTTIwIDIwaDIwTTIwIDIwdjIwIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIi8+PC9zdmc+')] opacity-30 pointer-events-none" />
 
         {/* Edit button on banner */}
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="absolute top-4 right-4 btn btn-sm bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm flex items-center gap-2"
+            className="absolute top-4 right-4 z-10 btn btn-sm bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm flex items-center gap-2"
           >
             <Edit3 className="w-4 h-4" />
             Editar perfil

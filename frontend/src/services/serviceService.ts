@@ -155,6 +155,9 @@ type RawPagePayload<T> = {
 };
 
 const normalizePage = <T>(raw: RawPagePayload<T>): NormalizedPage<T> => {
+  if (!raw) {
+    return { items: [], total: 0, page: 1, limit: 10, totalPages: 0 };
+  }
   const items =
     raw.items ||
     raw.data ||
@@ -291,7 +294,7 @@ export const acceptOrder = async (id: number): Promise<ServiceOrder> => {
   const response = await api.post<ApiResponse<any>>(
     `/services/orders/${id}/accept`,
   );
-  const payload = extractData(response);
+  const payload = extractData(response) ?? {};
   return payload.serviceOrder || payload;
 };
 
@@ -300,7 +303,7 @@ export const acceptOrder = async (id: number): Promise<ServiceOrder> => {
  */
 export const startOrder = async (id: number): Promise<ServiceOrder> => {
   const response = await api.post<ApiResponse<any>>(`/services/orders/${id}/start`);
-  const payload = extractData(response);
+  const payload = extractData(response) ?? {};
   return payload.serviceOrder || payload;
 };
 
@@ -311,7 +314,7 @@ export const submitOrderCompletion = async (id: number): Promise<ServiceOrder> =
   const response = await api.post<ApiResponse<any>>(
     `/services/orders/${id}/submit-completion`,
   );
-  const payload = extractData(response);
+  const payload = extractData(response) ?? {};
   return payload.serviceOrder || payload;
 };
 
@@ -322,7 +325,7 @@ export const completeOrder = async (id: number): Promise<ServiceOrder> => {
   const response = await api.post<ApiResponse<any>>(
     `/services/orders/${id}/submit-completion`,
   );
-  const payload = extractData(response);
+  const payload = extractData(response) ?? {};
   return payload.serviceOrder || payload;
 };
 
@@ -333,7 +336,7 @@ export const confirmOrderCompletion = async (id: number): Promise<ServiceOrder> 
   const response = await api.post<ApiResponse<any>>(
     `/services/orders/${id}/confirm-completion`,
   );
-  const payload = extractData(response);
+  const payload = extractData(response) ?? {};
   return payload.serviceOrder || payload;
 };
 
@@ -344,7 +347,7 @@ export const confirmProfessionalCompletion = async (id: number): Promise<Service
   const response = await api.post<ApiResponse<any>>(
     `/services/orders/${id}/confirm-professional`,
   );
-  const payload = extractData(response);
+  const payload = extractData(response) ?? {};
   return payload.serviceOrder || payload;
 };
 

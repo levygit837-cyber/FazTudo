@@ -220,16 +220,20 @@
   input:focus,
   textarea:focus,
   select:focus {
-    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+    @apply outline-none;
+  }
+
+  /* Remove number input spin buttons globally */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
   }
 
   html.dark button:focus-visible {
-    @apply ring-offset-slate-950;
-  }
-
-  html.dark input:focus,
-  html.dark textarea:focus,
-  html.dark select:focus {
     @apply ring-offset-slate-950;
   }
 
@@ -308,11 +312,14 @@
 
   /* Inputs e formularios */
   .input {
-    @apply w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500 transition-colors duration-200;
+    @apply w-full px-4 py-2 border border-slate-300 rounded-lg
+      focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30
+      transition-colors duration-200;
   }
 
   html.dark .input {
-    @apply bg-slate-900 border-slate-700 text-slate-100 placeholder-slate-500;
+    @apply border-slate-700 bg-slate-900 text-slate-100
+      focus:border-primary-400 focus:ring-primary-400/30;
   }
 
   .input-error {

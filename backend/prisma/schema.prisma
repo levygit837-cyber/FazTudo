@@ -762,8 +762,8 @@ model CompanyMember {
   company           CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
   userId            Int            @unique
   user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roleId            Int
-  role              CompanyRole    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId            Int?
+  role              CompanyRole?   @relation(fields: [roleId], references: [id], onDelete: SetNull)
   customPermissions Json?
   joinedAt          DateTime       @default(now())
   isActive          Boolean        @default(true)

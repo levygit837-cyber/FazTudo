@@ -94,8 +94,8 @@ const CompanyMembers: React.FC = () => {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteForm.email || !inviteForm.roleId) {
-      setInviteError("Preencha o email e o cargo");
+    if (!inviteForm.email) {
+      setInviteError("Preencha o email");
       return;
     }
     setInviteLoading(true);
@@ -103,7 +103,7 @@ const CompanyMembers: React.FC = () => {
     try {
       await api.post("/company/members/invite", {
         email: inviteForm.email,
-        roleId: Number(inviteForm.roleId),
+        ...(inviteForm.roleId ? { roleId: Number(inviteForm.roleId) } : {}),
       });
       setInviteSuccess(true);
       setInviteForm({ email: "", roleId: "" });
@@ -293,16 +293,15 @@ const CompanyMembers: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="label" htmlFor="invite-role">Cargo</label>
+                    <label className="label" htmlFor="invite-role">Cargo (opcional)</label>
                     <select
                       id="invite-role"
                       value={inviteForm.roleId}
                       onChange={(e) => setInviteForm((p) => ({ ...p, roleId: e.target.value }))}
                       className="input"
-                      required
                       disabled={inviteLoading}
                     >
-                      <option value="">Selecione um cargo</option>
+                      <option value="">Sem cargo definido</option>
                       {roles.map((r) => (
                         <option key={r.id} value={r.id}>{r.name}</option>
                       ))}

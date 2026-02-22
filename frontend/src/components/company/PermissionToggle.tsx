@@ -16,13 +16,15 @@ const PermissionToggle: React.FC<Props> = ({ label, description, value, onChange
     </div>
     <button
       type="button"
+      role="switch"
+      aria-checked={value}
       disabled={disabled}
       onClick={() => onChange(!value)}
-      className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors ${
-        value ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-600"
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+        value ? "bg-primary-600" : "bg-slate-300 dark:bg-slate-600"
       } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
     >
-      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform mt-0.5 ${value ? "translate-x-4" : "translate-x-0.5"}`} />
+      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform mt-0.5 ${value ? "translate-x-5" : "translate-x-0.5"}`} />
     </button>
   </div>
 );
