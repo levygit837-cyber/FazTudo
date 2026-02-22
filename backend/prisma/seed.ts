@@ -1095,6 +1095,72 @@ async function seedTestUsers() {
     }
   }
 
+  // Create test members for the company
+  const membro1 = await prisma.user.upsert({
+    where: { email: "membro1@teste.com" },
+    update: {},
+    create: {
+      email: "membro1@teste.com",
+      name: "Membro Um",
+      password: await bcrypt.hash("Teste@123", 10),
+      role: "PROFESSIONAL",
+      status: "ACTIVE",
+      isVerified: true,
+      emailVerified: true,
+    },
+  });
+
+  const membro2 = await prisma.user.upsert({
+    where: { email: "membro2@teste.com" },
+    update: {},
+    create: {
+      email: "membro2@teste.com",
+      name: "Membro Dois",
+      password: await bcrypt.hash("Teste@123", 10),
+      role: "PROFESSIONAL",
+      status: "ACTIVE",
+      isVerified: true,
+      emailVerified: true,
+    },
+  });
+
+  if (empresaProfile) {
+    // Get default role
+    const defaultRole = await prisma.companyRole.findFirst({
+      where: { companyId: empresaProfile.id },
+    });
+
+    // Member 1 with role
+    const existingMember1 = await prisma.companyMember.findUnique({
+      where: { userId: membro1.id },
+    });
+    if (!existingMember1) {
+      await prisma.companyMember.create({
+        data: {
+          companyId: empresaProfile.id,
+          userId: membro1.id,
+          roleId: defaultRole?.id,
+        },
+      });
+    }
+
+    // Member 2 without role
+    const existingMember2 = await prisma.companyMember.findUnique({
+      where: { userId: membro2.id },
+    });
+    if (!existingMember2) {
+      await prisma.companyMember.create({
+        data: {
+          companyId: empresaProfile.id,
+          userId: membro2.id,
+        },
+      });
+    }
+
+    console.log(`  - Membro 1: ${membro1.email} (com cargo)`);
+    console.log(`  - Membro 2: ${membro2.email} (sem cargo)`);
+  }
+
 
   console.log("Usuarios de teste criados com sucesso!");
   console.log("  (Consulte o seed.ts para credenciais de teste)");
