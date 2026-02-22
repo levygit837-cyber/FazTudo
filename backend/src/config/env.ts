@@ -273,8 +273,8 @@ function getEnvConfig(): EnvConfig {
       if (!raw) return nodeEnv === 'production' ? 0 : 1;
       if (raw === 'true') return true;
       if (raw === 'false') return false;
-      const num = parseInt(raw, 10);
-      if (!isNaN(num)) return num;
+      // Only parse as number if the entire string is a valid integer
+      if (/^\d+$/.test(raw)) return parseInt(raw, 10);
       return raw; // 'loopback', 'uniquelocal', or CIDR like '10.0.0.0/8'
     })(),
 

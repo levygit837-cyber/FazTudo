@@ -4,7 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import path from "path";
-import { env } from "./config/env";
+import { env, isProduction } from "./config/env";
 import { initializeSocket } from "./lib/socket";
 import prisma from "./lib/prisma";
 import logger, { createLogger } from "./lib/logger";
@@ -48,7 +48,7 @@ import { startWorkers, stopWorkers } from "./workers";
 import { closeAllQueues } from "./queues";
 import { closeRedisConnection, isRedisHealthy, initRedisConnection } from "./queues/connection";
 import { register } from "./lib/metrics";
-import { QUEUE_NAMES, getQueueStatus } from "./queues/queues";
+import { QUEUE_NAMES, getQueueStatus, type QueueName } from "./queues/queues";
 import { getCircuitBreakerStatus } from "./services/mercadopagoService";
 import { initDatabaseConnection } from "./lib/prisma";
 
@@ -107,8 +107,17 @@ app.use(helmet({
   xssFilter: true,
 }));
 
-// Trust first proxy (needed for rate limiter behind reverse proxy)
-app.set('trust proxy', 1);
+// Trust proxy (env-configurable for different deployment topologies)
+app.set('trust proxy', env.TRUST_PROXY);
+log.info({ trustProxy: env.TRUST_PROXY }, "Trust proxy configured");
+
+if (isProduction && env.TRUST_PROXY === 0) {
+  log.warn(
+    "TRUST_PROXY is 0 in production. If behind a load balancer/reverse proxy, " +
+    "set TRUST_PROXY to the number of proxy hops or a specific CIDR. " +
+    "Without this, rate limiting uses proxy IP instead of client IP."
+  );
+}
 
 // Serve uploaded files BEFORE rate limiter (static files should not count)
 // Chat uploads require authentication (may contain sensitive documents)
@@ -141,7 +150,7 @@ app.use(cookieParser());
 app.use(xssSanitizer);
 
 // ============================================
-// HEALTH CHECKS
+// HEALTH PROBES & METRICS
 // ============================================
 
 // Root ping (no version/environment info leaked)
@@ -152,19 +161,35 @@ app.get("/", (_req, res) => {
   });
 });
 
-// Protect health endpoint - internal use only
-const localOnlyMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+// Health probe authentication: localhost always allowed, external needs token
+const healthAuthMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   const ip = req.ip || req.socket?.remoteAddress || "";
   const isLocal = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
-  if (!isLocal) {
-    res.status(404).json({ success: false, message: "Not found" });
+
+  if (isLocal) {
+    next();
     return;
   }
-  next();
+
+  // Allow with auth token (for VPC/internal access)
+  if (env.HEALTH_AUTH_TOKEN) {
+    const authHeader = req.headers.authorization;
+    if (authHeader === `Bearer ${env.HEALTH_AUTH_TOKEN}`) {
+      next();
+      return;
+    }
+  }
+
+  res.status(404).json({ success: false, message: "Not found" });
 };
 
-// Extended Health Check (localhost only)
-app.get("/health", localOnlyMiddleware, async (_req, res) => {
+// Liveness — is the process alive? No dependency checks.
+app.get("/health/live", healthAuthMiddleware, (_req, res) => {
+  res.json({ status: "alive", timestamp: new Date().toISOString() });
+});
+
+// Readiness — can the service handle traffic?
+app.get("/health/ready", healthAuthMiddleware, async (_req, res) => {
   const checks: Record<string, unknown> = {};
 
   // Database
@@ -177,20 +202,31 @@ app.get("/health", localOnlyMiddleware, async (_req, res) => {
 
   // Redis
   try {
-    const redisOk = await isRedisHealthy();
-    checks.redis = redisOk ? "ok" : "error";
+    const healthy = await isRedisHealthy();
+    checks.redis = healthy ? "ok" : "error";
   } catch {
     checks.redis = "error";
   }
 
-  // Queues
+  // All 6 queues
   try {
-    const [notif, email, payment] = await Promise.all([
-      getQueueStatus(QUEUE_NAMES.NOTIFICATION),
-      getQueueStatus(QUEUE_NAMES.EMAIL),
-      getQueueStatus(QUEUE_NAMES.PAYMENT),
-    ]);
-    checks.queues = { notifications: notif, emails: email, payments: payment };
+    const queueNames: QueueName[] = [
+      QUEUE_NAMES.NOTIFICATION, QUEUE_NAMES.EMAIL, QUEUE_NAMES.PAYMENT,
+      QUEUE_NAMES.RECONCILIATION, QUEUE_NAMES.ANTI_FRAUD, QUEUE_NAMES.ESCROW,
+    ];
+    const queueStatuses = await Promise.all(
+      queueNames.map(async (name) => {
+        try {
+          const status = await getQueueStatus(name);
+          return { name, ...status };
+        } catch {
+          return { name, error: true };
+        }
+      })
+    );
+    checks.queues = Object.fromEntries(
+      queueStatuses.map((s) => [s.name, s])
+    );
   } catch {
     checks.queues = "error";
   }
@@ -202,6 +238,52 @@ app.get("/health", localOnlyMiddleware, async (_req, res) => {
     checks.circuitBreaker = "unknown";
   }
 
+  const isReady = checks.database === "ok" && checks.redis === "ok";
+
+  res.status(isReady ? 200 : 503).json({
+    status: isReady ? "ready" : "not_ready",
+    ...checks,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Startup — has initial setup completed? (checked once on boot)
+let startupComplete = false;
+app.get("/health/startup", healthAuthMiddleware, async (_req, res) => {
+  if (startupComplete) {
+    res.json({ status: "started", timestamp: new Date().toISOString() });
+    return;
+  }
+
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    startupComplete = true;
+    res.json({ status: "started", timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ status: "starting", timestamp: new Date().toISOString() });
+  }
+});
+
+// Backward compat: /health redirects to readiness probe
+app.get("/health", healthAuthMiddleware, async (req, res) => {
+  const checks: Record<string, unknown> = {};
+
+  // Database
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = "ok";
+  } catch {
+    checks.database = "error";
+  }
+
+  // Redis
+  try {
+    const healthy = await isRedisHealthy();
+    checks.redis = healthy ? "ok" : "error";
+  } catch {
+    checks.redis = "error";
+  }
+
   const isHealthy = checks.database === "ok" && checks.redis === "ok";
 
   res.status(isHealthy ? 200 : 503).json({
@@ -211,8 +293,8 @@ app.get("/health", localOnlyMiddleware, async (_req, res) => {
   });
 });
 
-// Prometheus metrics endpoint (localhost only)
-app.get("/metrics", localOnlyMiddleware, async (_req, res) => {
+// Prometheus metrics endpoint (protected by health auth)
+app.get("/metrics", healthAuthMiddleware, async (_req, res) => {
   try {
     res.set("Content-Type", register.contentType);
     res.end(await register.metrics());

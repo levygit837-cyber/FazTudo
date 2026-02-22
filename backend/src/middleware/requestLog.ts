@@ -8,11 +8,11 @@ import logger from "../lib/logger";
  */
 export const requestLogger = pinoHttp({
   logger,
-  // Don't log health check requests
+  // Don't log health/metrics/root requests (noisy in prod)
   autoLogging: {
     ignore: (req) => {
       const url = (req as any).url || "";
-      return url === "/" || url === "/health";
+      return url === "/" || url.startsWith("/health") || url === "/metrics";
     },
   },
   // Custom log level based on response status
