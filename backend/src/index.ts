@@ -43,6 +43,9 @@ import sessionRoutes from "./routes/sessionRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
 import { scheduleDailySalaries, stopSalaryCron } from "./services/companyCronService";
+import { startWorkers, stopWorkers } from "./workers";
+import { closeAllQueues } from "./queues";
+import { closeRedisConnection } from "./queues/connection";
 
 const app = express();
 const httpServer = createServer(app);
@@ -232,11 +235,14 @@ const gracefulShutdown = async (signal: string) => {
   try {
     stopScheduledTasks();
     stopSalaryCron();
+    await stopWorkers();
+    await closeAllQueues();
     server.close(() => {
       log.info("HTTP server closed");
     });
     await prisma.$disconnect();
-    log.info("Database connection closed");
+    await closeRedisConnection();
+    log.info("Database and Redis connections closed");
     process.exit(0);
   } catch (error) {
     log.error({ err: error }, "Error during shutdown");
@@ -270,6 +276,7 @@ const server = httpServer.listen(PORT, () => {
   log.info({ port: PORT, env: env.NODE_ENV }, "Server started");
   startScheduledTasks();
   scheduleDailySalaries();
+  startWorkers();
 });
 
 export default app;
