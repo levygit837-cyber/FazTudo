@@ -342,7 +342,7 @@ const Settings: React.FC = () => {
                   <select
                     value={settings.serviceArea.state}
                     onChange={(e) => update("serviceArea", "state", e.target.value)}
-                    className="form-input w-full"
+                    className="input w-full"
                   >
                     <option value="">Selecione...</option>
                     {STATES.map((s) => (
@@ -361,7 +361,7 @@ const Settings: React.FC = () => {
                     placeholder="Ex: Sao Paulo"
                     value={settings.serviceArea.city}
                     onChange={(e) => update("serviceArea", "city", e.target.value)}
-                    className="form-input w-full"
+                    className="input w-full"
                   />
                 </div>
               </div>
@@ -534,7 +534,7 @@ const Settings: React.FC = () => {
               placeholder="Digite EXCLUIR"
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
-              className="form-input mb-4 w-full"
+              className="input mb-4 w-full"
             />
             <div className="flex gap-3">
               <button

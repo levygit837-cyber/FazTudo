@@ -59,7 +59,7 @@ const BlockCard: React.FC<{
           type="checkbox"
           checked={state.isActive}
           onChange={(e) => onChange({ isActive: e.target.checked })}
-          className="w-4 h-4 accent-blue-600"
+          className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500"
         />
       </label>
     </div>

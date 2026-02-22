@@ -780,7 +780,7 @@ const CompanyStorefrontManager: React.FC = () => {
                       id={`team-member-${member.id}`}
                       checked={teamMemberIds.includes(member.id)}
                       onChange={() => toggleTeamMember(member.id)}
-                      className="h-4 w-4 text-blue-600 rounded"
+                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500"
                     />
                     <label
                       htmlFor={`team-member-${member.id}`}

@@ -62,7 +62,7 @@ const TeamBuilder: React.FC<Props> = ({ orderId, members, onTeamCreated, onClose
                   id={`member-${member.id}`}
                   checked={selectedMemberIds.includes(member.id)}
                   onChange={() => toggleMember(member.id)}
-                  className="h-4 w-4 text-blue-600 rounded"
+                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500"
                 />
                 <label htmlFor={`member-${member.id}`} className="flex-1 cursor-pointer">
                   <p className="font-medium text-slate-900 dark:text-slate-100 text-sm">{member.user.name}</p>
@@ -75,7 +75,7 @@ const TeamBuilder: React.FC<Props> = ({ orderId, members, onTeamCreated, onClose
                       name="leader"
                       checked={leaderId === member.id}
                       onChange={() => setLeaderId(member.id)}
-                      className="h-3 w-3"
+                      className="h-3 w-3 text-primary-600 focus:ring-primary-500"
                     />
                     Líder
                   </label>
