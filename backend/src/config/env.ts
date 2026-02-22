@@ -35,6 +35,9 @@ export interface EnvConfig {
   // Database
   DATABASE_URL: string;
 
+  // Redis
+  REDIS_URL: string;
+
   // Authentication
   JWT_SECRET: string;
   JWT_ACCESS_SECRET: string;
@@ -89,6 +92,9 @@ export interface EnvConfig {
   // Development
   ENABLE_SWAGGER: boolean;
   ALLOW_LOCAL_PAYMENT_FALLBACK: boolean;
+
+  // MFA
+  MFA_ENCRYPTION_KEY: string;
 }
 
 /**
@@ -144,7 +150,10 @@ function getEnvConfig(): EnvConfig {
     PORT: parseInt(process.env.PORT || '3001', 10),
 
     // Database
-    DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db',
+    DATABASE_URL: process.env.DATABASE_URL || 'postgresql://faztudo:faztudo_dev_2026@localhost:5432/faztudo',
+
+    // Redis
+    REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
 
     // Authentication — reduced default expiry for security
     JWT_SECRET: jwtSecret,
@@ -211,6 +220,15 @@ function getEnvConfig(): EnvConfig {
     // Development
     ENABLE_SWAGGER: process.env.ENABLE_SWAGGER === 'true',
     ALLOW_LOCAL_PAYMENT_FALLBACK: process.env.ALLOW_LOCAL_PAYMENT_FALLBACK === 'true',
+
+    // MFA
+    MFA_ENCRYPTION_KEY: (() => {
+      const key = process.env.MFA_ENCRYPTION_KEY;
+      if (nodeEnv === 'production' && (!key || key.length < 32)) {
+        throw new Error('FATAL: MFA_ENCRYPTION_KEY must be set (min 32 chars) in production');
+      }
+      return key || crypto.randomBytes(32).toString('hex');
+    })(),
   };
 
   return config;

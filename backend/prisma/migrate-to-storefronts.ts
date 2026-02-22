@@ -11,9 +11,11 @@
  */
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const adapter = new PrismaLibSql({ url: "file:./dev.db" });
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL || "postgresql://faztudo:faztudo_dev_2026@localhost:5432/faztudo",
+});
 const prisma = new PrismaClient({ adapter });
 
 function slugify(text: string): string {

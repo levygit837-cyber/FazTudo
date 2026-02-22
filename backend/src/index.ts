@@ -41,8 +41,15 @@ import locationRoutes from "./routes/locationRoutes";
 import geocodingRoutes from "./routes/geocodingRoutes";
 import sessionRoutes from "./routes/sessionRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
+import mfaRoutes from "./routes/mfaRoutes";
 import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
 import { scheduleDailySalaries, stopSalaryCron } from "./services/companyCronService";
+import { startWorkers, stopWorkers } from "./workers";
+import { closeAllQueues } from "./queues";
+import { closeRedisConnection, isRedisHealthy } from "./queues/connection";
+import { register } from "./lib/metrics";
+import { QUEUE_NAMES, getQueueStatus } from "./queues/queues";
+import { getCircuitBreakerStatus } from "./services/mercadopagoService";
 
 const app = express();
 const httpServer = createServer(app);
@@ -155,21 +162,61 @@ const localOnlyMiddleware = (req: Request, res: Response, next: NextFunction): v
   next();
 };
 
-// Database Health Check (localhost only)
+// Extended Health Check (localhost only)
 app.get("/health", localOnlyMiddleware, async (_req, res) => {
+  const checks: Record<string, unknown> = {};
+
+  // Database
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({
-      status: "healthy",
-      database: "connected",
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    res.status(503).json({
-      status: "unhealthy",
-      database: "disconnected",
-      timestamp: new Date().toISOString(),
-    });
+    checks.database = "ok";
+  } catch {
+    checks.database = "error";
+  }
+
+  // Redis
+  try {
+    const redisOk = await isRedisHealthy();
+    checks.redis = redisOk ? "ok" : "error";
+  } catch {
+    checks.redis = "error";
+  }
+
+  // Queues
+  try {
+    const [notif, email, payment] = await Promise.all([
+      getQueueStatus(QUEUE_NAMES.NOTIFICATION),
+      getQueueStatus(QUEUE_NAMES.EMAIL),
+      getQueueStatus(QUEUE_NAMES.PAYMENT),
+    ]);
+    checks.queues = { notifications: notif, emails: email, payments: payment };
+  } catch {
+    checks.queues = "error";
+  }
+
+  // Circuit Breaker
+  try {
+    checks.circuitBreaker = getCircuitBreakerStatus();
+  } catch {
+    checks.circuitBreaker = "unknown";
+  }
+
+  const isHealthy = checks.database === "ok" && checks.redis === "ok";
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? "healthy" : "degraded",
+    ...checks,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Prometheus metrics endpoint (localhost only)
+app.get("/metrics", localOnlyMiddleware, async (_req, res) => {
+  try {
+    res.set("Content-Type", register.contentType);
+    res.end(await register.metrics());
+  } catch {
+    res.status(500).end();
   }
 });
 
@@ -178,6 +225,7 @@ app.get("/health", localOnlyMiddleware, async (_req, res) => {
 // ============================================
 
 app.use("/api/auth", authRoutes);
+app.use("/api/auth/mfa", mfaRoutes);
 app.use("/api/services", serviceRoutes);           // Listings + briefs
 app.use("/api/services", orderRoutes);             // Orders (pedidos)
 app.use("/api/services", paymentRoutes);           // Payments (webhook, config, order payments)
@@ -230,13 +278,16 @@ const gracefulShutdown = async (signal: string) => {
 
   log.info({ signal }, "Shutting down gracefully...");
   try {
-    stopScheduledTasks();
     stopSalaryCron();
+    await stopScheduledTasks();
+    await stopWorkers();
+    await closeAllQueues();
     server.close(() => {
       log.info("HTTP server closed");
     });
     await prisma.$disconnect();
-    log.info("Database connection closed");
+    await closeRedisConnection();
+    log.info("Database and Redis connections closed");
     process.exit(0);
   } catch (error) {
     log.error({ err: error }, "Error during shutdown");
@@ -266,10 +317,11 @@ const PORT = env.PORT;
 // Initialize Socket.io before starting server
 initializeSocket(httpServer);
 
-const server = httpServer.listen(PORT, () => {
+const server = httpServer.listen(PORT, async () => {
   log.info({ port: PORT, env: env.NODE_ENV }, "Server started");
-  startScheduledTasks();
+  await startScheduledTasks();
   scheduleDailySalaries();
+  startWorkers();
 });
 
 export default app;

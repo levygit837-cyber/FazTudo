@@ -1,132 +1,114 @@
-import cron, { type ScheduledTask } from "node-cron";
-import {
-  checkAutoReleasablePayments,
-  checkExpiredOrders,
-  sendDeadlineWarnings,
-} from "../services/escrowService";
-import { createLogger } from "./logger";
-import { emitToUser } from "./socket";
-import prisma from "./prisma";
+import { Queue } from "bullmq";
+import { getRedisConnectionOpts } from "../queues/connection";
+import { QUEUE_NAMES } from "../queues/queues";
+import { createLogger } from "../lib/logger";
 
 const log = createLogger("scheduler");
 
-let tasks: ScheduledTask[] = [];
+const SCHEDULER_QUEUE = "scheduler";
+
+let schedulerQueue: Queue | null = null;
 
 /**
- * Start all scheduled cron tasks.
- * Call this once after the server starts.
+ * Get or create the scheduler queue (for repeatable/cron jobs).
  */
-export function startScheduledTasks(): void {
-  log.info("Starting scheduled tasks...");
+function getSchedulerQueue(): Queue {
+  if (!schedulerQueue) {
+    schedulerQueue = new Queue(SCHEDULER_QUEUE, {
+      connection: getRedisConnectionOpts(),
+    });
+  }
+  return schedulerQueue;
+}
+
+/**
+ * Register all repeatable jobs using BullMQ cron patterns.
+ * These replace the old node-cron tasks.
+ */
+export async function startScheduledTasks(): Promise<void> {
+  log.info("Registering scheduled tasks via BullMQ...");
+
+  const queue = getSchedulerQueue();
+
+  // Remove stale repeatable jobs from previous deployments
+  const existingRepeatable = await queue.getRepeatableJobs();
+  for (const job of existingRepeatable) {
+    await queue.removeRepeatableByKey(job.key);
+  }
 
   // Every hour: auto-release eligible escrow payments
-  const autoRelease = cron.schedule("0 * * * *", async () => {
-    try {
-      const count = await checkAutoReleasablePayments();
-      if (count > 0) {
-        log.info({ count }, "Auto-released payments from escrow");
-      }
-    } catch (err) {
-      log.error({ err }, "Failed to auto-release payments");
+  await queue.add(
+    "auto-release-escrow",
+    { task: "auto-release-escrow" },
+    {
+      repeat: { pattern: "0 * * * *" }, // Every hour
+      removeOnComplete: { count: 24 },
+      removeOnFail: { count: 48 },
     }
-  });
+  );
 
   // Every 6 hours: mark expired orders
-  const expiredOrders = cron.schedule("0 */6 * * *", async () => {
-    try {
-      const count = await checkExpiredOrders();
-      if (count > 0) {
-        log.info({ count }, "Marked orders as expired");
-      }
-    } catch (err) {
-      log.error({ err }, "Failed to check expired orders");
+  await queue.add(
+    "check-expired-orders",
+    { task: "check-expired-orders" },
+    {
+      repeat: { pattern: "0 */6 * * *" },
+      removeOnComplete: { count: 10 },
+      removeOnFail: { count: 20 },
     }
-  });
+  );
 
   // Every 12 hours: send deadline warnings (1 day before)
-  const deadlineWarnings = cron.schedule("0 */12 * * *", async () => {
-    try {
-      const count = await sendDeadlineWarnings(1);
-      if (count > 0) {
-        log.info({ count }, "Sent deadline warnings");
-      }
-    } catch (err) {
-      log.error({ err }, "Failed to send deadline warnings");
+  await queue.add(
+    "deadline-warnings",
+    { task: "deadline-warnings", daysBeforeDeadline: 1 },
+    {
+      repeat: { pattern: "0 */12 * * *" },
+      removeOnComplete: { count: 5 },
+      removeOnFail: { count: 10 },
     }
-  });
+  );
 
-  // Every minute: check for late professionals (15 min past scheduled time, no en-route)
-  const delayCheck = cron.schedule("* * * * *", async () => {
-    try {
-      const now = new Date();
-      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-
-      // Find orders where scheduled time + 15 min has passed,
-      // professional hasn't marked en-route, status is active,
-      // and no DEADLINE_WARNING notification was sent in the last hour
-      const lateOrders = await prisma.serviceOrder.findMany({
-        where: {
-          scheduledDate: { lte: fifteenMinutesAgo },
-          enRouteAt: null,
-          status: { in: ["ACCEPTED", "IN_PROGRESS"] },
-          notifications: {
-            none: {
-              type: "DEADLINE_WARNING",
-              createdAt: {
-                gte: new Date(now.getTime() - 60 * 60 * 1000),
-              },
-            },
-          },
-        },
-        include: { professional: true },
-      });
-
-      for (const order of lateOrders) {
-        // Create notification for client
-        await prisma.notification.create({
-          data: {
-            userId: order.clientId,
-            type: "DEADLINE_WARNING",
-            title: "Profissional atrasado",
-            message: `O horario agendado para "${order.title}" ja passou e o profissional ainda nao confirmou que esta a caminho. O profissional ja chegou?`,
-            serviceOrderId: order.id,
-            metadata: JSON.stringify({
-              delayAlert: true,
-              professionalName: order.professional?.name,
-            }),
-          },
-        });
-
-        // Emit real-time alert to client
-        emitToUser(order.clientId, "order:delayAlert", {
-          orderId: order.id,
-          orderTitle: order.title,
-          professionalName: order.professional?.name,
-          scheduledDate: order.scheduledDate?.toISOString(),
-        });
-
-        log.info({ orderId: order.id }, "Sent delay alert to client");
-      }
-    } catch (err) {
-      log.error({ err }, "Failed to check for late professionals");
+  // Every minute: check for late professionals
+  await queue.add(
+    "delay-check",
+    { task: "delay-check" },
+    {
+      repeat: { pattern: "* * * * *" },
+      removeOnComplete: { count: 60 },
+      removeOnFail: { count: 120 },
     }
-  });
+  );
 
-  tasks = [autoRelease, expiredOrders, deadlineWarnings, delayCheck];
+  // Daily at 02:00 UTC: reconciliation
+  await queue.add(
+    "daily-reconciliation",
+    { task: "daily-reconciliation" },
+    {
+      repeat: { pattern: "0 2 * * *" },
+      removeOnComplete: { count: 7 },
+      removeOnFail: { count: 14 },
+    }
+  );
 
   log.info(
-    "Scheduled tasks started: auto-release (hourly), expired-orders (6h), deadline-warnings (12h), delay-check (1m)",
+    "Scheduled tasks registered: auto-release (hourly), expired-orders (6h), " +
+    "deadline-warnings (12h), delay-check (1m), reconciliation (daily 02:00)"
   );
 }
 
 /**
- * Stop all scheduled cron tasks.
- * Call this during graceful shutdown.
+ * Stop all scheduled tasks and close the scheduler queue.
  */
-export function stopScheduledTasks(): void {
-  for (const task of tasks) {
-    task.stop();
+export async function stopScheduledTasks(): Promise<void> {
+  if (schedulerQueue) {
+    // Remove all repeatable jobs
+    const repeatableJobs = await schedulerQueue.getRepeatableJobs();
+    for (const job of repeatableJobs) {
+      await schedulerQueue.removeRepeatableByKey(job.key);
+    }
+    await schedulerQueue.close();
+    schedulerQueue = null;
+    log.info("All scheduled tasks stopped");
   }
-  tasks = [];
-  log.info("All scheduled tasks stopped");
 }
