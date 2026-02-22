@@ -3,6 +3,7 @@ import { getRedisConnectionOpts } from "../queues/connection";
 import { QUEUE_NAMES, type AntiFraudJobData } from "../queues/queues";
 import prisma from "../lib/prisma";
 import { createLogger } from "../lib/logger";
+import { queueJobsTotal, queueJobDuration } from "../lib/metrics";
 
 const log = createLogger("worker:anti-fraud");
 
@@ -89,10 +90,15 @@ export function createAntiFraudWorker(): Worker<AntiFraudJobData> {
 
   worker.on("completed", (job) => {
     log.debug({ jobId: job.id }, "Anti-fraud check completed");
+    queueJobsTotal.inc({ queue: "anti-fraud", status: "completed" });
+    if (job.processedOn && job.finishedOn) {
+      queueJobDuration.observe({ queue: "anti-fraud" }, (job.finishedOn - job.processedOn) / 1000);
+    }
   });
 
   worker.on("failed", (job, err) => {
     log.error({ jobId: job?.id, err }, "Anti-fraud check failed");
+    queueJobsTotal.inc({ queue: "anti-fraud", status: "failed" });
   });
 
   log.info("Anti-fraud worker started");

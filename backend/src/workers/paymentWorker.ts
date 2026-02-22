@@ -3,6 +3,7 @@ import { getRedisConnectionOpts } from "../queues/connection";
 import { QUEUE_NAMES, type PaymentJobData } from "../queues/queues";
 import prisma from "../lib/prisma";
 import { createLogger } from "../lib/logger";
+import { queueJobsTotal, queueJobDuration } from "../lib/metrics";
 
 const log = createLogger("worker:payment");
 
@@ -62,10 +63,15 @@ export function createPaymentWorker(): Worker<PaymentJobData> {
 
   worker.on("completed", (job) => {
     log.debug({ jobId: job.id }, "Payment job completed");
+    queueJobsTotal.inc({ queue: "payment", status: "completed" });
+    if (job.processedOn && job.finishedOn) {
+      queueJobDuration.observe({ queue: "payment" }, (job.finishedOn - job.processedOn) / 1000);
+    }
   });
 
   worker.on("failed", (job, err) => {
     log.error({ jobId: job?.id, err }, "Payment job failed");
+    queueJobsTotal.inc({ queue: "payment", status: "failed" });
   });
 
   log.info("Payment worker started");

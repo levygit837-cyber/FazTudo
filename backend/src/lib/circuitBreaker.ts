@@ -1,5 +1,6 @@
 import CircuitBreaker from "opossum";
 import { createLogger } from "./logger";
+import { circuitBreakerState } from "./metrics";
 
 const log = createLogger("circuitBreaker");
 
@@ -31,15 +32,18 @@ export function createCircuitBreaker<TArgs extends unknown[], TResult>(
     volumeThreshold: options?.volumeThreshold ?? 5,
   });
 
-  breaker.on("open", () =>
-    log.warn({ name }, "Circuit breaker OPENED — requests will be rejected"),
-  );
-  breaker.on("halfOpen", () =>
-    log.info({ name }, "Circuit breaker HALF-OPEN — testing with next request"),
-  );
-  breaker.on("close", () =>
-    log.info({ name }, "Circuit breaker CLOSED — back to normal"),
-  );
+  breaker.on("open", () => {
+    log.warn({ name }, "Circuit breaker OPENED — requests will be rejected");
+    circuitBreakerState.set({ name }, 2);
+  });
+  breaker.on("halfOpen", () => {
+    log.info({ name }, "Circuit breaker HALF-OPEN — testing with next request");
+    circuitBreakerState.set({ name }, 1);
+  });
+  breaker.on("close", () => {
+    log.info({ name }, "Circuit breaker CLOSED — back to normal");
+    circuitBreakerState.set({ name }, 0);
+  });
   breaker.on("fallback", () =>
     log.warn({ name }, "Circuit breaker fallback triggered"),
   );

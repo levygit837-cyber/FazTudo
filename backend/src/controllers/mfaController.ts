@@ -6,6 +6,7 @@ import prisma from "../lib/prisma";
 import type { AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
 import { createLogger } from "../lib/logger";
+import { mfaValidationsTotal } from "../lib/metrics";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
@@ -241,12 +242,14 @@ export const validateMFA = async (req: AuthRequest, res: Response): Promise<void
             },
           });
           log.info({ userId }, "Backup code used for MFA");
+          mfaValidationsTotal.inc({ result: "backup_used" });
           break;
         }
       }
     }
 
     if (!isValid) {
+      mfaValidationsTotal.inc({ result: "failure" });
       res.status(403).json({ success: false, message: "Invalid MFA code" });
       return;
     }
@@ -256,6 +259,8 @@ export const validateMFA = async (req: AuthRequest, res: Response): Promise<void
       where: { userId },
       data: { lastUsedAt: new Date() },
     });
+
+    mfaValidationsTotal.inc({ result: "success" });
 
     // Fetch user and issue real tokens
     const user = await prisma.user.findUnique({ where: { id: userId } });

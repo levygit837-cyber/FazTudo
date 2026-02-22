@@ -519,3 +519,24 @@ export const trackListingViewSchema = z.object({
   device: z.enum(["mobile", "desktop", "tablet"]).optional(),
   sessionDuration: z.number().int().min(0).optional(),
 });
+
+// ============================================
+// STORAGE SCHEMAS
+// ============================================
+
+export const presignUploadSchema = z.object({
+  filename: z.string().min(1).max(255),
+  contentType: z.string().min(1).max(100),
+  context: z.enum(["chat", "listing", "profile", "dispute"]),
+  contextId: z.string().optional(),
+  fileSize: z.number().int().positive().max(10 * 1024 * 1024), // 10MB max
+});
+
+export const confirmUploadSchema = z.object({
+  key: z.string().min(1).max(500),
+  originalName: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(100),
+  size: z.number().int().positive(),
+  context: z.enum(["chat", "listing", "profile", "dispute"]),
+  contextId: z.string().optional(),
+});

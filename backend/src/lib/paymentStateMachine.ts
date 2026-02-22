@@ -1,6 +1,7 @@
 import prisma from "./prisma";
 import { getRedisConnection } from "../queues/connection";
 import { createLogger } from "./logger";
+import { paymentTransitionsTotal, paymentEventsTotal } from "./metrics";
 import type { PaymentEventType, EventSource } from "@prisma/client";
 
 const log = createLogger("paymentStateMachine");
@@ -125,6 +126,9 @@ export async function transitionPaymentStatus(
       "Payment status transitioned",
     );
 
+    paymentTransitionsTotal.inc({ from_status: currentStatus, to_status: newStatus });
+    paymentEventsTotal.inc({ event_type: eventType, source });
+
     return { success: true, event };
   } catch (err: any) {
     // UNIQUE constraint violation = duplicate
@@ -186,6 +190,8 @@ export async function appendPaymentEvent(params: {
         ipAddress,
       },
     });
+
+    paymentEventsTotal.inc({ event_type: eventType, source });
 
     return { success: true, event };
   } catch (err: any) {

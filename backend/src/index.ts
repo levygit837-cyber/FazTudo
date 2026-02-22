@@ -42,12 +42,13 @@ import geocodingRoutes from "./routes/geocodingRoutes";
 import sessionRoutes from "./routes/sessionRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import mfaRoutes from "./routes/mfaRoutes";
+import storageRoutes from "./routes/storageRoutes";
 import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
 import { scheduleDailySalaries, stopSalaryCron } from "./services/companyCronService";
 import { startWorkers, stopWorkers } from "./workers";
 import { closeAllQueues } from "./queues";
 import { closeRedisConnection, isRedisHealthy, initRedisConnection } from "./queues/connection";
-import { register } from "./lib/metrics";
+import { register, httpRequestDuration, httpRequestTotal } from "./lib/metrics";
 import { QUEUE_NAMES, getQueueStatus, type QueueName } from "./queues/queues";
 import { getCircuitBreakerStatus } from "./services/mercadopagoService";
 import { initDatabaseConnection } from "./lib/prisma";
@@ -61,6 +62,22 @@ const log = createLogger("server");
 // ============================================
 
 app.use(requestLogger);
+
+// ============================================
+// PROMETHEUS HTTP METRICS
+// ============================================
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = process.hrtime.bigint();
+  res.on("finish", () => {
+    const durationMs = Number(process.hrtime.bigint() - start) / 1e9;
+    const route = req.route?.path || req.path || "unknown";
+    const labels = { method: req.method, route, status_code: String(res.statusCode) };
+    httpRequestDuration.observe(labels, durationMs);
+    httpRequestTotal.inc(labels);
+  });
+  next();
+});
 
 // ============================================
 // SECURITY MIDDLEWARE
@@ -327,6 +344,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/wallet", walletRoutes);
+app.use("/api/storage", storageRoutes);
 // More-specific /api/company/* sub-paths must be registered BEFORE the
 // general /api/company router, otherwise Express will match the wildcard
 // route (e.g. GET /storefront/:companyId) before the sub-routers.

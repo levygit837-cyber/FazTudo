@@ -1,7 +1,32 @@
 import type { Request } from "express";
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import rateLimit, { type Options, ipKeyGenerator } from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
 import { env } from '../config/env';
+import { getRedisConnection } from '../queues/connection';
+import { createLogger } from '../lib/logger';
 import type { AuthRequest } from "./auth";
+
+const log = createLogger("rateLimiter");
+
+/**
+ * Creates a Redis-backed store for rate limiting.
+ * Falls back to in-memory store if Redis is unavailable (logged as warning).
+ */
+function createRedisStore(prefix: string): { store?: Options["store"] } {
+  try {
+    const client = getRedisConnection();
+    return {
+      store: new RedisStore({
+        // Use the existing IORedis connection
+        sendCommand: (...args: string[]) => client.call(...args) as any,
+        prefix: `rl:${prefix}:`,
+      }),
+    };
+  } catch (err) {
+    log.warn({ err, prefix }, "Redis unavailable for rate limiting — using in-memory store");
+    return {};
+  }
+}
 
 /**
  * General API rate limiter.
@@ -16,6 +41,7 @@ export const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.method === 'OPTIONS',
+  ...createRedisStore("general"),
   message: {
     success: false,
     message: 'Muitas requisicoes. Tente novamente mais tarde.',
@@ -33,6 +59,7 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+  ...createRedisStore("auth"),
   message: {
     success: false,
     message: 'Muitas tentativas de autenticacao. Tente novamente em 15 minutos.',
@@ -42,13 +69,14 @@ export const authLimiter = rateLimit({
 
 /**
  * Very strict limiter for sensitive operations (password reset, etc).
- * 5 requests per 15 minutes.
+ * Configurable via SENSITIVE_RATE_LIMIT_MAX (default: 5 per 15min).
  */
 export const sensitiveLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: env.SENSITIVE_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  ...createRedisStore("sensitive"),
   message: {
     success: false,
     message: 'Muitas tentativas. Tente novamente mais tarde.',
@@ -58,13 +86,14 @@ export const sensitiveLimiter = rateLimit({
 
 /**
  * Very strict limiter for financial operations (withdraw, payment release).
- * 3 requests per 15 minutes per IP.
+ * Configurable via FINANCIAL_RATE_LIMIT_MAX (default: 3 per 15min).
  */
 export const financialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 3,
+  max: env.FINANCIAL_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  ...createRedisStore("financial"),
   message: {
     success: false,
     message: 'Muitas operacoes financeiras. Tente novamente em 15 minutos.',
@@ -81,6 +110,7 @@ export const createUserRateLimiter = (
   maxRequests: number,
   windowMs: number,
   message: string = "Muitas requisições. Tente novamente mais tarde.",
+  prefix: string = "user",
 ) =>
   rateLimit({
     windowMs,
@@ -92,6 +122,7 @@ export const createUserRateLimiter = (
       // Falls back to IP if user not authenticated (uses ipKeyGenerator for IPv6 safety)
       return authReq.user ? `user:${authReq.user.id}` : ipKeyGenerator(req.ip ?? "unknown");
     },
+    ...createRedisStore(prefix),
     message: {
       success: false,
       message,
@@ -101,34 +132,37 @@ export const createUserRateLimiter = (
 
 /**
  * User-based rate limiter for financial operations.
- * 3 operations per 15 minutes per user (not per IP).
+ * Configurable via FINANCIAL_RATE_LIMIT_MAX (default: 3 per 15min per user).
  */
 export const userFinancialLimiter = createUserRateLimiter(
-  3,
+  env.FINANCIAL_RATE_LIMIT_MAX,
   15 * 60 * 1000,
   "Muitas operações financeiras. Tente novamente em 15 minutos.",
+  "user-financial",
 );
 
 /**
  * User-based rate limiter for sensitive auth operations.
- * 5 operations per 15 minutes per user.
+ * Configurable via SENSITIVE_RATE_LIMIT_MAX (default: 5 per 15min per user).
  */
 export const userSensitiveLimiter = createUserRateLimiter(
-  5,
+  env.SENSITIVE_RATE_LIMIT_MAX,
   15 * 60 * 1000,
   "Muitas tentativas. Tente novamente mais tarde.",
+  "user-sensitive",
 );
 
 /**
  * Rate limiter for webhook endpoints.
- * 100 webhooks per minute per IP — prevents flood attacks
- * while allowing legitimate burst traffic from payment providers.
+ * Configurable via WEBHOOK_RATE_LIMIT_MAX (default: 100 per minute per IP).
+ * Prevents flood attacks while allowing legitimate burst traffic from payment providers.
  */
 export const webhookLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100,
+  max: env.WEBHOOK_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  ...createRedisStore("webhook"),
   message: {
     success: false,
     message: "Too many webhook requests",

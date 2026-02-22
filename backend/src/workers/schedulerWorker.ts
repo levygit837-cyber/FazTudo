@@ -9,6 +9,7 @@ import { enqueueReconciliation } from "../queues/producers";
 import prisma from "../lib/prisma";
 import { emitToUser } from "../lib/socket";
 import { createLogger } from "../lib/logger";
+import { queueJobsTotal, queueJobDuration } from "../lib/metrics";
 
 const log = createLogger("worker:scheduler");
 
@@ -130,10 +131,15 @@ export function createSchedulerWorker(): Worker<SchedulerJobData> {
 
   worker.on("completed", (job) => {
     log.debug({ jobId: job.id, task: job.data.task }, "Scheduler job completed");
+    queueJobsTotal.inc({ queue: "escrow", status: "completed" });
+    if (job.processedOn && job.finishedOn) {
+      queueJobDuration.observe({ queue: "escrow" }, (job.finishedOn - job.processedOn) / 1000);
+    }
   });
 
   worker.on("failed", (job, err) => {
     log.error({ jobId: job?.id, task: job?.data?.task, err }, "Scheduler job failed");
+    queueJobsTotal.inc({ queue: "escrow", status: "failed" });
   });
 
   log.info("Scheduler worker started");
