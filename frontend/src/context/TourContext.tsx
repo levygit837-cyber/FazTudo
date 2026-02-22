@@ -133,7 +133,7 @@ export const PROFESSIONAL_STEPS: TourStep[] = [
   },
   {
     id: "tour-create-service-form",
-    route: "/professional/catalog/new",
+    route: "/professional/vitrine",
     icon: "Edit",
     title: "Descreva seu serviço",
     description:

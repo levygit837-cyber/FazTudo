@@ -8,6 +8,7 @@ import {
   X,
   Filter,
   Verified,
+  Package,
 } from "lucide-react";
 import { SearchBar } from "../../components/common/SearchBar";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -23,21 +24,47 @@ import ModalPortal from "../../components/common/ModalPortal";
 
 // ── Skeleton for storefront cards ─────────────────────────
 const SkeletonStorefrontCard: React.FC = () => (
-  <div className="card overflow-hidden">
-    <Skeleton className="h-20 w-full rounded-none" />
-    <div className="p-4 space-y-3">
-      <div className="flex items-center gap-3">
-        <Skeleton className="w-12 h-12 rounded-full shrink-0" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-3/4 rounded" />
+  <div className="rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+    <Skeleton className="h-40 w-full rounded-none" />
+    <div className="p-5 space-y-4">
+      <div className="flex items-start gap-3 -mt-12">
+        <Skeleton className="w-16 h-16 rounded-full shrink-0 border-4 border-white dark:border-slate-900" />
+        <div className="flex-1 space-y-2 pt-8">
+          <Skeleton className="h-5 w-3/4 rounded" />
           <Skeleton className="h-3 w-1/2 rounded" />
         </div>
       </div>
-      <Skeleton className="h-3 w-full rounded" />
-      <Skeleton className="h-3 w-2/3 rounded" />
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-full rounded" />
+        <Skeleton className="h-3 w-5/6 rounded" />
+        <Skeleton className="h-3 w-2/3 rounded" />
+      </div>
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-5 w-20 rounded-full" />
+      </div>
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+        <Skeleton className="h-4 w-24 rounded" />
+        <Skeleton className="h-4 w-20 rounded" />
+      </div>
     </div>
   </div>
 );
+
+// ── Gradient palette for banners ──────────────────────────
+const BANNER_GRADIENTS = [
+  "from-primary-500 to-primary-600",
+  "from-violet-500 to-purple-600",
+  "from-cyan-500 to-blue-600",
+  "from-emerald-500 to-teal-600",
+  "from-amber-500 to-orange-600",
+  "from-rose-500 to-pink-600",
+  "from-indigo-500 to-blue-600",
+  "from-fuchsia-500 to-pink-600",
+];
+
+function getBannerGradient(id: number): string {
+  return BANNER_GRADIENTS[id % BANNER_GRADIENTS.length];
+}
 
 // ── Storefront Card Component ─────────────────────────────
 interface StorefrontCardProps {
@@ -46,26 +73,29 @@ interface StorefrontCardProps {
 
 const StorefrontCard: React.FC<StorefrontCardProps> = ({ storefront }) => {
   const hasRating = storefront.totalReviews > 0;
+  const gradient = getBannerGradient(storefront.id);
 
   return (
     <Link
       to={`/explorar/${storefront.slug}`}
-      className="card overflow-hidden hover:shadow-lg transition-shadow group"
+      className="rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow group flex flex-col"
     >
-      {/* Banner area */}
-      <div className="h-20 bg-gradient-to-r from-primary-500 to-primary-600 relative">
+      {/* Banner */}
+      <div
+        className={`h-40 bg-gradient-to-br ${gradient} relative flex items-end`}
+      >
         {storefront.mainCategory && (
-          <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/20 text-white text-xs backdrop-blur-sm">
+          <span className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-medium backdrop-blur-sm">
             {storefront.mainCategory.name}
           </span>
         )}
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-5 flex-1 flex flex-col">
         {/* Avatar + Name */}
-        <div className="flex items-start gap-3 -mt-10">
-          <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 border-2 border-white dark:border-slate-800 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
+        <div className="flex items-start gap-3 -mt-12">
+          <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-900 shadow-md flex items-center justify-center shrink-0 overflow-hidden">
             {storefront.logo ? (
               <img
                 src={storefront.logo}
@@ -73,17 +103,17 @@ const StorefrontCard: React.FC<StorefrontCardProps> = ({ storefront }) => {
                 className="w-full h-full object-cover rounded-full"
               />
             ) : (
-              <Store className="w-6 h-6 text-primary-500" />
+              <Store className="w-7 h-7 text-primary-500" />
             )}
           </div>
-          <div className="pt-6 min-w-0 flex-1">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors flex items-center gap-1.5">
+          <div className="pt-8 min-w-0 flex-1">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors flex items-center gap-1.5">
               {storefront.name}
               {storefront.user.isVerified && (
                 <Verified className="w-4 h-4 text-primary-500 shrink-0" />
               )}
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
               {storefront.user.name}
             </p>
           </div>
@@ -91,19 +121,34 @@ const StorefrontCard: React.FC<StorefrontCardProps> = ({ storefront }) => {
 
         {/* Description */}
         {storefront.description && (
-          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+          <p className="mt-4 text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed">
             {storefront.description}
           </p>
         )}
 
-        {/* Stats row */}
-        <div className="mt-3 flex items-center gap-4 text-sm">
+        {/* Category tag */}
+        {storefront.mainCategory && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+              {storefront.mainCategory.name}
+            </span>
+          </div>
+        )}
+
+        {/* Spacer to push stats to bottom */}
+        <div className="flex-1" />
+
+        {/* Stats footer */}
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-sm">
           {hasRating ? (
-            <span className="flex items-center gap-1 text-amber-500">
+            <span className="flex items-center gap-1.5 text-amber-500">
               <Star className="w-4 h-4 fill-current" />
-              <span className="font-medium">{formatRating(storefront.ratingAverage)}</span>
+              <span className="font-semibold">
+                {formatRating(storefront.ratingAverage)}
+              </span>
               <span className="text-slate-400 dark:text-slate-500">
-                ({storefront.totalReviews})
+                ({storefront.totalReviews}{" "}
+                {storefront.totalReviews === 1 ? "avaliacao" : "avaliacoes"})
               </span>
             </span>
           ) : (
@@ -111,7 +156,8 @@ const StorefrontCard: React.FC<StorefrontCardProps> = ({ storefront }) => {
               Sem avaliacoes
             </span>
           )}
-          <span className="text-slate-400 dark:text-slate-500">
+          <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+            <Package className="w-4 h-4" />
             {storefront.totalServices}{" "}
             {storefront.totalServices === 1 ? "servico" : "servicos"}
           </span>
@@ -255,7 +301,7 @@ const ExplorePage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-800">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-16 z-10">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 max-w-7xl py-4">
           <div className="mb-3">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
               Explorar
@@ -337,137 +383,121 @@ const ExplorePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          {/* Sidebar — categories (desktop) */}
-          <aside
-            className="hidden md:block w-56 flex-shrink-0"
-            role="complementary"
+      {/* Main content — full-width, no sidebar */}
+      <div className="container mx-auto px-4 max-w-7xl py-6">
+        {/* Horizontal category pills (desktop) */}
+        {categories.length > 0 && (
+          <div
+            className="hidden md:flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide"
+            role="group"
             aria-label="Filtro por categoria"
           >
-            <div className="sticky top-36">
-              <div className="card p-4">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">
-                  Categorias
-                </h3>
-                <div
-                  className="space-y-1 max-h-96 overflow-y-auto"
-                  role="group"
-                  aria-label="Categorias"
-                >
-                  <button
-                    onClick={() => handleCategorySelect(null)}
-                    aria-pressed={!categoryId}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      !categoryId
-                        ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 font-medium"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                    }`}
-                  >
-                    Todas
-                  </button>
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleCategorySelect(cat.id)}
-                      aria-pressed={categoryId === cat.id.toString()}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                        categoryId === cat.id.toString()
-                          ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 font-medium"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                      }`}
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </aside>
+            <button
+              onClick={() => handleCategorySelect(null)}
+              aria-pressed={!categoryId}
+              className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                !categoryId
+                  ? "bg-primary-500 text-white shadow-sm"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+              }`}
+            >
+              Todas
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleCategorySelect(cat.id)}
+                aria-pressed={categoryId === cat.id.toString()}
+                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  categoryId === cat.id.toString()
+                    ? "bg-primary-500 text-white shadow-sm"
+                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
 
-          {/* Content */}
-          <main className="flex-1">
-            {/* Count */}
-            <div className="mb-4">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {total}{" "}
-                {total === 1 ? "vitrine encontrada" : "vitrines encontradas"}
-              </p>
-            </div>
-
-            {/* Grid */}
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <SkeletonStorefrontCard key={i} />
-                ))}
-              </div>
-            ) : error ? (
-              <EmptyState
-                icon="alert"
-                title="Erro ao carregar"
-                description={error}
-                action={{
-                  label: "Tentar novamente",
-                  onClick: () => loadStorefronts(1, false),
-                }}
-              />
-            ) : storefronts.length === 0 ? (
-              <EmptyState
-                icon="search"
-                title="Nenhuma vitrine encontrada"
-                description="Tente ajustar os filtros ou buscar por outro termo"
-                action={
-                  hasActiveFilters
-                    ? { label: "Limpar filtros", onClick: clearFilters }
-                    : undefined
-                }
-              />
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {storefronts.map((sf) => (
-                    <StorefrontCard key={sf.id} storefront={sf} />
-                  ))}
-                </div>
-
-                {/* Load more */}
-                {hasMore && (
-                  <div className="text-center mt-8">
-                    <button
-                      onClick={loadMore}
-                      disabled={loadingMore}
-                      className="btn btn-outline"
-                    >
-                      {loadingMore ? "Carregando..." : "Carregar mais"}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Category chips when no filters */}
-            {!searchTerm && !categoryId && storefronts.length > 0 && categories.length > 0 && (
-              <div className="mt-12">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-                  Explorar por categoria
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {categories.slice(0, 12).map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleCategorySelect(cat.id)}
-                      className="px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-700 dark:text-slate-300 hover:border-primary-300 hover:text-primary-600 dark:hover:border-primary-600 dark:hover:text-primary-400 transition-colors"
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </main>
+        {/* Count */}
+        <div className="mb-4">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            {total}{" "}
+            {total === 1 ? "vitrine encontrada" : "vitrines encontradas"}
+          </p>
         </div>
+
+        {/* Grid */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonStorefrontCard key={i} />
+            ))}
+          </div>
+        ) : error ? (
+          <EmptyState
+            icon="alert"
+            title="Erro ao carregar"
+            description={error}
+            action={{
+              label: "Tentar novamente",
+              onClick: () => loadStorefronts(1, false),
+            }}
+          />
+        ) : storefronts.length === 0 ? (
+          <EmptyState
+            icon="search"
+            title="Nenhuma vitrine encontrada"
+            description="Tente ajustar os filtros ou buscar por outro termo"
+            action={
+              hasActiveFilters
+                ? { label: "Limpar filtros", onClick: clearFilters }
+                : undefined
+            }
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {storefronts.map((sf) => (
+                <StorefrontCard key={sf.id} storefront={sf} />
+              ))}
+            </div>
+
+            {/* Load more */}
+            {hasMore && (
+              <div className="text-center mt-8">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="btn btn-outline"
+                >
+                  {loadingMore ? "Carregando..." : "Carregar mais"}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Category chips when no filters */}
+        {!searchTerm && !categoryId && storefronts.length > 0 && categories.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+              Explorar por categoria
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {categories.slice(0, 12).map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategorySelect(cat.id)}
+                  className="px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-700 dark:text-slate-300 hover:border-primary-300 hover:text-primary-600 dark:hover:border-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mobile filter modal */}
@@ -492,16 +522,16 @@ const ExplorePage: React.FC = () => {
                   <h4 className="mb-3 font-medium text-slate-900 dark:text-slate-100">
                     Categorias
                   </h4>
-                  <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => {
                         handleCategorySelect(null);
                         setShowMobileFilters(false);
                       }}
-                      className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                         !categoryId
-                          ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          ? "bg-primary-500 text-white shadow-sm"
+                          : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
                       }`}
                     >
                       Todas as categorias
@@ -513,10 +543,10 @@ const ExplorePage: React.FC = () => {
                           handleCategorySelect(cat.id);
                           setShowMobileFilters(false);
                         }}
-                        className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                           categoryId === cat.id.toString()
-                            ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                            ? "bg-primary-500 text-white shadow-sm"
+                            : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
                         }`}
                       >
                         {cat.name}

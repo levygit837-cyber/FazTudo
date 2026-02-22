@@ -28,8 +28,6 @@ import ClientDashboard from "./pages/client/Dashboard";
 import ClientServiceOrders from "./pages/client/ServiceOrders";
 import NewOrder from "./pages/client/NewOrder";
 import OrderDetails from "./pages/orders/OrderDetails";
-import CreateService from "./pages/professional/CreateService";
-import EditService from "./pages/professional/EditService";
 import ProfessionalDashboard from "./pages/professional/Dashboard";
 import ProfessionalServiceOrders from "./pages/professional/ServiceOrders";
 import ProfessionalCRM from "./pages/professional/CRM";
@@ -39,7 +37,6 @@ import Checkout from "./pages/checkout/Checkout";
 import PaymentConfirmation from "./pages/checkout/PaymentConfirmation";
 import ServiceChat from "./pages/services/ServiceChat";
 import ServiceDetails from "./pages/services/ServiceDetails";
-import ServiceSearch from "./pages/services/ServiceSearch";
 import Messages from "./pages/Messages";
 import Security from "./pages/Security";
 import TermsOfService from "./pages/TermsOfService";
@@ -59,7 +56,7 @@ import CompanyStorefront from "./pages/CompanyStorefront";
 import CompanyAnalytics from "./pages/company/Analytics";
 import StorefrontEditor from "./pages/company/StorefrontEditor";
 import ProfessionalStorefrontPage from "./pages/ProfessionalStorefront";
-import StorefrontSetup from "./pages/professional/StorefrontSetup";
+import StorefrontWizard from "./pages/professional/StorefrontWizard";
 import StorefrontManager from "./pages/professional/StorefrontManager";
 import ExplorePage from "./pages/services/ExplorePage";
 import StorefrontViewPage from "./pages/services/StorefrontViewPage";
@@ -151,13 +148,9 @@ const App: React.FC = () => {
                 <Route path="services/:id" element={<OrderDetails />} />
                 <Route path="services/:id/chat" element={<ServiceChat />} />
                 <Route path="services/:id/mapa" element={<MapView />} />
-                <Route
-                  path="catalog"
-                  element={<ServiceSearch showProfessionalCatalog />}
-                />
-                <Route path="catalog/new" element={<CreateService />} />
-                <Route path="catalog/:id/edit" element={<EditService />} />
-                <Route path="vitrine/setup" element={<StorefrontSetup />} />
+                <Route path="catalog" element={<Navigate to="/professional/vitrine" replace />} />
+                <Route path="catalog/*" element={<Navigate to="/professional/vitrine" replace />} />
+                <Route path="vitrine/setup" element={<StorefrontWizard />} />
                 <Route path="vitrine" element={<StorefrontManager />} />
                 <Route
                   path="messages"

@@ -106,7 +106,7 @@ const calculateDeadlineDate = (days: number): Date => {
   return deadline;
 };
 
-// Criar novo pedido de serviço (apenas clientes)
+// Criar novo pedido de serviço (clientes e profissionais)
 export const createServiceOrder = async (
   req: AuthRequest,
   res: Response,
@@ -117,10 +117,10 @@ export const createServiceOrder = async (
       return;
     }
 
-    if (req.user.role !== "CLIENT") {
+    if (req.user.role !== "CLIENT" && req.user.role !== "PROFESSIONAL") {
       res
         .status(403)
-        .json(errorResponse("Only clients can create service orders"));
+        .json(errorResponse("Only clients and professionals can create service orders"));
       return;
     }
 
@@ -161,6 +161,14 @@ export const createServiceOrder = async (
 
     if (!serviceListing.isAvailable) {
       res.status(400).json(errorResponse("This service is not available"));
+      return;
+    }
+
+    // Impedir pedidos no próprio serviço
+    if (serviceListing.professionalId === req.user.id) {
+      res
+        .status(403)
+        .json(errorResponse("Voce nao pode fazer pedidos dos seus proprios servicos"));
       return;
     }
 
@@ -1369,10 +1377,123 @@ export const createDraftOrder = async (
       return;
     }
 
-    const { serviceListingId, message } = req.body;
+    const { serviceListingId, storefrontServiceId, message } = req.body;
 
+    // ── Branch A: storefrontServiceId (from vitrine "Tirar duvida" button) ──
+    if (storefrontServiceId) {
+      const sfService = await prisma.storefrontService.findUnique({
+        where: { id: storefrontServiceId },
+        include: {
+          category: {
+            include: {
+              storefront: {
+                include: { user: { select: SAFE_USER_SELECT } },
+              },
+            },
+          },
+        },
+      });
+
+      if (!sfService) {
+        res.status(404).json(errorResponse("Servico nao encontrado"));
+        return;
+      }
+      if (!sfService.isAvailable) {
+        res.status(400).json(errorResponse("Servico indisponivel"));
+        return;
+      }
+
+      const professionalId = sfService.category.storefront.userId;
+
+      if (professionalId === req.user.id) {
+        res.status(403).json(errorResponse("Voce nao pode tirar duvidas sobre seus proprios servicos"));
+        return;
+      }
+
+      // Check for existing draft with this storefront service
+      const existingDraft = await prisma.serviceOrder.findFirst({
+        where: {
+          clientId: req.user.id,
+          storefrontServiceId: storefrontServiceId,
+          status: "DRAFT",
+        },
+      });
+
+      if (existingDraft) {
+        // Return existing draft instead of creating new
+        res.status(200).json(
+          successResponse(
+            { serviceOrder: existingDraft },
+            "Existing draft order found",
+          ),
+        );
+        return;
+      }
+
+      // Create the draft order
+      const draft = await prisma.serviceOrder.create({
+        data: {
+          title: `Duvida sobre: ${sfService.title}`,
+          price: sfService.price,
+          status: "DRAFT",
+          deadlineDays: env.DEFAULT_ESCROW_HOLD_DAYS,
+          deadlineDate: calculateDeadlineDate(env.DEFAULT_ESCROW_HOLD_DAYS),
+          clientId: req.user.id,
+          professionalId: professionalId,
+          storefrontServiceId: storefrontServiceId,
+        },
+        include: {
+          client: {
+            select: { id: true, name: true, profileImage: true },
+          },
+          professional: {
+            select: { id: true, name: true, profileImage: true },
+          },
+        },
+      });
+
+      // Create initial message if provided
+      if (message && message.trim()) {
+        await prisma.message.create({
+          data: {
+            content: message.trim(),
+            type: "TEXT",
+            senderId: req.user.id,
+            recipientId: professionalId,
+            serviceOrderId: draft.id,
+          },
+        });
+      }
+
+      // Notify professional
+      await createNotification(
+        professionalId,
+        NotificationType.NEW_MESSAGE,
+        "Nova duvida recebida",
+        `${req.user.name} quer tirar duvidas sobre "${sfService.title}"`,
+        draft.id,
+        { clientId: req.user.id, clientName: req.user.name },
+      );
+
+      // Socket.io
+      emitToUser(professionalId, "order:draft", {
+        orderId: draft.id,
+        clientName: req.user.name,
+        serviceTitle: sfService.title,
+      });
+
+      res.status(201).json(
+        successResponse(
+          { serviceOrder: draft },
+          "Draft order created successfully",
+        ),
+      );
+      return;
+    }
+
+    // ── Branch B: serviceListingId (original flow) ──
     if (!serviceListingId) {
-      res.status(400).json(errorResponse("Service listing ID is required"));
+      res.status(400).json(errorResponse("Informe serviceListingId ou storefrontServiceId"));
       return;
     }
 

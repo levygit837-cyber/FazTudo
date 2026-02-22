@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { X, AlertTriangle, ArrowUpCircle } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { handleApiError } from "../../services/api";
+import CurrencyInput from "../common/CurrencyInput";
 
 interface WithdrawalModalProps {
   isOpen: boolean;
@@ -24,7 +25,6 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset state when opening
   useEffect(() => {
@@ -33,7 +33,6 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       setAmount("");
       setLoading(false);
       setError(null);
-      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
 
@@ -72,13 +71,9 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setError(null);
   };
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Allow only numbers and one decimal point
-    if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
-      setAmount(value);
-      setError(null);
-    }
+  const handleAmountChange = (val: number) => {
+    setAmount(val.toString());
+    setError(null);
   };
 
   const handleProceed = () => {
@@ -157,28 +152,13 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
               {/* Amount input */}
               <div className="mb-4">
-                <label
-                  htmlFor="withdrawal-amount"
-                  className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
-                >
-                  Valor do saque
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                    R$
-                  </span>
-                  <input
-                    ref={inputRef}
-                    id="withdrawal-amount"
-                    type="text"
-                    inputMode="decimal"
-                    value={amount}
-                    onChange={handleAmountChange}
-                    placeholder="0,00"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
-                  />
-                </div>
-                <p className="text-xs text-slate-400 mt-1">Minimo R$ 10,00</p>
+                <CurrencyInput
+                  value={numericAmount}
+                  onChange={handleAmountChange}
+                  label="Valor do saque"
+                  helperText="Minimo R$ 10,00"
+                  id="withdrawal-amount"
+                />
               </div>
 
               {/* Quick amounts */}

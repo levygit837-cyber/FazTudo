@@ -138,6 +138,10 @@ export interface CreateStorefrontInput {
   logo?: string;
   banner?: string;
   mainCategoryId?: number;
+  serviceLocation?: string;
+  teamSize?: number;
+  workingHours?: string;
+  averageServiceTime?: string;
 }
 
 export interface UpdateStorefrontInput {

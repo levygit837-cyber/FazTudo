@@ -506,8 +506,8 @@ describe("Storefront Integration", () => {
     expect(res.status).toBe(401);
   });
 
-  it("should reject cart checkout by professional", async () => {
-    // Get storefront ID
+  it("should reject cart checkout on own storefront by professional", async () => {
+    // Get storefront ID (professional's own storefront)
     const sfRes = await request(app)
       .get("/api/storefronts/mine")
       .set("Authorization", `Bearer ${profToken}`);
@@ -520,7 +520,8 @@ describe("Storefront Integration", () => {
         storefrontId,
         items: [{ serviceId, quantity: 1 }],
       });
-    expect(res.status).toBe(403);
+    // Professionals can now order from OTHER storefronts, but not their own
+    expect(res.status).toBe(400);
   });
 
   it("should create order from cart (client)", async () => {

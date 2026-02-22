@@ -287,6 +287,10 @@ model ServiceOrder {
   events        ServiceOrderEvent[] // analytics
   items         ServiceOrderItem[]
 
+  // Storefront service (vitrine) reference for draft orders
+  storefrontServiceId Int?
+  storefrontService   StorefrontService? @relation("OrderStorefrontService", fields: [storefrontServiceId], references: [id])
+
   // Reschedule approval flow
   rescheduleProposedDate DateTime?
   rescheduleReason       String?
@@ -1050,6 +1054,11 @@ model Storefront {
   totalReviews    Int     @default(0)
   totalServices   Int     @default(0)
 
+  serviceLocation    String?
+  teamSize           Int?      @default(1)
+  workingHours       String?
+  averageServiceTime String?
+
   categories  StorefrontCategory[]
 
   createdAt   DateTime @default(now())
@@ -1087,10 +1096,12 @@ model StorefrontService {
   price        Float
   images       Json?
   isAvailable  Boolean            @default(true)
+  serviceLocation    String?
   order        Int
 
   options      StorefrontServiceOption[]
   orderItems   ServiceOrderItem[]
+  draftOrders  ServiceOrder[] @relation("OrderStorefrontService")
 
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt

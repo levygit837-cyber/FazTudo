@@ -289,7 +289,7 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                   Crie e gerencie os servicos do seu perfil profissional.
                 </p>
               </div>
-              <Link to="/professional/catalog/new" className="btn btn-primary">
+              <Link to="/professional/vitrine" className="btn btn-primary">
                 Criar novo servico
               </Link>
             </div>
@@ -617,7 +617,7 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                           <button
                             onClick={(e) => {
                               e.preventDefault();
-                              navigate(`/professional/catalog/${service.id}/edit`);
+                              navigate(`/professional/vitrine`);
                             }}
                             className="btn btn-outline btn-sm flex items-center gap-1.5"
                           >

@@ -150,7 +150,7 @@ const CreateService: React.FC = () => {
         images: parsedImages,
         tags: parsedTags,
       });
-      navigate("/professional/catalog");
+      navigate("/professional/vitrine");
     } catch (err: any) {
       setError(
         err?.response?.data?.message || "Nao foi possivel criar o servico.",
@@ -363,7 +363,7 @@ const CreateService: React.FC = () => {
             <button
               type="button"
               className="btn btn-outline"
-              onClick={() => navigate("/professional/catalog")}
+              onClick={() => navigate("/professional/vitrine")}
             >
               Cancelar
             </button>

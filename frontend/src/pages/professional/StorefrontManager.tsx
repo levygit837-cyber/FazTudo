@@ -48,6 +48,7 @@ import {
   StorefrontServiceOption,
 } from "../../types";
 import { formatCurrency } from "../../utils/formatters";
+import CurrencyInput from "../../components/common/CurrencyInput";
 
 // ==================== MODAL COMPONENT ====================
 
@@ -967,22 +968,14 @@ const StorefrontManager: React.FC = () => {
               className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Preco (R$) *
-            </label>
-            <input
-              type="number"
-              value={serviceForm.price}
-              onChange={(e) =>
-                setServiceForm((p) => ({ ...p, price: e.target.value }))
-              }
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+          <CurrencyInput
+            value={parseFloat(serviceForm.price) || 0}
+            onChange={(val) =>
+              setServiceForm((p) => ({ ...p, price: val.toString() }))
+            }
+            label="Preco (R$)"
+            required
+          />
           {/* Category selector (for editing, allow changing category) */}
           {serviceModal.editing && categories.length > 1 && (
             <div>
@@ -1049,25 +1042,17 @@ const StorefrontManager: React.FC = () => {
               autoFocus
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Preco adicional (R$)
-            </label>
-            <input
-              type="number"
-              value={optionForm.price}
-              onChange={(e) =>
-                setOptionForm((p) => ({ ...p, price: e.target.value }))
-              }
-              min="0"
-              step="0.01"
-              placeholder="Deixe vazio se sem custo extra"
-              className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-            <p className="text-xs text-slate-400 mt-1">
-              Valor adicional ao preco do servico
-            </p>
-          </div>
+          <CurrencyInput
+            value={parseFloat(optionForm.price) || 0}
+            onChange={(val) =>
+              setOptionForm((p) => ({
+                ...p,
+                price: val > 0 ? val.toString() : "",
+              }))
+            }
+            label="Preco adicional (R$)"
+            helperText="Valor adicional ao preco do servico. R$ 0,00 = sem custo extra."
+          />
           <div className="flex items-center gap-2">
             <input
               type="checkbox"

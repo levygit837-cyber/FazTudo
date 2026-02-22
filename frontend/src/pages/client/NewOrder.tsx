@@ -17,6 +17,7 @@ import { useToast } from "../../context/ToastContext";
 import { getMainCategories, CategoryWithCounts } from "../../services/categoryService";
 import { getBriefTemplate, createOrderWithBrief } from "../../services/serviceService";
 import { LocationPicker } from "../../components/map";
+import CurrencyInput from "../../components/common/CurrencyInput";
 
 const STEPS = [
   { label: "Categoria", icon: <FileText className="w-4 h-4" /> },
@@ -381,24 +382,18 @@ const NewOrder: React.FC = () => {
             </label>
             <div className="flex gap-3">
               <div className="flex-1">
-                <input
-                  type="number"
-                  className="input"
-                  placeholder="Mínimo R$"
-                  min={0}
-                  value={priceRangeMin || ""}
-                  onChange={(e) => setPriceRangeMin(parseFloat(e.target.value) || undefined)}
+                <CurrencyInput
+                  value={priceRangeMin || 0}
+                  onChange={(val) => setPriceRangeMin(val > 0 ? val : undefined)}
+                  label="Mínimo"
                 />
               </div>
-              <span className="self-center text-slate-400">—</span>
+              <span className="self-end mb-3 text-slate-400">—</span>
               <div className="flex-1">
-                <input
-                  type="number"
-                  className="input"
-                  placeholder="Máximo R$"
-                  min={0}
-                  value={priceRangeMax || ""}
-                  onChange={(e) => setPriceRangeMax(parseFloat(e.target.value) || undefined)}
+                <CurrencyInput
+                  value={priceRangeMax || 0}
+                  onChange={(val) => setPriceRangeMax(val > 0 ? val : undefined)}
+                  label="Máximo"
                 />
               </div>
             </div>

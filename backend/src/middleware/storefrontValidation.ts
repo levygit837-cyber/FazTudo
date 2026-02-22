@@ -14,6 +14,10 @@ export const createStorefrontSchema = z.object({
     .optional(),
   description: z.string().max(500).optional(),
   mainCategoryId: z.number().int().positive().optional(),
+  serviceLocation: z.string().max(200).optional(),
+  teamSize: z.number().int().min(1).optional(),
+  workingHours: z.string().max(500).optional(),
+  averageServiceTime: z.string().max(200).optional(),
 });
 
 export const updateStorefrontSchema = z.object({
@@ -29,6 +33,10 @@ export const updateStorefrontSchema = z.object({
   banner: z.string().url().optional().nullable(),
   mainCategoryId: z.number().int().positive().optional().nullable(),
   isActive: z.boolean().optional(),
+  serviceLocation: z.string().max(200).optional().nullable(),
+  teamSize: z.number().int().min(1).optional().nullable(),
+  workingHours: z.string().max(500).optional().nullable(),
+  averageServiceTime: z.string().max(200).optional().nullable(),
 });
 
 export const publishStorefrontSchema = z.object({
@@ -66,6 +74,7 @@ export const createServiceSchema = z.object({
   price: z.number().positive("Preco deve ser positivo"),
   images: z.array(z.string().url()).max(10).optional(),
   order: z.number().int().min(0).optional(),
+  serviceLocation: z.string().max(200).optional(),
 });
 
 export const updateServiceSchema = z.object({
@@ -76,6 +85,7 @@ export const updateServiceSchema = z.object({
   images: z.array(z.string().url()).max(10).optional(),
   isAvailable: z.boolean().optional(),
   order: z.number().int().min(0).optional(),
+  serviceLocation: z.string().max(200).optional().nullable(),
 });
 
 // ── StorefrontServiceOption ────────────────────────────
