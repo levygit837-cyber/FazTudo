@@ -15,7 +15,7 @@
 | **Autenticacao** | JWT + Refresh Tokens + MFA (TOTP) |
 | **Filas Assincronas** | BullMQ + Redis (email, notificacoes, pagamentos, anti-fraude) |
 | **Banco de Dados** | PostgreSQL 16 + 50 modelos Prisma |
-| **Linhas de Codigo** | ~23.000 backend + ~41.600 frontend/admin = ~64.600 total |
+| **Linhas de Codigo** | ~23.000 backend + ~42.000 frontend + ~5.000 admin = ~70.000 total |
 | **Testes** | 337 testes (40 arquivos) - integracao, seguranca, unitarios |
 | **Endpoints da API** | 28 grupos de rotas REST |
 | **Commits** | 619+ |
