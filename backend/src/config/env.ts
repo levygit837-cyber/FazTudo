@@ -35,6 +35,9 @@ export interface EnvConfig {
   // Database
   DATABASE_URL: string;
 
+  // Redis
+  REDIS_URL: string;
+
   // Authentication
   JWT_SECRET: string;
   JWT_ACCESS_SECRET: string;
@@ -144,7 +147,10 @@ function getEnvConfig(): EnvConfig {
     PORT: parseInt(process.env.PORT || '3001', 10),
 
     // Database
-    DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db',
+    DATABASE_URL: process.env.DATABASE_URL || 'postgresql://faztudo:faztudo_dev_2026@localhost:5432/faztudo',
+
+    // Redis
+    REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
 
     // Authentication — reduced default expiry for security
     JWT_SECRET: jwtSecret,

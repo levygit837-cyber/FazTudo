@@ -1,10 +1,8 @@
-import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-// Criar adapter libSQL para SQLite
-const adapter = new PrismaLibSql({
-  url: process.env.DATABASE_URL || "file:./dev.db",
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL || "postgresql://faztudo:faztudo_dev_2026@localhost:5432/faztudo",
 });
 
 const globalForPrisma = globalThis as unknown as {
