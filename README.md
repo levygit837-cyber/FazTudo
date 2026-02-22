@@ -1,140 +1,225 @@
-# FazTudo - Marketplace de Serviços
+# FazTudo - Marketplace de Servicos
 
-**FazTudo** é uma plataforma completa de marketplace que conecta **clientes** a **profissionais de serviços** no Brasil, com sistema de pagamentos em escrow via MercadoPago, chat integrado, CRM profissional e muito mais.
+**FazTudo** e uma plataforma completa de marketplace que conecta **clientes** a **profissionais de servicos** e **empresas** no Brasil, com sistema de pagamentos em escrow via MercadoPago, vitrines personalizaveis, chat integrado, CRM profissional, painel administrativo dedicado e muito mais.
 
 ---
 
-## Visão Geral
+## Visao Geral
 
 | Item | Detalhes |
 |------|---------|
-| **Backend** | Express 5 + TypeScript + Prisma ORM + SQLite |
-| **Frontend** | React 18 + TypeScript + Vite + TailwindCSS |
-| **Pagamentos** | MercadoPago (Cartão, PIX, Boleto) |
-| **Autenticação** | JWT com refresh tokens |
-| **Linhas de Código** | ~18.000+ linhas TypeScript |
-| **Modelos no Banco** | 21 tabelas |
-| **Endpoints da API** | 60+ rotas REST |
+| **Backend** | Express 5 + TypeScript + Prisma 7.4 + PostgreSQL + Redis/BullMQ |
+| **Frontend** | React 19 + TypeScript + Vite 7 + TailwindCSS 4 |
+| **Admin** | React 19 + TypeScript + Vite 7 + Recharts 3 |
+| **Pagamentos** | MercadoPago (Cartao, PIX, Boleto) com Escrow |
+| **Autenticacao** | JWT + Refresh Tokens + MFA (TOTP) |
+| **Filas Assincronas** | BullMQ + Redis (email, notificacoes, pagamentos, anti-fraude) |
+| **Banco de Dados** | PostgreSQL 16 + 50 modelos Prisma |
+| **Linhas de Codigo** | ~23.000 backend + ~41.600 frontend/admin = ~64.600 total |
+| **Testes** | 337 testes (40 arquivos) - integracao, seguranca, unitarios |
+| **Endpoints da API** | 28 grupos de rotas REST |
+| **Commits** | 619+ |
 
 ---
 
 ## Funcionalidades Principais
 
 ### Para Clientes
-- Busca e navegação de serviços por categoria, localização e avaliação
-- Criação de pedidos com briefing detalhado (fotos, vídeos, urgência)
-- Pagamento seguro com escrow (Cartão, PIX, Boleto)
-- Chat integrado com profissionais (texto, anexos, localização)
-- Sistema de avaliações e reviews
-- Carteira digital com histórico de transações
+- Busca e navegacao de servicos por categoria, localizacao e avaliacao
+- **Explorar vitrines** de profissionais e empresas com carrinho de compras
+- Criacao de pedidos com briefing detalhado (fotos, videos, urgencia)
+- Pagamento seguro com escrow (Cartao, PIX, Boleto)
+- Chat integrado com profissionais (texto, anexos, localizacao)
+- **Rastreamento em mapa** da localizacao do profissional
+- Sistema de avaliacoes e reviews
+- Carteira digital com historico de transacoes
+- Notificacoes em tempo real via WebSocket
 
 ### Para Profissionais
-- Catálogo de serviços com preços, imagens e tags
-- Dashboard CRM com pipeline de clientes e métricas
-- Calendário de disponibilidade com bloqueio de horários
-- Painel de reputação com análise de tendências
+- **Vitrine personalizavel** com categorias, servicos e opcoes
+- **Wizard de onboarding** para configuracao inicial da vitrine
+- Dashboard CRM com pipeline de clientes e metricas
+- Calendario de disponibilidade com bloqueio de horarios
+- Painel de reputacao com analise de tendencias
 - Sistema de propostas para concorrer em pedidos
-- Gestão financeira com saques e histórico
+- Gestao financeira com saques e historico
+- Verificacao de conta (KYC) com tour guiado
 
-### Para Administradores
-- Gerenciamento de usuários e verificações
-- Aprovação de documentos (CPF/CNPJ)
-- Estatísticas da plataforma
-- Gerenciamento de categorias
+### Para Empresas
+- **Perfil empresarial** com gestao de membros e cargos
+- **Vitrine da empresa** com editor visual (banner, secoes, blocos)
+- Canais de comunicacao internos
+- Regras salariais e gestao de pagamentos
+- Analytics com metricas de trafego e conversao
+- Convites para novos membros
+
+### Para Administradores (Painel Dedicado)
+- Dashboard com estatisticas da plataforma
+- Gerenciamento de usuarios e verificacoes
+- Aprovacao de documentos (CPF/CNPJ)
+- Gerenciamento de empresas
+- Moderacao de disputas
+- Metricas de trafego e configuracoes
+
+---
+
+## Stack Tecnologica
+
+### Backend
+
+| Tecnologia | Versao | Uso |
+|-----------|--------|-----|
+| Express | 5.2 | Framework web |
+| TypeScript | 5.9.3 | Linguagem |
+| Prisma | 7.4.0 | ORM + PostgreSQL adapter |
+| PostgreSQL | 16 | Banco de dados relacional |
+| Redis | 7 | Cache, filas, idempotencia |
+| BullMQ | 5.x | Filas assincronas (email, pagamentos, notificacoes) |
+| Socket.IO | 4.8 | WebSocket (notificacoes em tempo real) |
+| JWT | 9.0 | Autenticacao |
+| bcrypt | 6.0 | Hash de senhas |
+| MercadoPago SDK | 2.12 | Pagamentos |
+| Zod | 4.3.6 | Validacao de dados |
+| Pino | 10.3 | Logging estruturado |
+| opossum | 9.x | Circuit breaker (MercadoPago) |
+| otplib | 13.x | MFA TOTP |
+| prom-client | 15.x | Metricas Prometheus |
+| Helmet | 8.1 | Seguranca HTTP |
+| Nodemailer | 8.0 | Envio de emails (Brevo SMTP) |
+| Multer | 2.0 | Upload de arquivos |
+| Vitest | 4.0 | Testes |
+| Playwright | 1.58 | Testes E2E |
+
+### Frontend
+
+| Tecnologia | Versao | Uso |
+|-----------|--------|-----|
+| React | 19.2.4 | UI Framework |
+| Vite | 7.3.1 | Build tool |
+| TypeScript | 5.9.3 | Linguagem |
+| TailwindCSS | 4.1.18 | Estilizacao (CSS-first, sem config JS) |
+| React Router | 7.13.0 | Roteamento |
+| Axios | 1.13.5 | HTTP Client |
+| Lucide React | 0.574.0 | Icones |
+| Socket.IO Client | 4.8 | WebSocket |
+| Leaflet / MapLibre | 1.9 / 5.18 | Mapas interativos |
+
+### Admin
+
+| Tecnologia | Versao | Uso |
+|-----------|--------|-----|
+| React | 19.2.4 | UI Framework |
+| Vite | 7.3.1 | Build tool |
+| React Router | 7.13.0 | Roteamento |
+| Recharts | 3.7.0 | Graficos e dashboards |
+| Axios | 1.13.5 | HTTP Client |
+| Lucide React | 0.574.0 | Icones |
 
 ---
 
 ## Arquitetura do Projeto
 
 ```
-faztudo/
-├── backend/                    # API REST Express.js
+faztudo-main/
+├── backend/                        # API REST Express 5 + TypeScript
 │   ├── src/
-│   │   ├── controllers/        # Handlers de requisição
-│   │   │   └── service/        # Controllers de serviço (orders, payments, chat)
-│   │   ├── routes/             # Definições de rotas
-│   │   ├── services/           # Lógica de negócio (MercadoPago, escrow, notificações)
-│   │   ├── middleware/         # Auth, validação, rate limiting, filtro de chat, XSS
-│   │   ├── config/             # Configuração de ambiente e MercadoPago
-│   │   └── lib/                # Cliente Prisma
-│   ├── prisma/                 # Schema do banco e migrações
-│   ├── tests/                  # Testes (integração, segurança, middleware)
-│   └── uploads/                # Armazenamento de arquivos do chat
+│   │   ├── index.ts                # Entry point, middlewares, 28 grupos de rotas
+│   │   ├── config/                 # env.ts, mercadopago.ts, secrets.ts
+│   │   ├── controllers/            # 36 controllers
+│   │   │   ├── service/            # 15 controllers de dominio (orders, payments, chat...)
+│   │   │   ├── admin*.ts           # Administracao
+│   │   │   ├── auth*.ts            # Autenticacao
+│   │   │   ├── company*.ts         # 7 controllers empresa (profile, members, salary...)
+│   │   │   ├── storefront*.ts      # Vitrines
+│   │   │   ├── mfa*.ts             # Autenticacao multi-fator
+│   │   │   └── ...                 # Dashboard, wallet, analytics, etc.
+│   │   ├── routes/                 # 23 route files (divididos por dominio)
+│   │   ├── services/               # 9 services (escrow, mercadopago, email, geocoding...)
+│   │   ├── middleware/             # 14 middlewares (auth, mfa, validate, sanitize, auditLog...)
+│   │   ├── queues/                 # BullMQ: connection, queues, producers
+│   │   ├── workers/                # 7 workers: notification, email, payment, reconciliation,
+│   │   │                           #   anti-fraud, scheduler
+│   │   └── lib/                    # 10 libs: prisma, logger, circuitBreaker, metrics,
+│   │                               #   paymentStateMachine, socket, idempotency...
+│   ├── prisma/
+│   │   ├── schema.prisma           # 50 modelos
+│   │   └── seed.ts                 # Dados de teste
+│   ├── tests/                      # 40 arquivos de teste (337 tests)
+│   │   ├── integration/            # 10 testes de integracao
+│   │   ├── security/               # 8 testes de seguranca
+│   │   ├── unit/                   # 4 testes unitarios
+│   │   ├── lib/                    # 2 testes de libs
+│   │   ├── middleware/             # 3 testes de middleware
+│   │   ├── config/                 # 1 teste de config
+│   │   └── *.test.ts               # 12 testes E2E/feature
+│   └── uploads/chat/               # Uploads do chat
 │
-├── frontend/                   # SPA React + TypeScript
+├── frontend/                       # SPA React 19 + Vite + TailwindCSS 4
 │   ├── src/
-│   │   ├── pages/              # Páginas organizadas por domínio
-│   │   │   ├── auth/           # Login, Registro
-│   │   │   ├── services/       # Catálogo, Detalhes, Busca
-│   │   │   ├── orders/         # Pedidos, Detalhes do pedido
-│   │   │   ├── checkout/       # Pagamento (Cartão, PIX, Boleto)
-│   │   │   ├── professional/   # Dashboard, CRM, Calendário, Reputação
-│   │   │   ├── client/         # Dashboard do cliente
-│   │   │   ├── chat/           # Sistema de mensagens
-│   │   │   └── admin/          # Painel administrativo
-│   │   ├── components/         # Componentes reutilizáveis
-│   │   ├── context/            # Providers (Auth, Theme, Toast)
-│   │   ├── services/           # Chamadas à API (Axios)
-│   │   ├── hooks/              # Custom hooks
-│   │   └── types/              # Interfaces TypeScript
-│   └── public/                 # Assets estáticos
+│   │   ├── App.tsx                 # Router principal (~210 linhas)
+│   │   ├── pages/                  # 52 paginas organizadas por dominio
+│   │   │   ├── client/             # Dashboard, pedidos, novo pedido
+│   │   │   ├── professional/       # Dashboard, CRM, calendario, vitrine, wizard
+│   │   │   ├── company/            # Dashboard, membros, cargos, canais, analytics
+│   │   │   ├── services/           # Explorar, detalhes, chat, mapa, vitrines
+│   │   │   ├── checkout/           # Pagamento, confirmacao
+│   │   │   ├── orders/             # Detalhes do pedido
+│   │   │   └── *.tsx               # Auth, perfil, wallet, notificacoes, seguranca, legal
+│   │   ├── components/             # 75 componentes organizados por feature
+│   │   │   ├── common/             # Componentes reutilizaveis
+│   │   │   ├── checkout/           # Checkout
+│   │   │   ├── company/            # Empresa
+│   │   │   ├── dashboard/          # Dashboard
+│   │   │   ├── landing/            # Landing pages
+│   │   │   ├── map/                # Mapas
+│   │   │   ├── orders/             # Pedidos
+│   │   │   ├── services/           # Servicos
+│   │   │   └── wallet/             # Carteira
+│   │   ├── services/               # 13 API service files (Axios)
+│   │   ├── context/                # 5 contexts (Auth, Socket, Theme, Toast, Tour)
+│   │   ├── hooks/                  # 9 custom hooks
+│   │   └── types/                  # Tipos TypeScript divididos por dominio (10+ modulos)
+│   └── public/                     # Assets estaticos
 │
-├── docs/plans/                 # Documentação e planos de implementação
-└── VARIAVEIS/                  # Credenciais MercadoPago (gitignored)
+├── admin/                          # Painel Administrativo (SPA separada)
+│   ├── src/
+│   │   ├── pages/                  # 9 paginas (dashboard, users, companies, disputes...)
+│   │   └── ...                     # 15 arquivos TSX total
+│   └── vite.config.ts
+│
+├── docker-compose.yml              # PostgreSQL 16 + Redis 7 + Backend + Frontend + Admin
+├── docs/plans/                     # Planos de implementacao (.md)
+└── VARIAVEIS/                      # Credenciais MercadoPago (gitignored)
 ```
-
----
-
-## Stack Tecnológica
-
-### Backend
-| Tecnologia | Versão | Uso |
-|-----------|--------|-----|
-| Express | 5.2 | Framework web |
-| TypeScript | 5.9 | Linguagem |
-| Prisma | 7.3 | ORM + Migrações |
-| SQLite | - | Banco de dados |
-| JWT | 9.0 | Autenticação |
-| bcrypt | 6.0 | Hash de senhas |
-| MercadoPago SDK | 2.12 | Pagamentos |
-| Zod | 4.3 | Validação de dados |
-| Helmet | 8.1 | Segurança HTTP |
-| Multer | 2.0 | Upload de arquivos |
-| Vitest | 4.0 | Testes |
-
-### Frontend
-| Tecnologia | Versão | Uso |
-|-----------|--------|-----|
-| React | 18.2 | UI Framework |
-| Vite | 5.0 | Build tool |
-| TypeScript | 5.2 | Linguagem |
-| TailwindCSS | 3.3 | Estilização |
-| React Router | 6.20 | Roteamento |
-| Axios | 1.6 | HTTP Client |
-| Lucide React | 0.292 | Ícones |
 
 ---
 
 ## Fluxo de Pagamento (Escrow)
 
 ```
-Cliente cria pedido
+Cliente busca servico/vitrine
+       │
+       ▼
+Cliente cria pedido (com ou sem briefing)
        │
        ▼
 Profissional aceita
        │
        ▼
 Cliente realiza pagamento ──► Fundos retidos em ESCROW (7 dias)
-   (Cartão/PIX/Boleto)
+   (Cartao/PIX/Boleto)         │
+       │                       ├─ Payment Event Store (idempotente)
+       ▼                       └─ State Machine valida transicoes
+Profissional executa servico
        │
        ▼
-Profissional executa serviço
+Profissional submete conclusao
        │
        ▼
-Profissional marca como concluído
+Cliente confirma ──────────── Confirmacao dupla obrigatoria
        │
        ▼
-Cliente confirma conclusão ──► Confirmação dupla
+Profissional confirma
        │
        ▼
 Pagamento LIBERADO
@@ -142,168 +227,332 @@ Pagamento LIBERADO
    └── Taxa da plataforma: 10%
 ```
 
-### Métodos de Pagamento
-- **Cartão de Crédito/Débito** - Checkout transparente (tokenização pelo SDK do MercadoPago)
+### Metodos de Pagamento
+- **Cartao de Credito/Debito** - Checkout transparente (tokenizacao pelo SDK do MercadoPago)
 - **PIX** - QR Code gerado em tempo real
-- **Boleto Bancário** - Código de barras para pagamento
+- **Boleto Bancario** - Codigo de barras para pagamento
+
+### Seguranca de Pagamentos
+- **State Machine**: Transicoes de status validadas — transicoes invalidas sao rejeitadas
+- **Idempotencia dupla**: Redis NX SET (5min TTL) + UNIQUE constraint no DB
+- **Circuit Breaker**: Chamadas MercadoPago com circuit breaker (opossum) — abre apos 50% de falhas
+- **Reconciliacao diaria**: Worker automatico compara eventos locais com MercadoPago
+- **Anti-fraude**: Worker dedicado para analise de transacoes suspeitas
 
 ---
 
 ## Endpoints da API
 
-### Autenticação (`/api/auth`)
-| Método | Rota | Descrição |
+### Autenticacao (`/api/auth`)
+| Metodo | Rota | Descricao |
 |--------|------|-----------|
-| POST | `/register` | Registro de usuário |
+| POST | `/register` | Registro de usuario |
 | POST | `/login` | Login com JWT |
 | POST | `/refresh` | Renovar access token |
 | POST | `/logout` | Invalidar token |
-| GET | `/me` | Dados do usuário atual |
+| GET | `/me` | Dados do usuario atual |
 | PUT | `/me` | Atualizar perfil |
+| POST | `/forgot-password` | Solicitar reset de senha |
+| POST | `/reset-password/:token` | Resetar senha |
+| GET | `/verify-email/:token` | Verificar email |
 
-### Serviços (`/api/services`)
-| Método | Rota | Descrição |
+### MFA (`/api/auth/mfa`)
+| Metodo | Rota | Descricao |
 |--------|------|-----------|
-| GET | `/` | Listar serviços (público) |
-| POST | `/` | Criar serviço (profissional) |
-| GET | `/:id` | Detalhes do serviço |
-| PUT | `/:id` | Atualizar serviço |
-| DELETE | `/:id` | Remover serviço |
+| POST | `/setup` | Configurar TOTP |
+| POST | `/verify` | Verificar codigo TOTP |
+| POST | `/disable` | Desabilitar MFA |
+
+### Servicos e Catalogo (`/api/services`)
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET | `/` | Listar servicos (publico) |
+| POST | `/` | Criar servico (profissional) |
+| GET | `/:id` | Detalhes do servico |
+| PUT | `/:id` | Atualizar servico |
+| DELETE | `/:id` | Remover servico |
 
 ### Pedidos (`/api/services/orders`)
-| Método | Rota | Descrição |
+| Metodo | Rota | Descricao |
 |--------|------|-----------|
 | POST | `/` | Criar pedido |
 | POST | `/with-brief` | Criar com briefing detalhado |
 | GET | `/` | Meus pedidos |
 | GET | `/:id` | Detalhes do pedido |
 | POST | `/:id/accept` | Profissional aceita |
-| POST | `/:id/start` | Iniciar serviço |
-| POST | `/:id/submit-completion` | Marcar como concluído |
-| POST | `/:id/confirm-completion` | Cliente confirma |
+| POST | `/:id/start` | Iniciar servico |
+| POST | `/:id/submit-completion` | Marcar como concluido |
+| POST | `/:id/confirm-completion` | Confirmar conclusao |
 | POST | `/:id/cancel` | Cancelar pedido |
 | POST | `/:id/reschedule` | Reagendar |
 
+### Pagamentos (`/api/services`)
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET | `/payments/config` | Chave publica do MercadoPago |
+| POST | `/orders/:id/payments` | Criar pagamento |
+| POST | `/payments/webhook` | Webhook do MercadoPago |
+| POST | `/orders/:id/payments/release` | Liberar do escrow |
+
 ### Propostas
-| Método | Rota | Descrição |
+| Metodo | Rota | Descricao |
 |--------|------|-----------|
 | POST | `/orders/:id/proposals` | Enviar proposta |
 | GET | `/orders/:id/proposals` | Ver propostas |
 | POST | `/orders/:id/proposals/:pid/accept` | Aceitar proposta |
 
-### Pagamentos (`/api/services`)
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/payments/config` | Chave pública do MercadoPago |
-| POST | `/orders/:id/payments` | Criar pagamento |
-| POST | `/payments/webhook` | Webhook do MercadoPago |
-| POST | `/orders/:id/payments/release` | Liberar do escrow |
-
 ### Chat e Mensagens
-| Método | Rota | Descrição |
+| Metodo | Rota | Descricao |
 |--------|------|-----------|
 | GET | `/chats` | Listar conversas |
 | POST | `/orders/:id/messages` | Enviar mensagem |
 | POST | `/orders/:id/messages/upload` | Upload de arquivo |
 | GET | `/orders/:id/messages` | Obter mensagens |
 
-### Dashboard e Carteira
-| Método | Rota | Descrição |
+### Vitrines (`/api/storefronts`)
+| Metodo | Rota | Descricao |
 |--------|------|-----------|
-| GET | `/api/dashboard/stats` | Estatísticas do usuário |
+| GET | `/` | Listar vitrines (publico) |
+| GET | `/:slug` | Ver vitrine por slug |
+| POST | `/` | Criar vitrine |
+| PUT | `/:id` | Atualizar vitrine |
+| POST | `/cart/checkout` | Checkout do carrinho |
+
+### Empresa (`/api/company`)
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET/PUT | `/profile` | Perfil da empresa |
+| CRUD | `/members` | Gestao de membros |
+| CRUD | `/invite` | Convites |
+| CRUD | `/salary` | Regras salariais |
+| CRUD | `/teams` | Equipes |
+| CRUD | `/channels` | Canais de comunicacao |
+| CRUD | `/storefront` | Vitrine da empresa |
+
+### Dashboard e Carteira
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET | `/api/dashboard/stats` | Estatisticas do usuario |
 | GET | `/api/dashboard/professional/crm` | Dados do CRM |
-| GET | `/api/dashboard/professional/reputation` | Métricas de reputação |
+| GET | `/api/dashboard/professional/reputation` | Metricas de reputacao |
 | GET | `/api/wallet/balance` | Saldo da carteira |
-| GET | `/api/wallet/transactions` | Histórico de transações |
+| GET | `/api/wallet/transactions` | Historico de transacoes |
 | POST | `/api/wallet/withdraw` | Solicitar saque |
 
-### Admin (`/api/admin`)
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/users` | Listar usuários |
-| PUT | `/users/:id/status` | Alterar status |
-| GET | `/verifications` | Verificações pendentes |
-| POST | `/verifications/:id/approve` | Aprovar verificação |
+### Outros
+| Prefixo | Descricao |
+|---------|-----------|
+| `/api/categories` | CRUD de categorias |
+| `/api/admin` | Gerenciamento admin (usuarios, verificacoes, empresas) |
+| `/api/analytics` | Metricas de trafego |
+| `/api/sessions` | Sessoes de usuario |
+| `/api/geocoding` | Proxy de geocodificacao e rotas |
+| `/api/services/schedule` | Agenda/calendario do profissional |
+| `/api/services/notifications` | Notificacoes |
+| `/api/services/recommendations` | Recomendacoes personalizadas |
+| `/api/services/location` | Rastreamento de localizacao |
+| `/api/services/disputes` | Disputas |
+| `/api/services/reviews` | Avaliacoes |
+
+### Health & Metricas
+| Rota | Descricao |
+|------|-----------|
+| `/health` | Status de database, Redis, filas, circuit breaker |
+| `/metrics` | Metricas Prometheus (localhost only) |
 
 ---
 
 ## Modelos do Banco de Dados
 
-O schema Prisma contém **21 modelos**:
+O schema Prisma contem **50 modelos** organizados por dominio:
 
-| Modelo | Descrição |
+### Core
+| Modelo | Descricao |
 |--------|-----------|
-| `User` | Usuários (CLIENT, PROFESSIONAL, ADMIN) |
-| `ServiceCategory` | Categorias hierárquicas de serviços |
-| `ServiceListing` | Catálogo de serviços dos profissionais |
-| `ServiceOrder` | Ciclo de vida dos pedidos |
-| `Payment` | Rastreamento de pagamentos em escrow |
-| `Transaction` | Histórico financeiro (depósito, saque, taxa) |
-| `Message` | Sistema de chat (TEXT, SYSTEM, ATTACHMENT, LOCATION) |
-| `Notification` | Notificações do sistema |
-| `Review` | Avaliações (qualidade, pontualidade, comunicação) |
-| `Address` | Endereços e geolocalização |
-| `OrderBrief` | Briefing detalhado do pedido |
-| `Proposal` | Sistema de propostas/licitação |
-| `ProfessionalSchedule` | Disponibilidade semanal |
-| `ScheduleBlock` | Bloqueios de horário |
-| `Dispute` | Resolução de conflitos |
-| `File` | Armazenamento de anexos |
-| `Certification` | Certificações profissionais |
-| `VerificationSubmission` | Fluxo de verificação KYC |
-| `EscrowConfig` | Configuração de escrow |
-| `SystemConfig` | Configurações da plataforma |
+| `User` | Usuarios (CLIENT, PROFESSIONAL, COMPANY, ADMIN) |
+| `UserSession` | Sessoes ativas |
+| `UserDevice` | Dispositivos conhecidos |
+| `UserMFA` | Configuracao MFA (TOTP com AES-256-GCM) |
+| `AuditLog` | Log de auditoria persistente |
+| `Address` | Enderecos e geolocalizacao |
+
+### Servicos
+| Modelo | Descricao |
+|--------|-----------|
+| `ServiceCategory` | Categorias hierarquicas (20 principais + 130 sub) |
 | `ProfessionalCategory` | Mapeamento profissional-categoria |
+| `ServiceListing` | Catalogo legado de servicos |
+| `ServiceOrder` | Ciclo de vida dos pedidos |
+| `ServiceOrderItem` | Itens do pedido (vitrine) |
+| `ServiceOrderEvent` | Eventos do pedido |
+| `OrderBrief` | Briefing detalhado |
+| `Proposal` | Sistema de propostas/licitacao |
+
+### Vitrines (Storefronts)
+| Modelo | Descricao |
+|--------|-----------|
+| `Storefront` | Vitrine do profissional |
+| `StorefrontCategory` | Categorias da vitrine |
+| `StorefrontService` | Servicos da vitrine |
+| `StorefrontServiceOption` | Opcoes/variacoes do servico |
+
+### Financeiro
+| Modelo | Descricao |
+|--------|-----------|
+| `Payment` | Rastreamento de pagamentos em escrow |
+| `PaymentEvent` | Event store de pagamentos (idempotente) |
+| `Transaction` | Historico financeiro (deposito, saque, taxa) |
+| `EscrowConfig` | Configuracao de escrow |
+
+### Comunicacao
+| Modelo | Descricao |
+|--------|-----------|
+| `Message` | Chat (TEXT, SYSTEM, ATTACHMENT, LOCATION) |
+| `Notification` | Notificacoes do sistema |
+| `File` | Armazenamento de anexos |
+
+### Profissional
+| Modelo | Descricao |
+|--------|-----------|
+| `Review` | Avaliacoes (qualidade, pontualidade, comunicacao) |
+| `ProfessionalSchedule` | Disponibilidade semanal |
+| `ScheduleBlock` | Bloqueios de horario |
+| `Certification` | Certificacoes profissionais |
+| `VerificationSubmission` | Fluxo de verificacao KYC |
+| `Dispute` | Resolucao de conflitos |
+
+### Empresa
+| Modelo | Descricao |
+|--------|-----------|
+| `CompanyProfile` | Perfil da empresa |
+| `CompanyRole` | Cargos personalizados |
+| `CompanyMember` | Membros da empresa |
+| `CompanySalaryRule` | Regras salariais |
+| `CompanySalaryPayment` | Pagamentos de salario |
+| `ServiceTeam` / `ServiceTeamMember` | Equipes de servico |
+| `CompanyChannel` / `CompanyChannelMember` | Canais de comunicacao |
+| `CompanyStorefront*` | Vitrine da empresa (secoes, itens, blocos) |
+| `CompanyPinnedTestimonial` | Depoimentos fixados |
+| `CompanyInviteToken` | Tokens de convite |
+
+### Analytics
+| Modelo | Descricao |
+|--------|-----------|
+| `PageView` | Visualizacoes de pagina |
+| `SearchEvent` | Eventos de busca |
+| `ServiceListingView` | Visualizacoes de listings |
+| `CityMetrics` | Metricas por cidade |
+| `SystemConfig` | Configuracoes da plataforma |
 
 ---
 
-## Segurança
+## Seguranca
 
-- **Autenticação JWT** com refresh tokens e versionamento
+- **Autenticacao JWT** com refresh tokens e versionamento
+- **MFA TOTP** com segredos criptografados (AES-256-GCM) — obrigatorio para admins
 - **Bcrypt** com 12 rounds para hash de senhas
-- **Rate Limiting** - 100 req/15min (geral), 10 req/15min (auth)
+- **Rate Limiting** — geral por IP + especifico para auth e webhooks
 - **Helmet.js** para headers HTTP seguros
-- **Sanitização XSS** em todas as entradas
-- **Validação Zod** em todos os inputs da API
-- **Filtro de Chat** - bloqueia telefones, emails, CPF/CNPJ, redes sociais, chaves PIX
-- **Escrow** com confirmação dupla obrigatória
+- **Sanitizacao XSS** em todas as entradas
+- **Validacao Zod** em todos os inputs da API
+- **Filtro de Chat** — bloqueia telefones, emails, CPF/CNPJ, redes sociais, chaves PIX
+- **Escrow** com confirmacao dupla obrigatoria
 - **CORS** configurado por ambiente
-- **Proteção contra SQL Injection** via Prisma ORM
+- **Protecao contra SQL Injection** via Prisma ORM
+- **Circuit Breaker** para chamadas externas (MercadoPago)
+- **Audit Log** persistente com middleware automatico
+- **Secrets Management** abstraido (`env` / `aws` / `gcp` / `azure`)
+- **Idempotencia dupla** em pagamentos (Redis + DB constraint)
+- **Webhook validation** com assinatura MercadoPago
+
+---
+
+## Filas Assincronas (BullMQ)
+
+Workers rodam como processos separados da API, permitindo escalar independentemente:
+
+| Worker | Funcao |
+|--------|--------|
+| `notificationWorker` | Processa notificacoes assincronas |
+| `emailWorker` | Envia emails (verificacao, reset, notificacoes) |
+| `paymentWorker` | Processa eventos de pagamento |
+| `reconciliationWorker` | Reconciliacao diaria com MercadoPago |
+| `antiFraudWorker` | Analise de transacoes suspeitas |
+| `schedulerWorker` | Jobs recorrentes (BullMQ repeatable) |
+
+---
+
+## Observabilidade
+
+- **Logging**: Pino estruturado (JSON em prod, pino-pretty em dev) — zero `console.log`
+- **Metricas**: Prometheus via `/metrics` (HTTP, filas, pagamentos, circuit breaker, MFA)
+- **Health Check**: `/health` com status de database, Redis, filas e circuit breaker
+- **Request Logging**: pino-http middleware com correlacao de requests
+- **Audit Trail**: Todas acoes criticas registradas em `AuditLog`
 
 ---
 
 ## Como Executar
 
-### Pré-requisitos
-- Node.js 18+
+### Pre-requisitos
+
+- Node.js 20+
+- Docker e Docker Compose (para PostgreSQL e Redis)
 - npm
 
-### Instalação
+### Instalacao
 
 ```bash
-# Clone o repositório
+# Clone o repositorio
 git clone git@github.com:levygamer200-ux/faztudo.git
 cd faztudo
 
-# Instalar dependências do backend
+# Subir PostgreSQL e Redis
+docker compose up postgres redis -d
+
+# Instalar e configurar o backend
 cd backend
 npm install
-cp .env.example .env  # Configure suas variáveis
-
-# Instalar dependências do frontend
-cd ../frontend
-npm install
-```
-
-### Configurar Banco de Dados
-
-```bash
-cd backend
+cp .env.example .env  # Configure suas variaveis (ver secao abaixo)
 npx prisma generate
 npx prisma db push
+npm run db:seed  # Popula banco com dados de teste
+
+# Instalar o frontend
+cd ../frontend
+npm install
+
+# Instalar o admin (opcional)
+cd ../admin
+npm install
 ```
 
-### Variáveis de Ambiente
+### Executar em Desenvolvimento
+
+```bash
+# Terminal 1 - Backend API
+cd backend && npm run dev          # http://localhost:3001
+
+# Terminal 2 - Workers BullMQ
+cd backend && npm run worker       # Processa filas assincronas
+
+# Terminal 3 - Scheduler
+cd backend && npm run scheduler    # Jobs recorrentes
+
+# Terminal 4 - Frontend
+cd frontend && npm run dev         # http://localhost:5173
+
+# Terminal 5 - Admin (opcional)
+cd admin && npm run dev            # http://localhost:5174
+```
+
+### Ou com Docker Compose (tudo junto)
+
+```bash
+docker compose up                  # Backend + Frontend + Admin + PostgreSQL + Redis
+```
+
+### Variaveis de Ambiente
 
 #### Backend (`backend/.env`)
 ```env
@@ -311,17 +560,22 @@ npx prisma db push
 NODE_ENV=development
 PORT=3001
 
-# Banco de Dados
-DATABASE_URL=file:./dev.db
+# Banco de Dados (PostgreSQL)
+DATABASE_URL=postgresql://faztudo:faztudo_dev_2026@localhost:5432/faztudo
 
-# Autenticação
+# Redis (BullMQ)
+REDIS_URL=redis://localhost:6379
+
+# Autenticacao
 JWT_SECRET=sua-chave-secreta-com-minimo-32-caracteres
 JWT_EXPIRES_IN=7d
 JWT_REFRESH_EXPIRES_IN=30d
 BCRYPT_SALT_ROUNDS=12
 
-# Segurança
-CORS_ORIGIN=http://localhost:5173
+# Seguranca
+CORS_ORIGIN=http://localhost:5173,http://localhost:5174
+MFA_ENCRYPTION_KEY=chave-hex-32-bytes-para-aes-256-gcm
+SECRETS_PROVIDER=env
 
 # Escrow e Taxas
 DEFAULT_ESCROW_HOLD_DAYS=7
@@ -333,6 +587,17 @@ MP_ACCESS_TOKEN=seu-access-token
 MP_CLIENT_ID=seu-client-id
 MP_CLIENT_SECRET=seu-client-secret
 MP_SANDBOX=true
+MP_WEBHOOK_SECRET=seu-webhook-secret
+
+# Email (Brevo SMTP)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=seu-usuario
+SMTP_PASS=sua-senha
+SMTP_FROM_NAME=FazTudo
+SMTP_FROM_EMAIL=noreply@faztudo.com
+
+FRONTEND_URL=http://localhost:5173
 ```
 
 #### Frontend (`frontend/.env`)
@@ -340,118 +605,219 @@ MP_SANDBOX=true
 VITE_API_URL=http://localhost:3001
 ```
 
-### Executar em Desenvolvimento
-
-```bash
-# Terminal 1 - Backend
-cd backend
-npm run dev    # http://localhost:3001
-
-# Terminal 2 - Frontend
-cd frontend
-npm run dev    # http://localhost:5173
-```
-
 ### Executar Testes
 
 ```bash
 cd backend
-npm test                # Todos os testes
+npm test                # Todos os 337 testes
 npm run test:watch      # Modo watch
-npm run test:security   # Testes de segurança
+npm run test:security   # Apenas testes de seguranca (8 arquivos)
+npx tsc --noEmit        # Checagem de tipos
+```
+
+### Comandos Uteis
+
+```bash
+# Banco de dados
+cd backend
+npm run db:push         # Aplica schema no banco
+npm run db:seed         # Popula com dados de teste
+npm run db:studio       # Abre Prisma Studio (GUI)
+npm run db:reset        # Reset completo do banco
+
+# Frontend
+cd frontend
+npm run build           # Build de producao
+npm run lint            # ESLint
+npx tsc --noEmit        # Checagem de tipos
 ```
 
 ---
 
 ## Rotas do Frontend
 
-### Públicas
-| Rota | Página |
+### Publicas
+| Rota | Pagina |
 |------|--------|
 | `/` | Landing page para clientes |
 | `/profissionais` | Landing page para profissionais |
 | `/login` | Login |
 | `/register` | Registro |
-| `/services` | Catálogo de serviços |
-| `/services/:id` | Detalhes do serviço |
+| `/forgot-password` | Recuperar senha |
+| `/reset-password/:token` | Resetar senha |
+| `/verify-email/:token` | Verificar email |
+| `/explorar` | Explorar vitrines de profissionais |
+| `/explorar/:slug` | Ver vitrine especifica |
+| `/services/:id` | Detalhes do servico |
+| `/mapa` | Visualizacao em mapa |
+| `/empresa/:companyId` | Vitrine da empresa |
+| `/profissional/:userId` | Vitrine do profissional |
+| `/termos` | Termos de servico |
+| `/privacidade` | Politica de privacidade |
+| `/seguranca` | Dicas de seguranca |
 
 ### Cliente (`/client/*`)
-| Rota | Página |
+| Rota | Pagina |
 |------|--------|
 | `/client/dashboard` | Dashboard |
 | `/client/orders` | Meus pedidos |
+| `/client/orders/new` | Novo pedido |
 | `/client/orders/:id` | Detalhes do pedido |
 | `/client/orders/:id/checkout` | Pagamento |
+| `/client/orders/:id/payment-confirmed` | Confirmacao de pagamento |
 | `/client/orders/:id/chat` | Chat do pedido |
+| `/client/orders/:id/mapa` | Rastreamento em mapa |
 | `/client/messages` | Conversas |
-| `/client/carteira` | Carteira |
+| `/client/notifications` | Notificacoes |
+| `/client/carteira` | Carteira digital |
 
 ### Profissional (`/professional/*`)
-| Rota | Página |
+| Rota | Pagina |
 |------|--------|
 | `/professional/dashboard` | Dashboard |
-| `/professional/crm` | CRM |
-| `/professional/agenda` | Calendário |
-| `/professional/reputacao` | Reputação |
+| `/professional/crm` | CRM (pipeline de clientes) |
+| `/professional/agenda` | Calendario de disponibilidade |
+| `/professional/reputacao` | Painel de reputacao |
 | `/professional/services` | Meus pedidos |
-| `/professional/catalog` | Catálogo |
-| `/professional/catalog/new` | Novo serviço |
+| `/professional/services/:id` | Detalhes do pedido |
+| `/professional/services/:id/chat` | Chat do pedido |
+| `/professional/services/:id/mapa` | Mapa do servico |
+| `/professional/vitrine` | Gerenciador da vitrine |
+| `/professional/vitrine/setup` | Wizard de onboarding |
 | `/professional/messages` | Conversas |
-| `/professional/carteira` | Carteira |
+| `/professional/notifications` | Notificacoes |
+| `/professional/carteira` | Carteira digital |
 
-### Admin (`/admin/*`)
-| Rota | Página |
+### Empresa (`/company/*`)
+| Rota | Pagina |
 |------|--------|
-| `/admin/dashboard` | Estatísticas |
-| `/admin/users` | Gerenciar usuários |
-| `/admin/verifications` | Verificações |
+| `/company/dashboard` | Dashboard |
+| `/company/profile` | Perfil da empresa |
+| `/company/members` | Gestao de membros |
+| `/company/roles` | Cargos e permissoes |
+| `/company/salary` | Regras salariais |
+| `/company/orders` | Pedidos da empresa |
+| `/company/channels` | Canais de comunicacao |
+| `/company/channels/:channelId` | Detalhe do canal |
+| `/company/analytics` | Analytics e metricas |
+| `/company/storefront-editor` | Editor de vitrine |
+| `/company/orders/:id/chat` | Chat do pedido |
+| `/company/notifications` | Notificacoes |
+| `/company/carteira` | Carteira digital |
+
+### Perfil (todos os roles)
+| Rota | Pagina |
+|------|--------|
+| `/profile` | Meu perfil |
+| `/profile/settings` | Configuracoes |
+
+### Admin (Painel Dedicado - porta 5174)
+| Pagina | Descricao |
+|--------|-----------|
+| Dashboard | Estatisticas gerais |
+| Usuarios | Listagem e gerenciamento |
+| Detalhe do usuario | Perfil completo |
+| Empresas | Gerenciamento de empresas |
+| Verificacoes | Aprovacao de documentos KYC |
+| Disputas | Moderacao de conflitos |
+| Trafego | Metricas de acesso |
+| Configuracoes | Settings da plataforma |
 
 ---
 
-## Modelo de Negócio
+## Modelo de Negocio
 
 | Item | Valor |
 |------|-------|
-| Taxa da plataforma | 10% por transação |
-| Período de escrow | 7 dias |
-| Confirmação | Dupla (cliente + profissional) |
+| Taxa da plataforma | 10% por transacao |
+| Periodo de escrow | 7 dias |
+| Confirmacao | Dupla (cliente + profissional) |
 
-**Exemplo de transação:**
+**Exemplo de transacao:**
 ```
-Valor do serviço:    R$ 500,00
+Valor do servico:    R$ 500,00
 Taxa (10%):          R$  50,00
 Profissional recebe: R$ 450,00
 ```
 
 ---
 
+## Testes
+
+**337 testes** em 40 arquivos, todos passando:
+
+| Categoria | Arquivos | Descricao |
+|-----------|----------|-----------|
+| **Integracao** | 10 | Fluxo de pedidos, confirmacao, chat, calendario, CRM, financas, reputacao, email, reset de senha |
+| **Seguranca** | 8 | XSS, validacao, rate limiting, input validation, IDOR, data leak, auth bypass, webhook |
+| **E2E/Feature** | 12 | Storefront, company flow, company invite, company channels, company orders, analytics, admin verification, professional storefront, geocoding, reschedule, bearing |
+| **Unitarios** | 4 | Email service, SMTP config, scheduler, CPF validator |
+| **Lib** | 2 | Payment state machine (11 tests), circuit breaker (6 tests) |
+| **Middleware** | 3 | Chat filter, sanitize, MFA (7 tests) |
+| **Config** | 1 | Secrets management (6 tests) |
+
+---
+
+## Usuarios de Teste (Seed)
+
+```
+Cliente:         cliente@teste.com        / Teste@123
+Profissional 1:  profissional@teste.com   / Teste@123
+Profissional 2:  profissional2@teste.com  / Teste@123
+Membro 1:        membro1@teste.com        / Teste@123
+Membro 2:        membro2@teste.com        / Teste@123
+```
+
+---
+
+## MercadoPago (Sandbox)
+
+- Credenciais em `VARIAVEIS/.env.mp` (gitignored)
+- Cartao teste: `5031 4332 1540 6351` (Mastercard)
+- CVV: `123`, Validade: qualquer futura
+- CPF teste: `12345678909`
+- Flag `MP_SANDBOX=true` para ambiente de teste
+
+---
+
 ## Roadmap
 
-- [ ] Notificações por email (Resend)
-- [ ] WebSocket para chat em tempo real
-- [ ] Liberação automática de escrow
-- [ ] Painel de mediação de disputas
-- [ ] Dashboard de analytics avançado
+- [x] ~~Migrar SQLite para PostgreSQL~~
+- [x] ~~Filas assincronas com BullMQ~~
+- [x] ~~Logging estruturado (Pino)~~
+- [x] ~~Autenticacao multi-fator (MFA TOTP)~~
+- [x] ~~Circuit breaker para APIs externas~~
+- [x] ~~Metricas Prometheus~~
+- [x] ~~Reconciliacao de pagamentos~~
+- [x] ~~Email (verificacao, reset, notificacoes)~~
+- [x] ~~Vitrines personalizaveis~~
+- [x] ~~Modulo de empresas completo~~
+- [x] ~~WebSocket (Socket.IO) para notificacoes~~
+- [x] ~~Mapas interativos (Leaflet/MapLibre)~~
+- [x] ~~Painel admin dedicado~~
+- [ ] Testes no frontend (unitarios e integracao)
+- [ ] Chat em tempo real via WebSocket (atualmente polling)
+- [ ] Liberacao automatica de escrow
+- [ ] Cache HTTP no backend
+- [ ] Rate limiting por usuario autenticado
+- [ ] Internacionalizacao (i18n)
 - [ ] Aplicativo mobile (React Native)
-- [ ] Integração com Google Maps
-- [ ] Verificação por SMS
-- [ ] Portfólio de profissionais
 - [ ] Suporte a videochamadas
-- [ ] Multi-idioma
 
 ---
 
-## Contribuição
+## Contribuicao
 
-Projeto desenvolvido com assistência do Claude Code. Workflow:
+Projeto desenvolvido com assistencia do Claude Code. Workflow:
 - TypeScript strict mode
-- Testes com Vitest
-- Commits semânticos
+- Testes com Vitest (337 testes passando)
+- Commits semanticos (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`)
 - Code review integrado
+- Git worktrees para features paralelas
 
 ---
 
-## Licença
+## Licenca
 
 Projeto privado - Todos os direitos reservados.
 
