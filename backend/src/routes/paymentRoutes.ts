@@ -6,7 +6,7 @@ import {
   requireVerified,
   authLogger,
 } from "../middleware/auth";
-import { financialLimiter } from "../middleware/rateLimiter";
+import { financialLimiter, webhookLimiter } from "../middleware/rateLimiter";
 import { validateBody } from "../middleware/validate";
 import { createPaymentSchema } from "../middleware/validation";
 
@@ -21,6 +21,7 @@ router.use(authLogger);
 
 router.post(
   "/payments/webhook",
+  webhookLimiter,
   serviceController.mercadoPagoWebhook,
 );
 
