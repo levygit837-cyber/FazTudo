@@ -1,14 +1,77 @@
 import IORedis from "ioredis";
-import { env } from "../config/env";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("redis");
 
+const REDIS_PRIMARY_URL = process.env.REDIS_URL || "redis://localhost:6379";
+const REDIS_FALLBACK_PORT = 6380;
+
 let connection: IORedis | null = null;
+let resolvedUrl: string = REDIS_PRIMARY_URL;
+
+/**
+ * Try to connect to primary Redis URL first.
+ * If the primary port is occupied, fall back to REDIS_FALLBACK_PORT.
+ */
+async function resolveRedisUrl(): Promise<string> {
+  const primary = REDIS_PRIMARY_URL;
+  try {
+    const probe = new IORedis(primary, {
+      maxRetriesPerRequest: 1,
+      enableReadyCheck: true,
+      connectTimeout: 2000,
+      lazyConnect: true,
+    });
+    await probe.connect();
+    const pong = await probe.ping();
+    await probe.quit();
+    if (pong === "PONG") {
+      log.info({ url: primary }, "Redis connected on primary URL");
+      return primary;
+    }
+  } catch {
+    // primary failed, try fallback
+  }
+
+  // Build fallback URL
+  try {
+    const url = new URL(primary);
+    url.port = String(REDIS_FALLBACK_PORT);
+    const fallback = url.toString();
+
+    const probe = new IORedis(fallback, {
+      maxRetriesPerRequest: 1,
+      enableReadyCheck: true,
+      connectTimeout: 2000,
+      lazyConnect: true,
+    });
+    await probe.connect();
+    const pong = await probe.ping();
+    await probe.quit();
+    if (pong === "PONG") {
+      log.warn(
+        { primary, fallback },
+        "Redis primary port unavailable — using FALLBACK port %d",
+        REDIS_FALLBACK_PORT,
+      );
+      return fallback;
+    }
+  } catch {
+    // fallback also failed
+  }
+
+  log.warn(
+    { primary, fallbackPort: REDIS_FALLBACK_PORT },
+    "Redis unreachable on both primary and fallback — will use primary and retry",
+  );
+  return primary;
+}
+
+let urlResolved = false;
 
 export function getRedisConnection(): IORedis {
   if (!connection) {
-    connection = new IORedis(env.REDIS_URL, {
+    connection = new IORedis(resolvedUrl, {
       maxRetriesPerRequest: null, // Required by BullMQ
       enableReadyCheck: false,
       retryStrategy(times: number) {
@@ -19,7 +82,7 @@ export function getRedisConnection(): IORedis {
     });
 
     connection.on("connect", () => {
-      log.info("Redis connected");
+      log.info({ url: resolvedUrl }, "Redis connected");
     });
 
     connection.on("error", (err) => {
@@ -31,11 +94,21 @@ export function getRedisConnection(): IORedis {
 }
 
 /**
+ * Initialize Redis connection with port fallback.
+ * Call this during app startup before using getRedisConnection().
+ */
+export async function initRedisConnection(): Promise<void> {
+  if (!urlResolved) {
+    resolvedUrl = await resolveRedisUrl();
+    urlResolved = true;
+  }
+}
+
+/**
  * Returns a Redis connection config object suitable for BullMQ.
- * This avoids type conflicts between different ioredis versions.
  */
 export function getRedisConnectionOpts(): { host: string; port: number; maxRetriesPerRequest: null } {
-  const url = new URL(env.REDIS_URL);
+  const url = new URL(resolvedUrl);
   return {
     host: url.hostname || "localhost",
     port: parseInt(url.port || "6379", 10),

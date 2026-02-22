@@ -46,10 +46,11 @@ import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";
 import { scheduleDailySalaries, stopSalaryCron } from "./services/companyCronService";
 import { startWorkers, stopWorkers } from "./workers";
 import { closeAllQueues } from "./queues";
-import { closeRedisConnection, isRedisHealthy } from "./queues/connection";
+import { closeRedisConnection, isRedisHealthy, initRedisConnection } from "./queues/connection";
 import { register } from "./lib/metrics";
 import { QUEUE_NAMES, getQueueStatus } from "./queues/queues";
 import { getCircuitBreakerStatus } from "./services/mercadopagoService";
+import { initDatabaseConnection } from "./lib/prisma";
 
 const app = express();
 const httpServer = createServer(app);
@@ -318,6 +319,10 @@ const PORT = env.PORT;
 initializeSocket(httpServer);
 
 const server = httpServer.listen(PORT, async () => {
+  // Initialize database and Redis connections with fallback ports
+  await initDatabaseConnection();
+  await initRedisConnection();
+
   log.info({ port: PORT, env: env.NODE_ENV }, "Server started");
   await startScheduledTasks();
   scheduleDailySalaries();
