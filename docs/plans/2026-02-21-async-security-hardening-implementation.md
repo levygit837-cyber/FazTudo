@@ -2,29 +2,34 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Separar a API em 3 processos (API / Worker / Scheduler), migrar para PostgreSQL, implementar event store de pagamentos com idempotência, adicionar MFA TOTP, secrets management, SLOs, circuit breaker e audit log.
+**Goal:** Migrate FazTudo from synchronous request processing to async BullMQ queues, add payment idempotency with event store, implement MFA TOTP, secrets management, SLOs, and migrate from SQLite to PostgreSQL.
 
-**Architecture:** API Express despacha jobs para Redis via BullMQ. Worker consome filas (notifications, emails, payments, reconciliation, anti-fraud). Scheduler registra jobs recorrentes. PostgreSQL substitui SQLite. Event store append-only para trilha de pagamentos. MFA TOTP para admins e ações críticas.
+**Architecture:** Three-process model (API Server, Worker Process, Scheduler Process) communicating via Redis/BullMQ. Payment events stored in append-only PostgreSQL table with state machine validation. TOTP MFA for critical actions. Cloud-portable secrets management.
 
-**Tech Stack:** BullMQ, IORedis, PostgreSQL 16, otplib, qrcode, opossum (circuit breaker), prom-client (metrics)
+**Tech Stack:** BullMQ 5.x, IORedis 5.x, PostgreSQL 16, Redis 7, otplib 12.x, qrcode 1.x, opossum 8.x, prom-client 15.x
 
 ---
 
-## Task 1: Instalar e Configurar PostgreSQL + Redis via Docker
+## Phase 1: PostgreSQL Migration
+
+### Task 1: Install PostgreSQL and Redis via Docker Compose
 
 **Files:**
 - Modify: `docker-compose.yml`
-- Modify: `backend/.env.example`
 - Modify: `backend/.env`
+- Modify: `backend/.env.example`
 
-**Step 1: Atualizar docker-compose.yml com PostgreSQL e Redis**
+**Step 1: Update docker-compose.yml to add PostgreSQL and Redis services**
 
-Adicionar os serviços `postgres` e `redis` ao `docker-compose.yml` existente. Atualizar o service `backend` para depender de ambos e usar `DATABASE_URL` PostgreSQL.
+Replace the entire `docker-compose.yml` with:
 
 ```yaml
+version: "3.8"
+
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: faztudo
       POSTGRES_USER: faztudo
@@ -41,68 +46,69 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
-    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
-    volumes:
-      - redisdata:/data
 
   backend:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "3001:3001"
-    environment:
-      NODE_ENV: development
-      PORT: 3001
-      DATABASE_URL: postgresql://faztudo:faztudo_dev_2026@postgres:5432/faztudo
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production-minimum-32-chars}
-      JWT_EXPIRES_IN: 7d
-      CORS_ORIGIN: http://localhost:5173,http://localhost:5174
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     volumes:
       - ./backend/src:/app/src
       - ./backend/prisma:/app/prisma
       - ./backend/tests:/app/tests
       - backend_node_modules:/app/node_modules
-    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://faztudo:faztudo_dev_2026@postgres:5432/faztudo
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-key-change-in-production-minimum-32-chars}
+      - JWT_EXPIRES_IN=7d
+      - CORS_ORIGIN=http://localhost:5173,http://localhost:5174
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     ports:
       - "5173:5173"
-    environment:
-      VITE_API_URL: http://localhost:3001
-    depends_on:
-      - backend
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
       - frontend_node_modules:/app/node_modules
-    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    depends_on:
+      - backend
 
   admin:
     build: ./admin
+    restart: unless-stopped
     ports:
       - "5174:5174"
-    environment:
-      VITE_API_URL: http://localhost:3001
-    depends_on:
-      - backend
     volumes:
       - ./admin/src:/app/src
       - ./admin/public:/app/public
       - admin_node_modules:/app/node_modules
-    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
@@ -112,319 +118,281 @@ volumes:
   admin_node_modules:
 ```
 
-**Step 2: Instalar PostgreSQL e Redis localmente (sem Docker)**
+**Step 2: Start PostgreSQL and Redis containers**
 
-Para dev local sem Docker, instalar PostgreSQL 16 e Redis 7:
+Run: `cd /home/levybonito/faztudo-main && docker compose up -d postgres redis`
+Expected: Both services healthy
 
-```bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install -y postgresql-16 redis-server
+**Step 3: Verify connectivity**
 
-# Criar banco e usuário
-sudo -u postgres psql -c "CREATE USER faztudo WITH PASSWORD 'faztudo_dev_2026';"
-sudo -u postgres psql -c "CREATE DATABASE faztudo OWNER faztudo;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE faztudo TO faztudo;"
+Run: `docker compose exec postgres psql -U faztudo -d faztudo -c "SELECT 1;"`
+Expected: Returns 1
 
-# Verificar
-psql -U faztudo -d faztudo -c "SELECT 1;"
-redis-cli ping
-```
+Run: `docker compose exec redis redis-cli ping`
+Expected: PONG
 
-**Step 3: Atualizar .env com novas variáveis**
-
-Adicionar ao `backend/.env`:
-```
-DATABASE_URL=postgresql://faztudo:faztudo_dev_2026@localhost:5432/faztudo
-REDIS_URL=redis://localhost:6379
-MFA_ENCRYPTION_KEY=  # Será gerado no Task 8
-```
-
-Atualizar `backend/.env.example` com as mesmas variáveis (sem valores sensíveis).
-
-**Step 4: Verificar que PostgreSQL e Redis estão rodando**
+**Step 4: Commit**
 
 ```bash
-psql -U faztudo -d faztudo -c "SELECT version();"
-redis-cli ping
-```
-
-Expected: Versão do PostgreSQL e `PONG`.
-
-**Step 5: Commit**
-
-```bash
-git add docker-compose.yml backend/.env.example
+git add docker-compose.yml
 git commit -m "infra: add PostgreSQL 16 and Redis 7 to docker-compose"
 ```
 
 ---
 
-## Task 2: Migrar Prisma de SQLite para PostgreSQL
+### Task 2: Migrate Prisma from SQLite to PostgreSQL
 
 **Files:**
-- Modify: `backend/prisma/schema.prisma` (linhas 1-10: datasource)
-- Modify: `backend/package.json` (remover libsql deps)
+- Modify: `backend/prisma/schema.prisma` (line 1-10: datasource block)
+- Modify: `backend/package.json` (remove libsql deps)
 - Modify: `backend/src/lib/prisma.ts`
-- Modify: `backend/src/config/env.ts` (DATABASE_URL default)
+- Modify: `backend/src/config/env.ts` (add REDIS_URL)
+- Modify: `backend/.env`
 
-**Step 1: Atualizar datasource no schema.prisma**
+**Step 1: Update schema.prisma datasource**
 
-No topo do `backend/prisma/schema.prisma`, substituir o datasource block inteiro:
+In `backend/prisma/schema.prisma`, replace the datasource block (first ~15 lines) with:
 
-De (atual — pode ter adapter para libsql):
 ```prisma
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+generator client {
+  provider = "prisma-client-js"
 }
-```
 
-Para:
-```prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 ```
 
-Remover qualquer referência a `previewFeatures = ["driverAdapters"]` no generator block se existir.
+Remove any `previewFeatures = ["driverAdapters"]` line if present.
 
-**Step 2: Atualizar prisma.ts para remover adapter libsql**
+**Step 2: Update prisma.ts to remove libsql adapter**
 
-O arquivo `backend/src/lib/prisma.ts` pode ter configuração de adapter libsql. Simplificar para:
+Replace `backend/src/lib/prisma.ts` entirely with:
 
 ```typescript
 import { PrismaClient } from "@prisma/client";
+import { createLogger } from "./logger";
 
-const prisma = new PrismaClient();
+const log = createLogger("prisma");
+
+const prisma = new PrismaClient({
+  log: [
+    { level: "error", emit: "event" },
+    { level: "warn", emit: "event" },
+  ],
+});
+
+prisma.$on("error" as never, (e: any) => {
+  log.error({ err: e }, "Prisma error");
+});
+
+prisma.$on("warn" as never, (e: any) => {
+  log.warn({ msg: e }, "Prisma warning");
+});
 
 export default prisma;
 ```
 
-**Step 3: Remover dependências libsql do package.json**
+**Step 3: Remove libsql dependencies**
 
-```bash
-cd backend && npm uninstall @prisma/adapter-libsql @libsql/client
+Run: `cd /home/levybonito/faztudo-main/backend && npm uninstall @libsql/client @prisma/adapter-libsql`
+
+**Step 4: Update .env with PostgreSQL URL**
+
+Add/update in `backend/.env`:
+```
+DATABASE_URL=postgresql://faztudo:faztudo_dev_2026@localhost:5432/faztudo
+REDIS_URL=redis://localhost:6379
 ```
 
-**Step 4: Atualizar default DATABASE_URL em env.ts**
+**Step 5: Add REDIS_URL to env.ts**
 
-No arquivo `backend/src/config/env.ts`, mudar o default de `DATABASE_URL`:
-
-De: `DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db'`
-Para: `DATABASE_URL: process.env.DATABASE_URL || 'postgresql://faztudo:faztudo_dev_2026@localhost:5432/faztudo'`
-
-**Step 5: Gerar cliente Prisma e push schema**
-
-```bash
-cd backend && npx prisma generate && npx prisma db push
+In `backend/src/config/env.ts`, add to the `EnvConfig` interface after `DATABASE_URL`:
+```typescript
+  REDIS_URL: string;
 ```
 
-Expected: Schema criado no PostgreSQL sem erros.
-
-**Step 6: Rodar seed**
-
-```bash
-cd backend && npm run db:seed
+And in the `getEnvConfig()` function, add after the DATABASE_URL line in the config object:
+```typescript
+    REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
 ```
 
-Expected: Seed completo com categorias, configs, 3 usuários teste, 8 listings.
+**Step 6: Push schema to PostgreSQL**
 
-**Step 7: Rodar testes existentes**
+Run: `cd /home/levybonito/faztudo-main/backend && npx prisma db push`
+Expected: Schema synced successfully
 
-```bash
-cd backend && npm test
-```
+**Step 7: Seed database**
 
-Expected: Todos os testes passam (ou pelo menos mesma quantidade de antes).
+Run: `cd /home/levybonito/faztudo-main/backend && npm run db:seed`
+Expected: Seed data created
 
-**Step 8: Verificar tipo check**
+**Step 8: Run existing tests**
 
-```bash
-cd backend && npx tsc --noEmit
-```
-
-Expected: Sem erros de tipo.
+Run: `cd /home/levybonito/faztudo-main/backend && npm test`
+Expected: All existing tests pass (some may need DATABASE_URL adjustment for test env)
 
 **Step 9: Commit**
 
 ```bash
-git add backend/prisma/schema.prisma backend/src/lib/prisma.ts backend/src/config/env.ts backend/package.json backend/package-lock.json
-git commit -m "feat: migrate from SQLite to PostgreSQL 16"
+git add backend/prisma/schema.prisma backend/src/lib/prisma.ts backend/src/config/env.ts backend/package.json backend/package-lock.json backend/.env.example
+git commit -m "feat: migrate from SQLite to PostgreSQL 16
+
+Remove libsql adapter, update Prisma datasource to postgresql,
+add REDIS_URL to env config."
 ```
 
 ---
 
-## Task 3: Instalar BullMQ + IORedis e Criar Infra de Filas
+## Phase 2: BullMQ Infrastructure
+
+### Task 3: Install BullMQ dependencies and create Redis connection
 
 **Files:**
+- Modify: `backend/package.json`
 - Create: `backend/src/queues/connection.ts`
 - Create: `backend/src/queues/queues.ts`
 - Create: `backend/src/queues/producers.ts`
-- Modify: `backend/package.json`
 
-**Step 1: Instalar dependências**
+**Step 1: Install BullMQ and IORedis**
 
-```bash
-cd backend && npm install bullmq ioredis
-npm install -D @types/ioredis
-```
+Run: `cd /home/levybonito/faztudo-main/backend && npm install bullmq ioredis`
 
-**Step 2: Criar connection.ts**
+**Step 2: Create Redis connection module**
 
-Criar `backend/src/queues/connection.ts`:
+Create `backend/src/queues/connection.ts`:
 
 ```typescript
 import IORedis from "ioredis";
+import { env } from "../config/env";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("redis");
 
-const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+let connection: IORedis | null = null;
 
-/**
- * Shared IORedis connection options for BullMQ.
- * BullMQ requires a new connection per Queue/Worker, so we export the config.
- */
-export const redisConnectionOptions = {
-  host: new URL(REDIS_URL).hostname || "localhost",
-  port: parseInt(new URL(REDIS_URL).port || "6379", 10),
-  maxRetriesPerRequest: null, // Required by BullMQ
-  enableReadyCheck: false,
-};
+export function getRedisConnection(): IORedis {
+  if (!connection) {
+    connection = new IORedis(env.REDIS_URL, {
+      maxRetriesPerRequest: null, // Required by BullMQ
+      enableReadyCheck: false,
+      retryStrategy(times: number) {
+        const delay = Math.min(times * 200, 5000);
+        log.warn({ attempt: times, delayMs: delay }, "Redis reconnecting...");
+        return delay;
+      },
+    });
 
-/**
- * Creates a new IORedis instance for general use (caching, dedup).
- * For BullMQ, pass redisConnectionOptions to Queue/Worker constructors.
- */
-export function createRedisClient(): IORedis {
-  const client = new IORedis(REDIS_URL, {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-    retryStrategy: (times: number) => {
-      if (times > 10) {
-        log.error("Redis connection failed after 10 retries");
-        return null; // Stop retrying
-      }
-      return Math.min(times * 200, 5000);
-    },
-  });
-
-  client.on("connect", () => log.info("Redis connected"));
-  client.on("error", (err) => log.error({ err }, "Redis error"));
-  client.on("close", () => log.warn("Redis connection closed"));
-
-  return client;
-}
-
-/**
- * Singleton Redis client for caching/dedup (not for BullMQ).
- */
-let _redisClient: IORedis | null = null;
-
-export function getRedisClient(): IORedis {
-  if (!_redisClient) {
-    _redisClient = createRedisClient();
+    connection.on("connect", () => log.info("Redis connected"));
+    connection.on("error", (err) => log.error({ err }, "Redis error"));
+    connection.on("close", () => log.warn("Redis connection closed"));
   }
-  return _redisClient;
+  return connection;
 }
 
-export async function closeRedisClient(): Promise<void> {
-  if (_redisClient) {
-    await _redisClient.quit();
-    _redisClient = null;
-    log.info("Redis client closed");
+export async function closeRedisConnection(): Promise<void> {
+  if (connection) {
+    await connection.quit();
+    connection = null;
+    log.info("Redis connection closed gracefully");
+  }
+}
+
+/**
+ * Check if Redis is available. Used for graceful degradation.
+ */
+export async function isRedisAvailable(): Promise<boolean> {
+  try {
+    const conn = getRedisConnection();
+    const result = await conn.ping();
+    return result === "PONG";
+  } catch {
+    return false;
   }
 }
 ```
 
-**Step 3: Criar queues.ts**
+**Step 3: Create queue instances**
 
-Criar `backend/src/queues/queues.ts`:
+Create `backend/src/queues/queues.ts`:
 
 ```typescript
 import { Queue } from "bullmq";
-import { redisConnectionOptions } from "./connection";
+import { getRedisConnection } from "./connection";
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("queues");
 
 const defaultOpts = {
-  connection: redisConnectionOptions,
   defaultJobOptions: {
     removeOnComplete: { count: 1000 },
     removeOnFail: { count: 5000 },
   },
 };
 
-// ==================== QUEUES ====================
+let queues: Record<string, Queue> | null = null;
 
-export const notificationQueue = new Queue("notifications", {
-  ...defaultOpts,
-  defaultJobOptions: {
-    ...defaultOpts.defaultJobOptions,
-    attempts: 3,
-    backoff: { type: "exponential", delay: 1000 },
-  },
-});
+export function getQueues() {
+  if (!queues) {
+    const connection = getRedisConnection();
+    queues = {
+      notifications: new Queue("notifications", { connection, ...defaultOpts }),
+      emails: new Queue("emails", {
+        connection,
+        ...defaultOpts,
+        defaultJobOptions: {
+          ...defaultOpts.defaultJobOptions,
+          attempts: 5,
+          backoff: { type: "custom" },
+        },
+      }),
+      payments: new Queue("payments", {
+        connection,
+        ...defaultOpts,
+        defaultJobOptions: {
+          ...defaultOpts.defaultJobOptions,
+          attempts: 3,
+          backoff: { type: "exponential", delay: 5000 },
+        },
+      }),
+      reconciliation: new Queue("reconciliation", { connection, ...defaultOpts }),
+      antiFraud: new Queue("anti-fraud", {
+        connection,
+        ...defaultOpts,
+        defaultJobOptions: {
+          ...defaultOpts.defaultJobOptions,
+          attempts: 2,
+          backoff: { type: "exponential", delay: 3000 },
+        },
+      }),
+    };
+    log.info("BullMQ queues initialized");
+  }
+  return queues;
+}
 
-export const emailQueue = new Queue("emails", {
-  ...defaultOpts,
-  defaultJobOptions: {
-    ...defaultOpts.defaultJobOptions,
-    attempts: 5,
-    backoff: { type: "exponential", delay: 30000 }, // 30s, 1m, 2m, 4m, 8m
-  },
-});
-
-export const paymentQueue = new Queue("payments", {
-  ...defaultOpts,
-  defaultJobOptions: {
-    ...defaultOpts.defaultJobOptions,
-    attempts: 3,
-    backoff: { type: "exponential", delay: 2000 },
-  },
-});
-
-export const reconciliationQueue = new Queue("reconciliation", {
-  ...defaultOpts,
-  defaultJobOptions: {
-    ...defaultOpts.defaultJobOptions,
-    attempts: 1,
-  },
-});
-
-export const antiFraudQueue = new Queue("anti-fraud", {
-  ...defaultOpts,
-  defaultJobOptions: {
-    ...defaultOpts.defaultJobOptions,
-    attempts: 2,
-    backoff: { type: "exponential", delay: 5000 },
-  },
-});
-
-// ==================== GRACEFUL SHUTDOWN ====================
-
-export async function closeAllQueues(): Promise<void> {
-  await Promise.all([
-    notificationQueue.close(),
-    emailQueue.close(),
-    paymentQueue.close(),
-    reconciliationQueue.close(),
-    antiFraudQueue.close(),
-  ]);
+export async function closeQueues(): Promise<void> {
+  if (queues) {
+    await Promise.all(Object.values(queues).map((q) => q.close()));
+    queues = null;
+    log.info("All queues closed");
+  }
 }
 ```
 
-**Step 4: Criar producers.ts**
+**Step 4: Create producer helpers**
 
-Criar `backend/src/queues/producers.ts`:
+Create `backend/src/queues/producers.ts`:
 
 ```typescript
-import { notificationQueue, emailQueue, paymentQueue, reconciliationQueue, antiFraudQueue } from "./queues";
+import { getQueues } from "./queues";
+import { isRedisAvailable } from "./connection";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("producers");
 
-// ==================== TYPES ====================
+// ============== NOTIFICATION JOBS ==============
 
 export interface NotificationJobData {
   userId: number;
@@ -435,108 +403,115 @@ export interface NotificationJobData {
   metadata?: Record<string, any>;
 }
 
+export async function enqueueNotification(data: NotificationJobData): Promise<boolean> {
+  try {
+    if (!(await isRedisAvailable())) {
+      log.warn("Redis unavailable, notification will be processed synchronously");
+      return false; // Caller should fall back to sync
+    }
+    const { notifications } = getQueues();
+    await notifications.add("send-notification", data, {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 2000 },
+    });
+    return true;
+  } catch (err) {
+    log.error({ err }, "Failed to enqueue notification");
+    return false;
+  }
+}
+
+// ============== EMAIL JOBS ==============
+
 export interface EmailJobData {
   to: string;
   subject: string;
   html: string;
   text?: string;
-  template?: "verification" | "passwordReset" | "welcome";
+  templateType?: "verification" | "password-reset" | "welcome" | "notification";
   templateData?: Record<string, any>;
 }
 
+export async function enqueueEmail(data: EmailJobData): Promise<boolean> {
+  try {
+    if (!(await isRedisAvailable())) {
+      log.warn("Redis unavailable, email will be sent synchronously");
+      return false;
+    }
+    const { emails } = getQueues();
+    await emails.add("send-email", data, {
+      attempts: 5,
+      backoff: { type: "exponential", delay: 30000 },
+    });
+    return true;
+  } catch (err) {
+    log.error({ err }, "Failed to enqueue email");
+    return false;
+  }
+}
+
+// ============== PAYMENT JOBS ==============
+
 export interface PaymentWebhookJobData {
   mpPaymentId: string;
-  action: string;
+  mpStatus: string;
+  externalReference: string;
+  transactionAmount: number;
+  paymentMethodId: string;
+  webhookRawHeaders: Record<string, string>;
   idempotencyKey: string;
-  rawPayload: Record<string, any>;
   receivedAt: string;
 }
 
-export interface PaymentReleaseJobData {
+export async function enqueuePaymentWebhook(data: PaymentWebhookJobData): Promise<boolean> {
+  try {
+    if (!(await isRedisAvailable())) {
+      log.warn("Redis unavailable, payment webhook will be processed synchronously");
+      return false;
+    }
+    const { payments } = getQueues();
+    await payments.add("process-webhook", data, {
+      jobId: data.idempotencyKey, // BullMQ deduplicates by jobId
+      attempts: 3,
+      backoff: { type: "exponential", delay: 5000 },
+    });
+    return true;
+  } catch (err) {
+    log.error({ err }, "Failed to enqueue payment webhook");
+    return false;
+  }
+}
+
+export interface EscrowReleaseJobData {
   paymentId: number;
   forcedByAdmin: boolean;
   actorId?: number;
 }
 
+export async function enqueueEscrowRelease(data: EscrowReleaseJobData): Promise<boolean> {
+  try {
+    if (!(await isRedisAvailable())) return false;
+    const { payments } = getQueues();
+    await payments.add("release-escrow", data);
+    return true;
+  } catch (err) {
+    log.error({ err }, "Failed to enqueue escrow release");
+    return false;
+  }
+}
+
+// ============== RECONCILIATION JOBS ==============
+
 export interface ReconciliationJobData {
-  type: "daily" | "manual";
-  triggeredBy?: number; // admin userId
+  type: "daily-mp-reconciliation" | "cleanup-notifications" | "cleanup-idempotency-keys";
+  params?: Record<string, any>;
 }
 
-export interface AntiFraudJobData {
-  userId: number;
-  action: string;
-  metadata: Record<string, any>;
-}
-
-// ==================== PRODUCERS ====================
-
-/**
- * Enfileira uma notificação. Fallback síncrono se Redis falhar.
- */
-export async function enqueueNotification(data: NotificationJobData): Promise<boolean> {
-  try {
-    await notificationQueue.add("create-notification", data, {
-      jobId: `notif-${data.userId}-${data.type}-${Date.now()}`,
-    });
-    return true;
-  } catch (err) {
-    log.warn({ err, data }, "Failed to enqueue notification — will be handled by fallback");
-    return false;
-  }
-}
-
-/**
- * Enfileira um email.
- */
-export async function enqueueEmail(data: EmailJobData): Promise<boolean> {
-  try {
-    await emailQueue.add("send-email", data, {
-      jobId: `email-${data.to}-${Date.now()}`,
-    });
-    return true;
-  } catch (err) {
-    log.warn({ err, data: { to: data.to, subject: data.subject } }, "Failed to enqueue email — will be handled by fallback");
-    return false;
-  }
-}
-
-/**
- * Enfileira processamento de webhook de pagamento.
- */
-export async function enqueuePaymentWebhook(data: PaymentWebhookJobData): Promise<boolean> {
-  try {
-    await paymentQueue.add("process-webhook", data, {
-      jobId: `webhook-${data.idempotencyKey}`,
-    });
-    return true;
-  } catch (err) {
-    log.error({ err, data }, "CRITICAL: Failed to enqueue payment webhook");
-    return false;
-  }
-}
-
-/**
- * Enfileira liberação de pagamento.
- */
-export async function enqueuePaymentRelease(data: PaymentReleaseJobData): Promise<boolean> {
-  try {
-    await paymentQueue.add("release-payment", data, {
-      jobId: `release-${data.paymentId}-${Date.now()}`,
-    });
-    return true;
-  } catch (err) {
-    log.error({ err, data }, "Failed to enqueue payment release");
-    return false;
-  }
-}
-
-/**
- * Enfileira reconciliação.
- */
 export async function enqueueReconciliation(data: ReconciliationJobData): Promise<boolean> {
   try {
-    await reconciliationQueue.add("reconcile", data);
+    if (!(await isRedisAvailable())) return false;
+    const { reconciliation } = getQueues();
+    await reconciliation.add(data.type, data);
     return true;
   } catch (err) {
     log.error({ err }, "Failed to enqueue reconciliation");
@@ -544,38 +519,54 @@ export async function enqueueReconciliation(data: ReconciliationJobData): Promis
   }
 }
 
-/**
- * Enfileira verificação anti-fraude.
- */
+// ============== ANTI-FRAUD JOBS ==============
+
+export interface AntiFraudJobData {
+  type: "withdrawal-velocity" | "login-anomaly" | "payment-pattern";
+  userId: number;
+  action: string;
+  metadata: Record<string, any>;
+}
+
 export async function enqueueAntiFraudCheck(data: AntiFraudJobData): Promise<boolean> {
   try {
-    await antiFraudQueue.add("check", data);
+    if (!(await isRedisAvailable())) return false;
+    const { antiFraud } = getQueues();
+    await antiFraud.add(data.type, data);
     return true;
   } catch (err) {
-    log.warn({ err }, "Failed to enqueue anti-fraud check");
+    log.error({ err }, "Failed to enqueue anti-fraud check");
     return false;
   }
 }
 ```
 
-**Step 5: Verificar tipo check**
+**Step 5: Verify Redis connection works**
 
-```bash
-cd backend && npx tsc --noEmit
-```
-
-Expected: Sem erros.
+Run: `cd /home/levybonito/faztudo-main/backend && npx ts-node -e "
+const { getRedisConnection, closeRedisConnection } = require('./src/queues/connection');
+(async () => {
+  const conn = getRedisConnection();
+  const pong = await conn.ping();
+  console.log('Redis:', pong);
+  await closeRedisConnection();
+})();
+"`
+Expected: `Redis: PONG`
 
 **Step 6: Commit**
 
 ```bash
 git add backend/src/queues/ backend/package.json backend/package-lock.json
-git commit -m "feat: add BullMQ queue infrastructure with Redis connection"
+git commit -m "feat: add BullMQ queue infrastructure with Redis connection
+
+Create connection.ts, queues.ts (5 named queues), and producers.ts
+with graceful degradation fallback when Redis is unavailable."
 ```
 
 ---
 
-## Task 4: Criar Workers
+### Task 4: Create Worker Process
 
 **Files:**
 - Create: `backend/src/workers/index.ts`
@@ -584,124 +575,126 @@ git commit -m "feat: add BullMQ queue infrastructure with Redis connection"
 - Create: `backend/src/workers/paymentWorker.ts`
 - Create: `backend/src/workers/reconciliationWorker.ts`
 - Create: `backend/src/workers/antiFraudWorker.ts`
-- Modify: `backend/package.json` (novo script `worker`)
+- Modify: `backend/package.json` (add worker script)
 
-**Step 1: Criar notificationWorker.ts**
+**Step 1: Create notification worker**
 
-Criar `backend/src/workers/notificationWorker.ts`:
+Create `backend/src/workers/notificationWorker.ts`:
 
 ```typescript
 import { Worker, Job } from "bullmq";
-import { redisConnectionOptions } from "../queues/connection";
-import type { NotificationJobData } from "../queues/producers";
+import { getRedisConnection } from "../queues/connection";
 import prisma from "../lib/prisma";
 import { emitToUser } from "../lib/socket";
 import { createLogger } from "../lib/logger";
+import type { NotificationJobData } from "../queues/producers";
 
-const log = createLogger("notificationWorker");
-
-async function processNotification(job: Job<NotificationJobData>): Promise<void> {
-  const { userId, type, title, message, serviceOrderId, metadata } = job.data;
-
-  log.info({ jobId: job.id, userId, type }, "Processing notification");
-
-  // 1. Criar no banco
-  const notification = await prisma.notification.create({
-    data: {
-      type: type as any,
-      title,
-      message,
-      status: "UNREAD",
-      userId,
-      serviceOrderId: serviceOrderId || null,
-      metadata: metadata ?? undefined,
-    },
-  });
-
-  // 2. Emitir via Socket.io (best-effort)
-  try {
-    emitToUser(userId, "notification:new", {
-      id: notification.id,
-      type,
-      title,
-      message,
-      serviceOrderId,
-    });
-  } catch (err) {
-    log.warn({ err, userId }, "Failed to emit socket notification — DB record created");
-  }
-
-  log.info({ jobId: job.id, notificationId: notification.id }, "Notification processed");
-}
+const log = createLogger("worker:notifications");
 
 export function createNotificationWorker(): Worker {
-  const worker = new Worker("notifications", processNotification, {
-    connection: redisConnectionOptions,
-    concurrency: 10,
-  });
+  const connection = getRedisConnection();
+
+  const worker = new Worker<NotificationJobData>(
+    "notifications",
+    async (job: Job<NotificationJobData>) => {
+      const { userId, type, title, message, serviceOrderId, metadata } = job.data;
+
+      log.info({ jobId: job.id, userId, type }, "Processing notification");
+
+      // 1. Create DB record
+      const notification = await prisma.notification.create({
+        data: {
+          type: type as any,
+          title,
+          message,
+          status: "UNREAD",
+          userId,
+          serviceOrderId: serviceOrderId || null,
+          metadata: metadata ?? undefined,
+        },
+      });
+
+      // 2. Real-time Socket.io emission (best-effort)
+      try {
+        emitToUser(userId, "notification:new", {
+          id: notification.id,
+          type,
+          title,
+          message,
+          serviceOrderId,
+        });
+      } catch (err) {
+        log.warn({ err, userId }, "Socket.io emission failed (non-fatal)");
+      }
+
+      log.info({ jobId: job.id, notificationId: notification.id }, "Notification sent");
+      return { notificationId: notification.id };
+    },
+    {
+      connection,
+      concurrency: 10,
+      limiter: { max: 100, duration: 1000 }, // Max 100/sec
+    }
+  );
 
   worker.on("failed", (job, err) => {
     log.error({ jobId: job?.id, err }, "Notification job failed");
   });
 
-  worker.on("completed", (job) => {
-    log.debug({ jobId: job.id }, "Notification job completed");
+  worker.on("error", (err) => {
+    log.error({ err }, "Notification worker error");
   });
 
   return worker;
 }
 ```
 
-**Step 2: Criar emailWorker.ts**
+**Step 2: Create email worker**
 
-Criar `backend/src/workers/emailWorker.ts`:
+Create `backend/src/workers/emailWorker.ts`:
 
 ```typescript
 import { Worker, Job } from "bullmq";
-import { redisConnectionOptions } from "../queues/connection";
-import type { EmailJobData } from "../queues/producers";
-import { sendEmail, sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from "../services/emailService";
+import { getRedisConnection } from "../queues/connection";
+import { sendEmail } from "../services/emailService";
 import { createLogger } from "../lib/logger";
+import type { EmailJobData } from "../queues/producers";
 
-const log = createLogger("emailWorker");
+const log = createLogger("worker:emails");
 
-async function processEmail(job: Job<EmailJobData>): Promise<void> {
-  const { to, subject, html, text, template, templateData } = job.data;
-
-  log.info({ jobId: job.id, to, subject, template }, "Processing email");
-
-  let result;
-
-  if (template && templateData) {
-    switch (template) {
-      case "verification":
-        result = await sendVerificationEmail(to, templateData.name, templateData.verifyUrl);
-        break;
-      case "passwordReset":
-        result = await sendPasswordResetEmail(to, templateData.name, templateData.resetUrl);
-        break;
-      case "welcome":
-        result = await sendWelcomeEmail(to, templateData.name, templateData.loginUrl);
-        break;
-      default:
-        result = await sendEmail({ to, subject, html, text });
-    }
-  } else {
-    result = await sendEmail({ to, subject, html, text });
-  }
-
-  if (!result.success) {
-    throw new Error(`Email failed: ${result.error}`);
-  }
-
-  log.info({ jobId: job.id, messageId: result.messageId }, "Email sent");
-}
+// Custom backoff: 30s, 1m, 5m, 15m, 1h
+const EMAIL_BACKOFF_DELAYS = [30_000, 60_000, 300_000, 900_000, 3_600_000];
 
 export function createEmailWorker(): Worker {
-  const worker = new Worker("emails", processEmail, {
-    connection: redisConnectionOptions,
-    concurrency: 5,
-  });
+  const connection = getRedisConnection();
+
+  const worker = new Worker<EmailJobData>(
+    "emails",
+    async (job: Job<EmailJobData>) => {
+      const { to, subject, html, text } = job.data;
+
+      log.info({ jobId: job.id, to, subject }, "Sending email");
+
+      const result = await sendEmail({ to, subject, html, text });
+
+      if (!result.success) {
+        throw new Error(result.error || "Email send failed");
+      }
+
+      log.info({ jobId: job.id, messageId: result.messageId }, "Email sent");
+      return { messageId: result.messageId };
+    },
+    {
+      connection,
+      concurrency: 5,
+      limiter: { max: 30, duration: 1000 }, // Max 30 emails/sec (SMTP limits)
+      settings: {
+        backoffStrategy: (attemptsMade: number) => {
+          return EMAIL_BACKOFF_DELAYS[attemptsMade - 1] || 3_600_000;
+        },
+      },
+    }
+  );
 
   worker.on("failed", (job, err) => {
     log.error({ jobId: job?.id, err, to: job?.data?.to }, "Email job failed");
@@ -711,122 +704,345 @@ export function createEmailWorker(): Worker {
 }
 ```
 
-**Step 3: Criar paymentWorker.ts (stub — lógica completa no Task 6)**
+**Step 3: Create payment worker**
 
-Criar `backend/src/workers/paymentWorker.ts`:
+Create `backend/src/workers/paymentWorker.ts`:
 
 ```typescript
 import { Worker, Job } from "bullmq";
-import { redisConnectionOptions } from "../queues/connection";
-import type { PaymentWebhookJobData, PaymentReleaseJobData } from "../queues/producers";
+import { getRedisConnection } from "../queues/connection";
+import prisma from "../lib/prisma";
+import { getMPPaymentStatus } from "../services/mercadopagoService";
+import { releasePaymentFromEscrow } from "../services/escrowService";
+import { enqueueNotification } from "../queues/producers";
 import { createLogger } from "../lib/logger";
+import type { PaymentWebhookJobData, EscrowReleaseJobData } from "../queues/producers";
 
-const log = createLogger("paymentWorker");
+const log = createLogger("worker:payments");
 
-async function processPaymentJob(job: Job): Promise<void> {
-  switch (job.name) {
-    case "process-webhook":
-      await processWebhook(job as Job<PaymentWebhookJobData>);
-      break;
-    case "release-payment":
-      await processRelease(job as Job<PaymentReleaseJobData>);
-      break;
-    case "auto-release-check":
-      await processAutoReleaseCheck();
-      break;
-    case "check-expired-orders":
-      await processExpiredOrdersCheck();
-      break;
-    case "send-deadline-warnings":
-      await processDeadlineWarnings();
-      break;
-    default:
-      log.warn({ jobName: job.name }, "Unknown payment job type");
+async function processWebhook(job: Job<PaymentWebhookJobData>) {
+  const { mpPaymentId, idempotencyKey, externalReference } = job.data;
+
+  log.info({ jobId: job.id, mpPaymentId }, "Processing payment webhook");
+
+  // 1. Check idempotency in DB (PaymentEvent unique constraint)
+  const existing = await prisma.paymentEvent.findUnique({
+    where: { idempotencyKey },
+  });
+
+  if (existing) {
+    log.info({ jobId: job.id, idempotencyKey }, "Duplicate webhook — skipping");
+    return { skipped: true, reason: "duplicate" };
   }
+
+  // 2. Fetch fresh status from MercadoPago
+  const mpStatus = await getMPPaymentStatus(mpPaymentId);
+
+  // 3. Find local payment
+  let payment = await prisma.payment.findFirst({
+    where: { transactionId: mpPaymentId },
+    include: {
+      serviceOrder: { include: { professional: true, client: true } },
+    },
+  });
+
+  if (!payment) {
+    // Try by external reference: format "order-{orderId}-{timestamp}"
+    const match = externalReference?.match(/^order-(\d+)/);
+    if (match) {
+      payment = await prisma.payment.findFirst({
+        where: { serviceOrderId: parseInt(match[1], 10) },
+        include: {
+          serviceOrder: { include: { professional: true, client: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }
+  }
+
+  if (!payment) {
+    log.warn({ mpPaymentId, externalReference }, "Payment not found locally");
+    return { skipped: true, reason: "payment_not_found" };
+  }
+
+  // 4. Process based on status
+  if (mpStatus.status === "approved" && payment.status === "PENDING") {
+    const now = new Date();
+    const holdDays = parseInt(process.env.DEFAULT_ESCROW_HOLD_DAYS || "0", 10);
+    const heldUntil = new Date(now);
+    heldUntil.setDate(heldUntil.getDate() + holdDays);
+
+    await prisma.$transaction([
+      // Create payment event
+      prisma.paymentEvent.create({
+        data: {
+          paymentId: payment.id,
+          eventType: "HELD",
+          previousStatus: "PENDING",
+          newStatus: "HELD",
+          idempotencyKey,
+          amount: payment.amount,
+          metadata: { mpStatus: mpStatus.status, mpStatusDetail: mpStatus.statusDetail },
+          source: "WEBHOOK",
+        },
+      }),
+      // Update payment status
+      prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: "HELD",
+          transactionId: mpPaymentId,
+          paidAt: now,
+          heldUntil,
+        },
+      }),
+      // Update order status
+      prisma.serviceOrder.update({
+        where: { id: payment.serviceOrderId },
+        data: { status: "IN_PROGRESS" },
+      }),
+      // Create transaction record
+      prisma.transaction.create({
+        data: {
+          type: "PAYMENT",
+          amount: payment.amount,
+          description: `Payment confirmed for order #${payment.serviceOrderId}`,
+          balanceBefore: payment.serviceOrder.client?.balance || 0,
+          balanceAfter: payment.serviceOrder.client?.balance || 0,
+          userId: payment.clientId,
+          paymentId: payment.id,
+        },
+      }),
+    ]);
+
+    // Notify professional
+    if (payment.professionalId) {
+      await enqueueNotification({
+        userId: payment.professionalId,
+        type: "PAYMENT_RECEIVED",
+        title: "Pagamento confirmado",
+        message: `Pagamento de R$${payment.amount.toFixed(2)} recebido para "${payment.serviceOrder.title}"`,
+        serviceOrderId: payment.serviceOrderId,
+        metadata: { amount: payment.amount, mpPaymentId },
+      });
+    }
+
+    log.info({ paymentId: payment.id, mpPaymentId }, "Payment approved and held in escrow");
+  } else if (
+    (mpStatus.status === "rejected" || mpStatus.status === "cancelled") &&
+    payment.status === "PENDING"
+  ) {
+    await prisma.$transaction([
+      prisma.paymentEvent.create({
+        data: {
+          paymentId: payment.id,
+          eventType: "FAILED",
+          previousStatus: "PENDING",
+          newStatus: "FAILED",
+          idempotencyKey,
+          metadata: { mpStatus: mpStatus.status, reason: mpStatus.statusDetail },
+          source: "WEBHOOK",
+        },
+      }),
+      prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: "FAILED" },
+      }),
+    ]);
+
+    // Notify client
+    await enqueueNotification({
+      userId: payment.clientId,
+      type: "SYSTEM_ALERT",
+      title: "Pagamento não aprovado",
+      message: `O pagamento para "${payment.serviceOrder.title}" não foi aprovado.`,
+      serviceOrderId: payment.serviceOrderId,
+    });
+
+    log.info({ paymentId: payment.id, reason: mpStatus.statusDetail }, "Payment rejected/cancelled");
+  }
+
+  return { processed: true, paymentId: payment.id, mpStatus: mpStatus.status };
 }
 
-async function processWebhook(job: Job<PaymentWebhookJobData>): Promise<void> {
-  // Implementado no Task 6 (Payment Event Store)
-  log.info({ jobId: job.id, mpPaymentId: job.data.mpPaymentId }, "Processing webhook — stub");
-}
+async function processEscrowRelease(job: Job<EscrowReleaseJobData>) {
+  const { paymentId, forcedByAdmin, actorId } = job.data;
 
-async function processRelease(job: Job<PaymentReleaseJobData>): Promise<void> {
-  const { releasePaymentFromEscrow } = await import("../services/escrowService");
-  const result = await releasePaymentFromEscrow(job.data.paymentId, job.data.forcedByAdmin);
+  log.info({ jobId: job.id, paymentId }, "Processing escrow release");
+
+  const result = await releasePaymentFromEscrow(paymentId, forcedByAdmin);
+
   if (!result.success) {
-    throw new Error(`Release failed: ${result.error}`);
+    log.warn({ paymentId, error: result.error }, "Escrow release failed");
+    throw new Error(result.error || "Release failed");
   }
-  log.info({ jobId: job.id, paymentId: job.data.paymentId }, "Payment released from escrow");
-}
 
-async function processAutoReleaseCheck(): Promise<void> {
-  const { checkAutoReleasablePayments } = await import("../services/escrowService");
-  const count = await checkAutoReleasablePayments();
-  if (count > 0) {
-    log.info({ count }, "Auto-released payments from escrow");
-  }
-}
-
-async function processExpiredOrdersCheck(): Promise<void> {
-  const { checkExpiredOrders } = await import("../services/escrowService");
-  const count = await checkExpiredOrders();
-  if (count > 0) {
-    log.info({ count }, "Marked orders as expired");
-  }
-}
-
-async function processDeadlineWarnings(): Promise<void> {
-  const { sendDeadlineWarnings } = await import("../services/escrowService");
-  const count = await sendDeadlineWarnings(1);
-  if (count > 0) {
-    log.info({ count }, "Sent deadline warnings");
-  }
+  log.info({ paymentId, professionalAmount: result.professionalAmount }, "Escrow released");
+  return result;
 }
 
 export function createPaymentWorker(): Worker {
-  const worker = new Worker("payments", processPaymentJob, {
-    connection: redisConnectionOptions,
-    concurrency: 5,
-  });
+  const connection = getRedisConnection();
+
+  const worker = new Worker(
+    "payments",
+    async (job: Job) => {
+      switch (job.name) {
+        case "process-webhook":
+          return processWebhook(job as Job<PaymentWebhookJobData>);
+        case "release-escrow":
+          return processEscrowRelease(job as Job<EscrowReleaseJobData>);
+        default:
+          log.warn({ jobName: job.name }, "Unknown payment job type");
+      }
+    },
+    {
+      connection,
+      concurrency: 3, // Low concurrency for financial operations
+    }
+  );
 
   worker.on("failed", (job, err) => {
     log.error({ jobId: job?.id, jobName: job?.name, err }, "Payment job failed");
+    // TODO: Alert admins on DLQ
   });
 
   return worker;
 }
 ```
 
-**Step 4: Criar reconciliationWorker.ts (stub — lógica completa no Task 7)**
+**Step 4: Create reconciliation worker**
 
-Criar `backend/src/workers/reconciliationWorker.ts`:
+Create `backend/src/workers/reconciliationWorker.ts`:
 
 ```typescript
 import { Worker, Job } from "bullmq";
-import { redisConnectionOptions } from "../queues/connection";
-import type { ReconciliationJobData } from "../queues/producers";
+import { getRedisConnection } from "../queues/connection";
+import prisma from "../lib/prisma";
+import { getMPPaymentStatus } from "../services/mercadopagoService";
+import { checkAutoReleasablePayments, checkExpiredOrders, sendDeadlineWarnings } from "../services/escrowService";
+import { enqueueNotification } from "../queues/producers";
 import { createLogger } from "../lib/logger";
+import type { ReconciliationJobData } from "../queues/producers";
 
-const log = createLogger("reconciliationWorker");
+const log = createLogger("worker:reconciliation");
 
-async function processReconciliation(job: Job<ReconciliationJobData>): Promise<void> {
-  log.info({ jobId: job.id, type: job.data.type }, "Starting reconciliation");
+async function dailyMPReconciliation() {
+  log.info("Starting daily MercadoPago reconciliation");
 
-  // Implementado no Task 7
-  // 1. Buscar todos os Payment com status HELD ou PENDING > 24h
-  // 2. Para cada um, consultar API do MercadoPago
-  // 3. Comparar status local vs remoto
-  // 4. Se divergência, criar PaymentEvent RECONCILED e corrigir
-  // 5. Gerar relatório e alertar admins
+  const cutoff = new Date();
+  cutoff.setHours(cutoff.getHours() - 24);
 
-  log.info({ jobId: job.id }, "Reconciliation complete — stub");
+  // Find payments that are HELD or PENDING and older than 24h
+  const payments = await prisma.payment.findMany({
+    where: {
+      status: { in: ["HELD", "PENDING"] },
+      createdAt: { lt: cutoff },
+      transactionId: { not: null },
+    },
+    take: 100, // Process in batches
+  });
+
+  let synced = 0;
+  let divergent = 0;
+  let errors = 0;
+
+  for (const payment of payments) {
+    try {
+      const mpStatus = await getMPPaymentStatus(payment.transactionId!);
+
+      const statusMap: Record<string, string> = {
+        approved: "HELD",
+        pending: "PENDING",
+        rejected: "FAILED",
+        cancelled: "FAILED",
+        refunded: "REFUNDED",
+      };
+
+      const expectedLocalStatus = statusMap[mpStatus.status] || payment.status;
+
+      if (payment.status !== expectedLocalStatus) {
+        divergent++;
+
+        // Log divergence and create event
+        log.warn({
+          paymentId: payment.id,
+          localStatus: payment.status,
+          mpStatus: mpStatus.status,
+          expectedLocalStatus,
+        }, "Payment status divergence found");
+
+        await prisma.paymentEvent.create({
+          data: {
+            paymentId: payment.id,
+            eventType: "RECONCILED",
+            previousStatus: payment.status as any,
+            newStatus: expectedLocalStatus as any,
+            idempotencyKey: `reconciliation:${payment.id}:${new Date().toISOString().split("T")[0]}`,
+            metadata: { mpStatus: mpStatus.status, localStatus: payment.status },
+            source: "SCHEDULER",
+          },
+        });
+
+        // Update local status
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: { status: expectedLocalStatus as any },
+        });
+      } else {
+        synced++;
+      }
+    } catch (err) {
+      errors++;
+      log.error({ err, paymentId: payment.id }, "Reconciliation error for payment");
+    }
+  }
+
+  const report = { total: payments.length, synced, divergent, errors };
+  log.info(report, "Reconciliation complete");
+
+  // Alert admins if divergences found
+  if (divergent > 0) {
+    const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+    for (const admin of admins) {
+      await enqueueNotification({
+        userId: admin.id,
+        type: "SYSTEM_ALERT",
+        title: "Reconciliacao: divergencias encontradas",
+        message: `Reconciliacao diaria encontrou ${divergent} divergencia(s) entre pagamentos locais e MercadoPago. ${errors} erro(s).`,
+        metadata: report,
+      });
+    }
+  }
+
+  return report;
 }
 
 export function createReconciliationWorker(): Worker {
-  const worker = new Worker("reconciliation", processReconciliation, {
-    connection: redisConnectionOptions,
-    concurrency: 1, // Serial — apenas um job de reconciliação por vez
-  });
+  const connection = getRedisConnection();
+
+  const worker = new Worker<ReconciliationJobData>(
+    "reconciliation",
+    async (job: Job<ReconciliationJobData>) => {
+      switch (job.data.type) {
+        case "daily-mp-reconciliation":
+          return dailyMPReconciliation();
+        case "cleanup-notifications":
+          // Archive old read notifications
+          const archived = await prisma.notification.updateMany({
+            where: {
+              status: "READ",
+              createdAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+            },
+            data: { status: "ARCHIVED" },
+          });
+          return { archived: archived.count };
+        default:
+          log.warn({ type: job.data.type }, "Unknown reconciliation job type");
+      }
+    },
+    { connection, concurrency: 1 }
+  );
 
   worker.on("failed", (job, err) => {
     log.error({ jobId: job?.id, err }, "Reconciliation job failed");
@@ -836,39 +1052,25 @@ export function createReconciliationWorker(): Worker {
 }
 ```
 
-**Step 5: Criar antiFraudWorker.ts**
+**Step 5: Create anti-fraud worker**
 
-Criar `backend/src/workers/antiFraudWorker.ts`:
+Create `backend/src/workers/antiFraudWorker.ts`:
 
 ```typescript
 import { Worker, Job } from "bullmq";
-import { redisConnectionOptions } from "../queues/connection";
-import type { AntiFraudJobData } from "../queues/producers";
+import { getRedisConnection } from "../queues/connection";
 import prisma from "../lib/prisma";
+import { enqueueNotification } from "../queues/producers";
 import { createLogger } from "../lib/logger";
+import type { AntiFraudJobData } from "../queues/producers";
 
-const log = createLogger("antiFraudWorker");
+const log = createLogger("worker:antiFraud");
 
-async function processAntiFraud(job: Job<AntiFraudJobData>): Promise<void> {
-  const { userId, action, metadata } = job.data;
+async function checkWithdrawalVelocity(data: AntiFraudJobData) {
+  const { userId } = data;
 
-  log.info({ jobId: job.id, userId, action }, "Processing anti-fraud check");
-
-  switch (action) {
-    case "withdrawal-velocity":
-      await checkWithdrawalVelocity(userId);
-      break;
-    case "login-anomaly":
-      await checkLoginAnomaly(userId, metadata);
-      break;
-    default:
-      log.debug({ action }, "Unknown anti-fraud action — skipping");
-  }
-}
-
-async function checkWithdrawalVelocity(userId: number): Promise<void> {
+  // Check number of withdrawals in last 24h
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
   const recentWithdrawals = await prisma.transaction.count({
     where: {
       userId,
@@ -878,36 +1080,39 @@ async function checkWithdrawalVelocity(userId: number): Promise<void> {
   });
 
   if (recentWithdrawals >= 5) {
-    log.warn({ userId, recentWithdrawals }, "ALERT: Excessive withdrawal velocity");
-    // Criar notificação para admins
-    const admins = await prisma.user.findMany({
-      where: { role: "ADMIN" },
-      select: { id: true },
-    });
+    log.warn({ userId, count: recentWithdrawals }, "High withdrawal velocity detected");
+
+    // Alert admins
+    const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
     for (const admin of admins) {
-      await prisma.notification.create({
-        data: {
-          userId: admin.id,
-          type: "SYSTEM_ALERT",
-          title: "Alerta Anti-Fraude",
-          message: `Usuário #${userId} fez ${recentWithdrawals} saques nas últimas 24h.`,
-          metadata: { alertType: "withdrawal-velocity", targetUserId: userId },
-        },
+      await enqueueNotification({
+        userId: admin.id,
+        type: "SYSTEM_ALERT",
+        title: "Alerta anti-fraude: saques frequentes",
+        message: `Usuario #${userId} realizou ${recentWithdrawals} saques nas ultimas 24h.`,
+        metadata: { suspectUserId: userId, withdrawalCount: recentWithdrawals },
       });
     }
   }
-}
 
-async function checkLoginAnomaly(userId: number, metadata: Record<string, any>): Promise<void> {
-  // Verificação básica de anomalia de login
-  log.debug({ userId, ip: metadata.ip }, "Login anomaly check — basic implementation");
+  return { userId, recentWithdrawals, flagged: recentWithdrawals >= 5 };
 }
 
 export function createAntiFraudWorker(): Worker {
-  const worker = new Worker("anti-fraud", processAntiFraud, {
-    connection: redisConnectionOptions,
-    concurrency: 3,
-  });
+  const connection = getRedisConnection();
+
+  const worker = new Worker<AntiFraudJobData>(
+    "anti-fraud",
+    async (job: Job<AntiFraudJobData>) => {
+      switch (job.data.type) {
+        case "withdrawal-velocity":
+          return checkWithdrawalVelocity(job.data);
+        default:
+          log.info({ type: job.data.type }, "Anti-fraud check type not yet implemented");
+      }
+    },
+    { connection, concurrency: 5 }
+  );
 
   worker.on("failed", (job, err) => {
     log.error({ jobId: job?.id, err }, "Anti-fraud job failed");
@@ -917,244 +1122,227 @@ export function createAntiFraudWorker(): Worker {
 }
 ```
 
-**Step 6: Criar worker entry point (index.ts)**
+**Step 6: Create worker entry point**
 
-Criar `backend/src/workers/index.ts`:
+Create `backend/src/workers/index.ts`:
 
 ```typescript
 import "dotenv/config";
+import { createLogger } from "../lib/logger";
+import { closeRedisConnection } from "../queues/connection";
 import { createNotificationWorker } from "./notificationWorker";
 import { createEmailWorker } from "./emailWorker";
 import { createPaymentWorker } from "./paymentWorker";
 import { createReconciliationWorker } from "./reconciliationWorker";
 import { createAntiFraudWorker } from "./antiFraudWorker";
-import { createLogger } from "../lib/logger";
 import prisma from "../lib/prisma";
 
-const log = createLogger("worker-main");
+const log = createLogger("worker:main");
 
-log.info("Starting BullMQ workers...");
+async function main() {
+  log.info("Starting worker process...");
 
-const workers = [
-  createNotificationWorker(),
-  createEmailWorker(),
-  createPaymentWorker(),
-  createReconciliationWorker(),
-  createAntiFraudWorker(),
-];
+  const workers = [
+    createNotificationWorker(),
+    createEmailWorker(),
+    createPaymentWorker(),
+    createReconciliationWorker(),
+    createAntiFraudWorker(),
+  ];
 
-log.info(
-  { workerCount: workers.length },
-  "Workers started: notifications, emails, payments, reconciliation, anti-fraud",
-);
+  log.info({ workerCount: workers.length }, "All workers started");
 
-// Graceful shutdown
-async function shutdown(signal: string): Promise<void> {
-  log.info({ signal }, "Shutting down workers...");
-  await Promise.all(workers.map((w) => w.close()));
-  await prisma.$disconnect();
-  log.info("All workers shut down");
-  process.exit(0);
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    log.info({ signal }, "Worker shutting down...");
+    await Promise.all(workers.map((w) => w.close()));
+    await closeRedisConnection();
+    await prisma.$disconnect();
+    log.info("Worker shutdown complete");
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("uncaughtException", (err) => {
+    log.fatal({ err }, "Worker uncaught exception");
+    shutdown("UNCAUGHT_EXCEPTION");
+  });
 }
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("uncaughtException", (err) => {
-  log.fatal({ err }, "Uncaught exception in worker");
-  shutdown("UNCAUGHT_EXCEPTION");
+main().catch((err) => {
+  log.fatal({ err }, "Worker failed to start");
+  process.exit(1);
 });
 ```
 
-**Step 7: Adicionar script worker ao package.json**
+**Step 7: Add worker script to package.json**
 
-No `backend/package.json`, adicionar ao bloco `"scripts"`:
+In `backend/package.json`, add to `scripts`:
 ```json
-"worker": "ts-node src/workers/index.ts"
+"worker": "ts-node src/workers/index.ts",
+"scheduler": "ts-node src/scheduler/index.ts"
 ```
 
-**Step 8: Verificar tipo check**
-
-```bash
-cd backend && npx tsc --noEmit
-```
-
-**Step 9: Commit**
+**Step 8: Commit**
 
 ```bash
 git add backend/src/workers/ backend/package.json
-git commit -m "feat: add BullMQ workers for notifications, emails, payments, reconciliation, anti-fraud"
+git commit -m "feat: add BullMQ worker process with 5 specialized workers
+
+Workers: notifications, emails, payments, reconciliation, anti-fraud.
+Graceful shutdown support. Concurrency limits per queue type."
 ```
 
 ---
 
-## Task 5: Migrar Scheduler de node-cron para BullMQ
+### Task 5: Create Scheduler Process and Migrate from node-cron
 
 **Files:**
 - Create: `backend/src/scheduler/index.ts`
-- Modify: `backend/src/index.ts` (remover node-cron, adicionar shutdown de filas)
-- Modify: `backend/package.json` (novo script `scheduler`)
+- Modify: `backend/src/index.ts` (remove node-cron startup)
 
-**Step 1: Criar scheduler/index.ts**
+**Step 1: Create scheduler entry point**
 
-Criar `backend/src/scheduler/index.ts`:
+Create `backend/src/scheduler/index.ts`:
 
 ```typescript
 import "dotenv/config";
-import { paymentQueue, notificationQueue, reconciliationQueue } from "../queues/queues";
+import { getQueues, closeQueues } from "../queues/queues";
+import { closeRedisConnection } from "../queues/connection";
 import { createLogger } from "../lib/logger";
 
 const log = createLogger("scheduler");
 
-async function registerRepeatableJobs(): Promise<void> {
-  log.info("Registering repeatable jobs...");
+async function main() {
+  log.info("Starting scheduler process...");
 
-  // Auto-release escrow — hourly
-  await paymentQueue.add(
-    "auto-release-check",
-    {},
-    { repeat: { pattern: "0 * * * *" }, jobId: "repeat:auto-release" },
+  const queues = getQueues();
+
+  // ============================================
+  // RECURRING JOBS (replaces node-cron in scheduler.ts)
+  // ============================================
+
+  // Every hour: auto-release eligible escrow payments
+  await queues.payments.add(
+    "auto-release-escrow",
+    { type: "auto-release" },
+    {
+      repeat: { pattern: "0 * * * *" },
+      jobId: "scheduled:auto-release",
+    }
   );
 
-  // Check expired orders — every 6 hours
-  await paymentQueue.add(
+  // Every 6 hours: check for expired orders
+  await queues.notifications.add(
     "check-expired-orders",
-    {},
-    { repeat: { pattern: "0 */6 * * *" }, jobId: "repeat:expired-orders" },
+    { type: "SYSTEM_ALERT", title: "expired-orders-check", message: "", userId: 0 },
+    {
+      repeat: { pattern: "0 */6 * * *" },
+      jobId: "scheduled:expired-orders",
+    }
   );
 
-  // Deadline warnings — every 12 hours
-  await paymentQueue.add(
+  // Every 12 hours: send deadline warnings
+  await queues.notifications.add(
     "send-deadline-warnings",
-    {},
-    { repeat: { pattern: "0 */12 * * *" }, jobId: "repeat:deadline-warnings" },
+    { type: "DEADLINE_WARNING", title: "deadline-warnings", message: "", userId: 0 },
+    {
+      repeat: { pattern: "0 */12 * * *" },
+      jobId: "scheduled:deadline-warnings",
+    }
   );
 
-  // Late professionals check — every minute
-  await notificationQueue.add(
+  // Every minute: check for late professionals
+  await queues.notifications.add(
     "check-late-professionals",
-    {},
-    { repeat: { pattern: "* * * * *" }, jobId: "repeat:late-professionals" },
+    { type: "DEADLINE_WARNING", title: "late-professionals-check", message: "", userId: 0 },
+    {
+      repeat: { pattern: "* * * * *" },
+      jobId: "scheduled:late-professionals",
+    }
   );
 
-  // Daily reconciliation with MercadoPago — 3AM
-  await reconciliationQueue.add(
-    "reconcile",
-    { type: "daily" },
-    { repeat: { pattern: "0 3 * * *" }, jobId: "repeat:reconciliation" },
+  // Daily at 3 AM: MercadoPago reconciliation
+  await queues.reconciliation.add(
+    "daily-mp-reconciliation",
+    { type: "daily-mp-reconciliation" },
+    {
+      repeat: { pattern: "0 3 * * *" },
+      jobId: "scheduled:mp-reconciliation",
+    }
   );
 
-  // Cleanup old archived notifications — Sunday 4AM
-  await notificationQueue.add(
-    "cleanup-old-notifications",
-    {},
-    { repeat: { pattern: "0 4 * * 0" }, jobId: "repeat:cleanup-notifications" },
+  // Weekly Sunday 4 AM: cleanup old notifications
+  await queues.reconciliation.add(
+    "cleanup-notifications",
+    { type: "cleanup-notifications" },
+    {
+      repeat: { pattern: "0 4 * * 0" },
+      jobId: "scheduled:cleanup-notifications",
+    }
   );
 
-  log.info("All repeatable jobs registered successfully");
+  log.info("All recurring jobs registered");
+
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    log.info({ signal }, "Scheduler shutting down...");
+    await closeQueues();
+    await closeRedisConnection();
+    log.info("Scheduler shutdown complete");
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+
+  // Keep process alive
+  log.info("Scheduler running. Press Ctrl+C to stop.");
 }
 
-registerRepeatableJobs()
-  .then(() => {
-    log.info("Scheduler started — repeatable jobs registered in Redis");
-    // Scheduler can exit after registering — BullMQ persists repeat config in Redis
-    // Or keep alive for monitoring:
-    log.info("Scheduler process staying alive for monitoring...");
-  })
-  .catch((err) => {
-    log.fatal({ err }, "Failed to register repeatable jobs");
-    process.exit(1);
-  });
-
-// Graceful shutdown
-process.on("SIGTERM", async () => {
-  log.info("Scheduler shutting down...");
-  process.exit(0);
-});
-process.on("SIGINT", async () => {
-  log.info("Scheduler shutting down...");
-  process.exit(0);
+main().catch((err) => {
+  log.fatal({ err }, "Scheduler failed to start");
+  process.exit(1);
 });
 ```
 
-**Step 2: Atualizar index.ts para remover node-cron**
+**Step 2: Update index.ts — remove node-cron startup, add Redis health check**
 
-No `backend/src/index.ts`:
+In `backend/src/index.ts`:
 
-1. Remover imports:
-   - `import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";`
-   - `import { scheduleDailySalaries, stopSalaryCron } from "./services/companyCronService";`
+- Remove import: `import { startScheduledTasks, stopScheduledTasks } from "./lib/scheduler";`
+- Remove import: `import { scheduleDailySalaries, stopSalaryCron } from "./services/companyCronService";`
+- In `gracefulShutdown`: remove `stopScheduledTasks()` and `stopSalaryCron()` calls
+- In `server = httpServer.listen(...)` callback: remove `startScheduledTasks()` and `scheduleDailySalaries()` calls
+- Add to graceful shutdown: `await closeQueues(); await closeRedisConnection();` (import from queues)
+- Update `/health` endpoint to include Redis status
 
-2. Adicionar imports:
-   - `import { closeAllQueues } from "./queues/queues";`
-   - `import { closeRedisClient } from "./queues/connection";`
-
-3. No `gracefulShutdown`, substituir `stopScheduledTasks()` e `stopSalaryCron()` por:
-   ```typescript
-   await closeAllQueues();
-   await closeRedisClient();
-   ```
-
-4. No callback de `httpServer.listen()`, remover:
-   - `startScheduledTasks();`
-   - `scheduleDailySalaries();`
-
-**Step 3: Adicionar script scheduler ao package.json**
-
-No `backend/package.json`, adicionar ao bloco `"scripts"`:
-```json
-"scheduler": "ts-node src/scheduler/index.ts"
-```
-
-**Step 4: Rodar testes**
+**Step 3: Commit**
 
 ```bash
-cd backend && npm test
-```
+git add backend/src/scheduler/ backend/src/index.ts
+git commit -m "feat: add BullMQ scheduler process, decouple cron from API
 
-**Step 5: Commit**
-
-```bash
-git add backend/src/scheduler/ backend/src/index.ts backend/package.json
-git commit -m "feat: migrate from node-cron to BullMQ scheduler with repeatable jobs"
+Migrate all node-cron scheduled tasks to BullMQ repeat jobs.
+Remove startScheduledTasks/scheduleDailySalaries from API server.
+Scheduler now runs as independent process."
 ```
 
 ---
 
-## Task 6: Payment Event Store, State Machine e Idempotência
+## Phase 3: Payment Event Store & Idempotency
+
+### Task 6: Add PaymentEvent and AuditLog models to Prisma
 
 **Files:**
-- Modify: `backend/prisma/schema.prisma` (adicionar PaymentEvent, enums)
-- Create: `backend/src/lib/paymentStateMachine.ts`
-- Modify: `backend/src/workers/paymentWorker.ts` (implementar webhook processing)
-- Modify: `backend/src/controllers/service/paymentController.ts` (webhook idempotente)
-- Modify: `backend/src/config/env.ts` (REDIS_URL)
+- Modify: `backend/prisma/schema.prisma`
 
-**Step 1: Adicionar modelos ao schema.prisma**
+**Step 1: Add new enums and models**
 
-No final do `backend/prisma/schema.prisma`, adicionar:
+Add to `backend/prisma/schema.prisma` (after existing enums):
 
 ```prisma
-// ==================== PAYMENT EVENT STORE ====================
-
-model PaymentEvent {
-  id              Int              @id @default(autoincrement())
-  paymentId       Int
-  payment         Payment          @relation(fields: [paymentId], references: [id])
-  eventType       PaymentEventType
-  previousStatus  String?
-  newStatus       String
-  idempotencyKey  String           @unique
-  amount          Float?
-  metadata        Json?
-  source          EventSource
-  actorId         Int?
-  ipAddress       String?
-  createdAt       DateTime         @default(now())
-
-  @@index([paymentId, createdAt])
-  @@index([eventType, createdAt])
-}
-
 enum PaymentEventType {
   CREATED
   HELD
@@ -1177,398 +1365,43 @@ enum EventSource {
 }
 ```
 
-Também adicionar relação no model `Payment` existente:
-```prisma
-// Dentro do model Payment, adicionar:
-events PaymentEvent[]
-```
-
-Aplicar:
-```bash
-cd backend && npx prisma db push && npx prisma generate
-```
-
-**Step 2: Criar paymentStateMachine.ts**
-
-Criar `backend/src/lib/paymentStateMachine.ts`:
-
-```typescript
-import prisma from "./prisma";
-import { getRedisClient } from "../queues/connection";
-import { createLogger } from "./logger";
-
-const log = createLogger("paymentStateMachine");
-
-// Transições válidas: status atual → [status permitidos]
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  PENDING: ["HELD", "FAILED"],
-  HELD: ["RELEASED", "REFUNDED", "PARTIALLY_REFUNDED", "DISPUTED"],
-  DISPUTED: ["RELEASED", "REFUNDED"],
-};
-
-interface TransitionParams {
-  paymentId: number;
-  newStatus: string;
-  eventType: string;
-  source: "WEBHOOK" | "INTERNAL" | "ADMIN" | "SCHEDULER";
-  idempotencyKey: string;
-  amount?: number;
-  metadata?: Record<string, any>;
-  actorId?: number;
-  ipAddress?: string;
-}
-
-interface TransitionResult {
-  success: boolean;
-  duplicate?: boolean;
-  error?: string;
-  event?: any;
-}
-
-/**
- * Transiciona um pagamento para novo status com event store.
- * Garante idempotência via Redis (5min) + DB UNIQUE constraint.
- */
-export async function transitionPaymentStatus(params: TransitionParams): Promise<TransitionResult> {
-  const { paymentId, newStatus, eventType, source, idempotencyKey, amount, metadata, actorId, ipAddress } = params;
-
-  // 1. Redis dedup (camada rápida, TTL 5min)
-  try {
-    const redis = getRedisClient();
-    const redisKey = `dedup:payment:${idempotencyKey}`;
-    const exists = await redis.set(redisKey, "1", "EX", 300, "NX"); // SET NX = only if not exists
-    if (!exists) {
-      log.info({ idempotencyKey }, "Duplicate payment event rejected (Redis)");
-      return { success: true, duplicate: true };
-    }
-  } catch (err) {
-    // Redis down — continue com DB check
-    log.warn({ err }, "Redis dedup unavailable — falling back to DB only");
-  }
-
-  // 2. Buscar pagamento atual
-  const payment = await prisma.payment.findUnique({
-    where: { id: paymentId },
-    select: { id: true, status: true },
-  });
-
-  if (!payment) {
-    return { success: false, error: `Payment ${paymentId} not found` };
-  }
-
-  // 3. Validar transição
-  const currentStatus = payment.status;
-  const allowedTransitions = VALID_TRANSITIONS[currentStatus] || [];
-
-  if (!allowedTransitions.includes(newStatus)) {
-    log.warn(
-      { paymentId, currentStatus, newStatus },
-      "Invalid payment status transition",
-    );
-    return {
-      success: false,
-      error: `Cannot transition from ${currentStatus} to ${newStatus}`,
-    };
-  }
-
-  // 4. Transação atômica: criar evento + atualizar status
-  try {
-    const [event] = await prisma.$transaction([
-      prisma.paymentEvent.create({
-        data: {
-          paymentId,
-          eventType: eventType as any,
-          previousStatus: currentStatus,
-          newStatus,
-          idempotencyKey,
-          amount,
-          metadata: metadata ?? undefined,
-          source: source as any,
-          actorId,
-          ipAddress,
-        },
-      }),
-      prisma.payment.update({
-        where: { id: paymentId },
-        data: { status: newStatus as any },
-      }),
-    ]);
-
-    log.info(
-      { paymentId, from: currentStatus, to: newStatus, eventId: event.id },
-      "Payment status transitioned",
-    );
-
-    return { success: true, event };
-  } catch (err: any) {
-    // UNIQUE constraint violation = duplicate
-    if (err.code === "P2002" && err.meta?.target?.includes("idempotencyKey")) {
-      log.info({ idempotencyKey }, "Duplicate payment event rejected (DB)");
-      return { success: true, duplicate: true };
-    }
-    throw err;
-  }
-}
-
-/**
- * Busca histórico de eventos de um pagamento.
- */
-export async function getPaymentEventHistory(paymentId: number) {
-  return prisma.paymentEvent.findMany({
-    where: { paymentId },
-    orderBy: { createdAt: "asc" },
-  });
-}
-```
-
-**Step 3: Atualizar env.ts com REDIS_URL**
-
-No `backend/src/config/env.ts`, adicionar ao interface `EnvConfig`:
-```typescript
-REDIS_URL: string;
-```
-
-E no `getEnvConfig()`:
-```typescript
-REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
-```
-
-**Step 4: Atualizar paymentController.ts — webhook idempotente**
-
-No `backend/src/controllers/service/paymentController.ts`, reescrever a função `mercadoPagoWebhook` para:
-1. Validar assinatura
-2. Gerar idempotencyKey
-3. Retornar 200 imediatamente
-4. Enfileirar job no paymentQueue
-
-Substituir a função `mercadoPagoWebhook` (atualmente linhas ~549-749):
-
-```typescript
-export const mercadoPagoWebhook = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
-  const ip = req.ip || req.socket?.remoteAddress || "unknown";
-
-  try {
-    // 1. Validar assinatura HMAC
-    const validation = validateMercadoPagoSignature({
-      xSignature: req.headers["x-signature"] as string,
-      xRequestId: req.headers["x-request-id"] as string,
-      dataId: req.query["data.id"] as string,
-      secret: env.MP_WEBHOOK_SECRET,
-    });
-
-    if (!validation.valid) {
-      log.warn({ reason: validation.reason, ip }, "Webhook signature invalid");
-      res.status(200).json({ received: false });
-      return;
-    }
-
-    // 2. Extrair dados
-    const { type, data, action } = req.body;
-    const mpPaymentId = data?.id || req.query["data.id"];
-
-    if (!mpPaymentId) {
-      log.warn({ body: req.body }, "Webhook missing payment ID");
-      res.status(200).json({ received: true });
-      return;
-    }
-
-    // Filtrar — só processar eventos de payment
-    if (type !== "payment" && !action?.startsWith("payment.")) {
-      log.debug({ type, action }, "Webhook ignored — not a payment event");
-      res.status(200).json({ received: true });
-      return;
-    }
-
-    // 3. Gerar idempotency key
-    const eventAction = action || type || "unknown";
-    const idempotencyKey = `mp:${mpPaymentId}:${eventAction}`;
-
-    // 4. Enfileirar para processamento assíncrono
-    const { enqueuePaymentWebhook } = await import("../../queues/producers");
-    const enqueued = await enqueuePaymentWebhook({
-      mpPaymentId: String(mpPaymentId),
-      action: eventAction,
-      idempotencyKey,
-      rawPayload: req.body,
-      receivedAt: new Date().toISOString(),
-    });
-
-    if (!enqueued) {
-      // Fallback: processar inline se Redis falhar
-      log.warn("Redis unavailable — processing webhook inline");
-      // Manter lógica original como fallback (importar do paymentWorker)
-    }
-
-    // 5. Responder imediatamente (< 500ms)
-    res.status(200).json({ received: true });
-  } catch (error) {
-    log.error({ err: error, ip }, "Webhook processing error");
-    res.status(200).json({ received: true }); // Sempre 200 para MP
-  }
-};
-```
-
-**Step 5: Implementar webhook processing no paymentWorker.ts**
-
-Atualizar a função `processWebhook` no `backend/src/workers/paymentWorker.ts` com a lógica que estava no controller (buscar status no MP, atualizar pagamento local, notificar).
-
-Esta é a parte mais complexa — mover a lógica das linhas ~596-749 do paymentController para o worker, usando `transitionPaymentStatus` em vez de updates diretos.
-
-**Step 6: Push schema e testar**
-
-```bash
-cd backend && npx prisma db push && npx prisma generate
-cd backend && npx tsc --noEmit
-cd backend && npm test
-```
-
-**Step 7: Commit**
-
-```bash
-git add backend/prisma/schema.prisma backend/src/lib/paymentStateMachine.ts backend/src/controllers/service/paymentController.ts backend/src/workers/paymentWorker.ts backend/src/config/env.ts
-git commit -m "feat: add payment event store with state machine and idempotent webhook"
-```
-
----
-
-## Task 7: Migrar Notificações e Emails para Filas
-
-**Files:**
-- Modify: `backend/src/services/notificationService.ts`
-- Modify: `backend/src/services/emailService.ts`
-- Modify: `backend/src/controllers/authController.ts`
-- Modify controllers com `createNotification` local: `paymentController.ts`, `orderController.ts`, `messageController.ts`, `reviewController.ts`
-
-**Step 1: Atualizar notificationService.ts**
-
-A função `createNotification` passa a enfileirar em vez de executar inline. Adicionar fallback síncrono:
-
-```typescript
-import { enqueueNotification } from "../queues/producers";
-
-export const createNotification = async (
-  userId: number,
-  type: PrismaNotificationType,
-  title: string,
-  message: string,
-  serviceOrderId?: number,
-  metadata?: Record<string, any>
-): Promise<any> => {
-  // Tentar enfileirar (assíncrono)
-  const enqueued = await enqueueNotification({
-    userId,
-    type,
-    title,
-    message,
-    serviceOrderId,
-    metadata,
-  });
-
-  if (enqueued) {
-    // Retornar placeholder — notificação será criada pelo worker
-    return { id: 0, queued: true };
-  }
-
-  // FALLBACK: Redis indisponível — executar inline (comportamento original)
-  log.warn("Notification fallback to sync mode");
-  const notification = await prisma.notification.create({
-    data: {
-      type,
-      title,
-      message,
-      status: "UNREAD",
-      userId,
-      serviceOrderId: serviceOrderId || null,
-      metadata: metadata ?? undefined,
-    },
-  });
-
-  try {
-    emitToUser(userId, "notification:new", {
-      id: notification.id, type, title, message, serviceOrderId,
-    });
-  } catch (err) {
-    log.warn({ err }, "Socket emit failed in fallback mode");
-  }
-
-  return notification;
-};
-```
-
-**Step 2: Remover `createNotification` locais dos controllers**
-
-Em cada um dos 4 controllers que definem sua própria `createNotification`:
-- `paymentController.ts` (linhas 48-70)
-- `orderController.ts` (linha ~67)
-- `messageController.ts` (linha ~48)
-- `reviewController.ts` (linha ~33)
-
-Remover a definição local e adicionar import do service:
-```typescript
-import { createNotification, NotificationType } from "../../services/notificationService";
-```
-
-**Step 3: Atualizar authController.ts para enfileirar emails**
-
-Substituir chamadas diretas a `sendVerificationEmail`, `sendPasswordResetEmail`, `sendWelcomeEmail` por `enqueueEmail`:
-
-```typescript
-import { enqueueEmail } from "../queues/producers";
-
-// Em register (linha ~227):
-// De: sendVerificationEmail(email, name, verifyUrl).catch(...)
-// Para:
-await enqueueEmail({
-  to: email,
-  subject: "Verifique seu email",
-  html: "",
-  template: "verification",
-  templateData: { name, verifyUrl },
-});
-
-// Mesmo padrão para forgotPassword e verifyEmail
-```
-
-**Step 4: Verificar e testar**
-
-```bash
-cd backend && npx tsc --noEmit
-cd backend && npm test
-```
-
-**Step 5: Commit**
-
-```bash
-git add backend/src/services/notificationService.ts backend/src/services/emailService.ts backend/src/controllers/
-git commit -m "feat: migrate notifications and emails to async BullMQ queues with sync fallback"
-```
-
----
-
-## Task 8: MFA TOTP
-
-**Files:**
-- Modify: `backend/prisma/schema.prisma` (adicionar UserMFA)
-- Create: `backend/src/controllers/mfaController.ts`
-- Create: `backend/src/routes/mfaRoutes.ts`
-- Create: `backend/src/middleware/mfa.ts`
-- Modify: `backend/src/controllers/authController.ts` (login com MFA)
-- Modify: `backend/src/index.ts` (registrar rotas MFA)
-- Modify: `backend/src/config/env.ts` (MFA_ENCRYPTION_KEY)
-
-**Step 1: Instalar dependências**
-
-```bash
-cd backend && npm install otplib qrcode
-npm install -D @types/qrcode
-```
-
-**Step 2: Adicionar model UserMFA ao schema.prisma**
+Add new models (after existing models):
 
 ```prisma
+model PaymentEvent {
+  id              Int              @id @default(autoincrement())
+  paymentId       Int
+  payment         Payment          @relation(fields: [paymentId], references: [id])
+  eventType       PaymentEventType
+  previousStatus  PaymentStatus?
+  newStatus       PaymentStatus
+  idempotencyKey  String           @unique
+  amount          Float?
+  metadata        Json?
+  source          EventSource
+  actorId         Int?
+  ipAddress       String?
+  createdAt       DateTime         @default(now())
+
+  @@index([paymentId, createdAt])
+  @@index([eventType, createdAt])
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  action      String
+  actorId     Int
+  actor       User     @relation("auditLogs", fields: [actorId], references: [id])
+  targetType  String
+  targetId    Int
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+}
+
 model UserMFA {
   id              Int       @id @default(autoincrement())
   userId          Int       @unique
@@ -1584,295 +1417,431 @@ model UserMFA {
 }
 ```
 
-Adicionar relação no model `User`:
+Update the `Payment` model to add the relation:
 ```prisma
-mfa UserMFA?
+  events          PaymentEvent[]
 ```
 
-Aplicar:
-```bash
-cd backend && npx prisma db push && npx prisma generate
+Update the `User` model to add relations:
+```prisma
+  auditLogs       AuditLog[]   @relation("auditLogs")
+  mfa             UserMFA?
 ```
 
-**Step 3: Adicionar MFA_ENCRYPTION_KEY ao env.ts**
+**Step 2: Push schema**
 
-No interface `EnvConfig`:
-```typescript
-MFA_ENCRYPTION_KEY: string;
-```
+Run: `cd /home/levybonito/faztudo-main/backend && npx prisma db push`
+Expected: Schema synced successfully
 
-No `getEnvConfig()`:
-```typescript
-MFA_ENCRYPTION_KEY: (() => {
-  const key = process.env.MFA_ENCRYPTION_KEY;
-  if (nodeEnv === 'production' && (!key || key.length < 32)) {
-    throw new Error('FATAL: MFA_ENCRYPTION_KEY must be set (min 32 chars) in production');
-  }
-  return key || crypto.randomBytes(32).toString('hex');
-})(),
-```
+**Step 3: Generate client**
 
-**Step 4: Criar mfaController.ts**
+Run: `cd /home/levybonito/faztudo-main/backend && npx prisma generate`
 
-Criar `backend/src/controllers/mfaController.ts` com funções:
-- `setupMFA` — gera secret, retorna QR code
-- `verifyMFASetup` — confirma primeiro código, gera backup codes
-- `validateMFA` — valida código no login
-- `disableMFA` — desativa (requer código)
-- `regenerateBackupCodes` — gera novos backup codes
-
-Usar `otplib.authenticator` para gerar/verificar TOTP. Encriptar secret com AES-256-GCM usando `MFA_ENCRYPTION_KEY`. Gerar QR code com `qrcode.toDataURL(otpauthUrl)`.
-
-**Step 5: Criar middleware/mfa.ts**
-
-Middleware `requireMFA` que verifica header `X-MFA-Code` para ações críticas:
-
-```typescript
-import type { Response, NextFunction } from "express";
-import type { AuthRequest } from "./auth";
-import prisma from "../lib/prisma";
-import { authenticator } from "otplib";
-import { createLogger } from "../lib/logger";
-// + decrypt function para o secret
-
-const log = createLogger("mfa");
-
-export const requireMFA = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  if (!req.user) {
-    res.status(401).json({ success: false, message: "Not authenticated" });
-    return;
-  }
-
-  const mfaCode = req.headers["x-mfa-code"] as string;
-  const userMfa = await prisma.userMFA.findUnique({
-    where: { userId: req.user.id },
-  });
-
-  // Se não tem MFA configurado, permitir (exceto admins)
-  if (!userMfa?.isEnabled) {
-    if (req.user.role === "ADMIN") {
-      res.status(403).json({
-        success: false,
-        message: "MFA obrigatório para administradores. Configure em Configurações.",
-        mfaRequired: true,
-      });
-      return;
-    }
-    next();
-    return;
-  }
-
-  if (!mfaCode) {
-    res.status(403).json({
-      success: false,
-      message: "Código MFA necessário",
-      mfaRequired: true,
-    });
-    return;
-  }
-
-  // Verificar TOTP
-  const decryptedSecret = decryptSecret(userMfa.secret); // Implementar decrypt
-  const isValid = authenticator.verify({ token: mfaCode, secret: decryptedSecret });
-
-  if (!isValid) {
-    // Tentar backup codes
-    // ... verificar contra backupCodes hasheados
-    res.status(403).json({ success: false, message: "Código MFA inválido" });
-    return;
-  }
-
-  // Atualizar lastUsedAt
-  await prisma.userMFA.update({
-    where: { userId: req.user.id },
-    data: { lastUsedAt: new Date() },
-  });
-
-  next();
-};
-```
-
-**Step 6: Criar routes/mfaRoutes.ts**
-
-```typescript
-import { Router } from "express";
-import { verifyToken } from "../middleware/auth";
-import { setupMFA, verifyMFASetup, validateMFA, disableMFA, regenerateBackupCodes } from "../controllers/mfaController";
-
-const router = Router();
-
-router.post("/setup", verifyToken, setupMFA);
-router.post("/verify-setup", verifyToken, verifyMFASetup);
-router.post("/validate", validateMFA); // Não precisa de verifyToken — usa mfaToken
-router.post("/disable", verifyToken, disableMFA);
-router.post("/backup-codes/regenerate", verifyToken, regenerateBackupCodes);
-
-export default router;
-```
-
-**Step 7: Atualizar authController.ts — login com MFA**
-
-No fluxo de login, após validar senha, verificar se user tem MFA:
-```typescript
-// Após line 309 (generateToken):
-const userMfa = await prisma.userMFA.findUnique({ where: { userId: user.id } });
-if (userMfa?.isEnabled) {
-  // Não emitir tokens reais — emitir token temporário MFA
-  const mfaToken = jwt.sign(
-    { id: user.id, type: "mfa-challenge" },
-    env.JWT_ACCESS_SECRET,
-    { expiresIn: "5m" },
-  );
-  res.json({
-    success: true,
-    message: "MFA required",
-    data: { mfaRequired: true, mfaToken },
-  });
-  return;
-}
-// Caso contrário, continuar login normal...
-```
-
-**Step 8: Registrar rotas MFA no index.ts**
-
-```typescript
-import mfaRoutes from "./routes/mfaRoutes";
-// ...
-app.use("/api/auth/mfa", mfaRoutes);
-```
-
-**Step 9: Aplicar requireMFA em rotas críticas**
-
-- `walletRoutes.ts`: adicionar `requireMFA` em `POST /withdraw`
-- `authRoutes.ts`: adicionar `requireMFA` em `PUT /change-password`
-
-**Step 10: Testar e commit**
+**Step 4: Commit**
 
 ```bash
-cd backend && npx prisma db push && npx prisma generate
-cd backend && npx tsc --noEmit
-cd backend && npm test
-git add .
-git commit -m "feat: add MFA TOTP authentication with backup codes"
+git add backend/prisma/schema.prisma
+git commit -m "feat: add PaymentEvent, AuditLog, UserMFA models to schema
+
+PaymentEvent: append-only event store with idempotency key.
+AuditLog: generic admin action audit trail.
+UserMFA: TOTP MFA configuration per user."
 ```
 
 ---
 
-## Task 9: Reconciliação Diária com MercadoPago
+### Task 7: Create Payment State Machine
 
 **Files:**
-- Modify: `backend/src/workers/reconciliationWorker.ts`
-- Modify: `backend/src/workers/paymentWorker.ts` (webhook processing completo)
+- Create: `backend/src/lib/paymentStateMachine.ts`
 
-**Step 1: Implementar reconciliationWorker completo**
+**Step 1: Write the state machine**
+
+Create `backend/src/lib/paymentStateMachine.ts`:
 
 ```typescript
-async function processReconciliation(job: Job<ReconciliationJobData>): Promise<void> {
-  log.info({ jobId: job.id, type: job.data.type }, "Starting reconciliation");
+import prisma from "./prisma";
+import { PaymentStatus, PaymentEventType, EventSource } from "@prisma/client";
+import { createLogger } from "./logger";
 
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+const log = createLogger("paymentStateMachine");
 
-  // 1. Buscar pagamentos pendentes/held > 24h
-  const payments = await prisma.payment.findMany({
-    where: {
-      status: { in: ["PENDING", "HELD"] },
-      createdAt: { lt: oneDayAgo },
-      transactionId: { not: null },
-    },
-    select: { id: true, status: true, transactionId: true, amount: true },
-  });
+// Valid transitions: from → [to, to, ...]
+const VALID_TRANSITIONS: Record<string, PaymentStatus[]> = {
+  PENDING: ["HELD", "FAILED"],
+  HELD: ["RELEASED", "REFUNDED", "PARTIALLY_REFUNDED", "FAILED"],
+  FAILED: [], // Terminal state
+  RELEASED: [], // Terminal state
+  REFUNDED: [], // Terminal state
+  PARTIALLY_REFUNDED: ["REFUNDED", "RELEASED"],
+};
 
-  let synced = 0;
-  let divergent = 0;
-  let errors = 0;
-
-  for (const payment of payments) {
-    try {
-      const mpStatus = await getMPPaymentStatus(payment.transactionId!);
-
-      // Mapear status MP para status local
-      const expectedLocalStatus = mapMPStatusToLocal(mpStatus.status);
-
-      if (expectedLocalStatus && expectedLocalStatus !== payment.status) {
-        divergent++;
-        log.warn(
-          { paymentId: payment.id, local: payment.status, mp: mpStatus.status, expected: expectedLocalStatus },
-          "Payment status divergence found",
-        );
-
-        // Criar evento de reconciliação
-        await transitionPaymentStatus({
-          paymentId: payment.id,
-          newStatus: expectedLocalStatus,
-          eventType: "RECONCILED",
-          source: "SCHEDULER",
-          idempotencyKey: `reconcile:${payment.id}:${new Date().toISOString().split("T")[0]}`,
-          metadata: { mpStatus: mpStatus.status, localStatus: payment.status },
-        });
-      } else {
-        synced++;
-      }
-    } catch (err) {
-      errors++;
-      log.error({ err, paymentId: payment.id }, "Reconciliation error for payment");
-    }
-  }
-
-  // Alertar admins se divergências
-  if (divergent > 0) {
-    const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
-    for (const admin of admins) {
-      await enqueueNotification({
-        userId: admin.id,
-        type: "SYSTEM_ALERT",
-        title: "Reconciliação: Divergências Encontradas",
-        message: `Reconciliação diária: ${synced} OK, ${divergent} divergências corrigidas, ${errors} erros. Total: ${payments.length} pagamentos analisados.`,
-        metadata: { synced, divergent, errors, total: payments.length },
-      });
-    }
-  }
-
-  log.info({ total: payments.length, synced, divergent, errors }, "Reconciliation complete");
+export interface TransitionParams {
+  paymentId: number;
+  newStatus: PaymentStatus;
+  eventType: PaymentEventType;
+  source: EventSource;
+  idempotencyKey: string;
+  amount?: number;
+  metadata?: Record<string, any>;
+  actorId?: number;
+  ipAddress?: string;
 }
 
-function mapMPStatusToLocal(mpStatus: string): string | null {
-  switch (mpStatus) {
-    case "approved": return "HELD";
-    case "rejected":
-    case "cancelled": return "FAILED";
-    case "refunded": return "REFUNDED";
-    default: return null;
+export interface TransitionResult {
+  success: boolean;
+  isDuplicate?: boolean;
+  error?: string;
+  event?: any;
+}
+
+/**
+ * Atomically transition a payment's status with event store tracking.
+ *
+ * 1. Validates transition against state machine
+ * 2. Creates PaymentEvent with idempotencyKey (UNIQUE constraint)
+ * 3. Updates Payment.status
+ * 4. Returns result (success, duplicate, or error)
+ */
+export async function transitionPaymentStatus(
+  params: TransitionParams
+): Promise<TransitionResult> {
+  const {
+    paymentId,
+    newStatus,
+    eventType,
+    source,
+    idempotencyKey,
+    amount,
+    metadata,
+    actorId,
+    ipAddress,
+  } = params;
+
+  // 1. Check for duplicate idempotency key
+  const existingEvent = await prisma.paymentEvent.findUnique({
+    where: { idempotencyKey },
+  });
+
+  if (existingEvent) {
+    log.info({ paymentId, idempotencyKey }, "Duplicate event — already processed");
+    return { success: true, isDuplicate: true };
   }
+
+  // 2. Fetch current payment status
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { status: true },
+  });
+
+  if (!payment) {
+    return { success: false, error: "Payment not found" };
+  }
+
+  // 3. Validate transition
+  const allowed = VALID_TRANSITIONS[payment.status] || [];
+  if (!allowed.includes(newStatus)) {
+    log.warn(
+      { paymentId, from: payment.status, to: newStatus },
+      "Invalid payment status transition"
+    );
+    return {
+      success: false,
+      error: `Invalid transition: ${payment.status} → ${newStatus}`,
+    };
+  }
+
+  // 4. Atomic: create event + update status
+  try {
+    const [event] = await prisma.$transaction([
+      prisma.paymentEvent.create({
+        data: {
+          paymentId,
+          eventType,
+          previousStatus: payment.status,
+          newStatus,
+          idempotencyKey,
+          amount,
+          metadata: metadata ?? undefined,
+          source,
+          actorId,
+          ipAddress,
+        },
+      }),
+      prisma.payment.update({
+        where: { id: paymentId },
+        data: { status: newStatus },
+      }),
+    ]);
+
+    log.info(
+      { paymentId, from: payment.status, to: newStatus, eventId: event.id },
+      "Payment status transitioned"
+    );
+
+    return { success: true, event };
+  } catch (err: any) {
+    // Handle unique constraint violation (duplicate idempotency key from race condition)
+    if (err.code === "P2002" && err.meta?.target?.includes("idempotencyKey")) {
+      log.info({ paymentId, idempotencyKey }, "Race condition duplicate — already processed");
+      return { success: true, isDuplicate: true };
+    }
+    log.error({ err, paymentId }, "Payment transition failed");
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Get payment event history for a given payment.
+ */
+export async function getPaymentEventHistory(paymentId: number) {
+  return prisma.paymentEvent.findMany({
+    where: { paymentId },
+    orderBy: { createdAt: "asc" },
+  });
 }
 ```
 
 **Step 2: Commit**
 
 ```bash
-git add backend/src/workers/reconciliationWorker.ts
-git commit -m "feat: implement daily MercadoPago reconciliation with divergence alerts"
+git add backend/src/lib/paymentStateMachine.ts
+git commit -m "feat: add payment state machine with idempotent transitions
+
+Validates transitions against allowed state graph.
+Creates PaymentEvent atomically with status update.
+Handles duplicate idempotency keys gracefully."
 ```
 
 ---
 
-## Task 10: Circuit Breaker para MercadoPago
+### Task 8: Update Webhook Handler to be Idempotent
+
+**Files:**
+- Modify: `backend/src/controllers/service/paymentController.ts` (mercadoPagoWebhook function, lines 549-749)
+
+**Step 1: Refactor mercadoPagoWebhook to enqueue instead of process inline**
+
+Replace the `mercadoPagoWebhook` export to:
+1. Validate HMAC signature (keep existing)
+2. Generate idempotencyKey
+3. Check Redis for duplicate (fast path)
+4. Enqueue job to `payments` queue
+5. Return 200 immediately
+
+The full processing moves to `paymentWorker.ts` (already created in Task 4 Step 3).
+
+See design doc section 4.3 for the exact flow.
+
+**Step 2: Commit**
+
+```bash
+git add backend/src/controllers/service/paymentController.ts
+git commit -m "feat: make webhook handler idempotent with queue dispatch
+
+Webhook now validates, deduplicates (Redis + DB), and enqueues.
+Processing moved to paymentWorker for async execution."
+```
+
+---
+
+## Phase 4: Migrate Notifications and Emails to Queues
+
+### Task 9: Update notificationService to use queues with fallback
+
+**Files:**
+- Modify: `backend/src/services/notificationService.ts`
+
+**Step 1: Update createNotification to enqueue with sync fallback**
+
+Modify the `createNotification` function to:
+1. Try to enqueue via `enqueueNotification()`
+2. If Redis unavailable (returns false), execute synchronously (current behavior)
+3. Email sending always enqueued separately via `enqueueEmail()`
+
+**Step 2: Fix controllers that have local createNotification copies**
+
+The following controllers define their own inline `createNotification` that only does `prisma.notification.create` (no Socket.io, no email). These should be updated to import from the service:
+
+- `backend/src/controllers/service/paymentController.ts` (lines 48-70)
+- `backend/src/controllers/service/orderController.ts` (line 67)
+- `backend/src/controllers/service/messageController.ts` (line 48)
+- `backend/src/controllers/service/reviewController.ts` (line 33)
+
+For each: remove local `createNotification` const, add import from `../../services/notificationService`.
+
+**Step 3: Commit**
+
+```bash
+git add backend/src/services/notificationService.ts backend/src/controllers/service/
+git commit -m "feat: migrate notifications to async queue with sync fallback
+
+All controllers now use centralized notificationService.
+Notifications enqueued to BullMQ when Redis available,
+falls back to synchronous execution otherwise."
+```
+
+---
+
+### Task 10: Update emailService to enqueue emails
+
+**Files:**
+- Modify: `backend/src/services/emailService.ts`
+- Modify: `backend/src/controllers/authController.ts`
+
+**Step 1: Add enqueueOrSendEmail helper to emailService**
+
+Add a new exported function that tries to enqueue, falls back to sync:
+
+```typescript
+export async function enqueueOrSendEmail(options: SendEmailOptions): Promise<void> {
+  const queued = await enqueueEmail({
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    text: options.text,
+  });
+  if (!queued) {
+    // Fallback: send synchronously
+    await sendEmail(options);
+  }
+}
+```
+
+**Step 2: Update authController to use enqueueOrSendEmail**
+
+Replace direct `sendEmail` / `sendVerificationEmail` calls with the enqueued version for fire-and-forget cases. Keep the `resendVerificationEmail` handler synchronous (user expects immediate response).
+
+**Step 3: Commit**
+
+```bash
+git add backend/src/services/emailService.ts backend/src/controllers/authController.ts
+git commit -m "feat: migrate email sending to async queue with sync fallback
+
+Emails enqueued to BullMQ when Redis available.
+Auth verification resend remains synchronous for UX."
+```
+
+---
+
+## Phase 5: MFA (TOTP)
+
+### Task 11: Install MFA dependencies and create MFA controller
+
+**Files:**
+- Create: `backend/src/controllers/mfaController.ts`
+- Create: `backend/src/routes/mfaRoutes.ts`
+- Create: `backend/src/middleware/mfa.ts`
+- Modify: `backend/src/config/env.ts` (add MFA_ENCRYPTION_KEY)
+- Modify: `backend/src/index.ts` (register mfaRoutes)
+- Modify: `backend/src/controllers/authController.ts` (MFA login flow)
+
+**Step 1: Install dependencies**
+
+Run: `cd /home/levybonito/faztudo-main/backend && npm install otplib qrcode`
+Run: `cd /home/levybonito/faztudo-main/backend && npm install -D @types/qrcode`
+
+**Step 2: Add MFA_ENCRYPTION_KEY to env.ts**
+
+Add to `EnvConfig` interface:
+```typescript
+  MFA_ENCRYPTION_KEY: string;
+```
+
+Add to config object:
+```typescript
+    MFA_ENCRYPTION_KEY: process.env.MFA_ENCRYPTION_KEY || (nodeEnv === 'production'
+      ? (() => { throw new Error('FATAL: MFA_ENCRYPTION_KEY must be set in production'); })()
+      : crypto.randomBytes(32).toString('hex')),
+```
+
+**Step 3: Create MFA controller**
+
+Create `backend/src/controllers/mfaController.ts` with these endpoints:
+- `setupMFA` — generates TOTP secret, encrypts with AES-256-GCM, stores in UserMFA, returns QR code URI
+- `verifySetup` — validates first TOTP code, generates 10 backup codes (bcrypt hashed), enables MFA
+- `validateMFA` — validates TOTP code during login (called after password check)
+- `disableMFA` — requires current TOTP code, deletes UserMFA record
+- `regenerateBackupCodes` — generates new backup codes, requires current TOTP code
+
+**Step 4: Create MFA routes**
+
+Create `backend/src/routes/mfaRoutes.ts`:
+```typescript
+import { Router } from "express";
+import { verifyToken } from "../middleware/auth";
+import { setupMFA, verifySetup, validateMFA, disableMFA, regenerateBackupCodes } from "../controllers/mfaController";
+
+const router = Router();
+
+router.post("/setup", verifyToken, setupMFA);
+router.post("/verify-setup", verifyToken, verifySetup);
+router.post("/validate", validateMFA); // No verifyToken — uses temp mfaToken
+router.post("/disable", verifyToken, disableMFA);
+router.post("/backup-codes/regenerate", verifyToken, regenerateBackupCodes);
+
+export default router;
+```
+
+**Step 5: Create requireMFA middleware**
+
+Create `backend/src/middleware/mfa.ts`:
+- Reads `X-MFA-Code` header
+- If user has MFA enabled, validates the code against their TOTP secret
+- Used on critical endpoints (wallet withdraw, password change, etc.)
+
+**Step 6: Update login flow in authController**
+
+Modify the `login` function in `authController.ts`:
+- After password verification, check if user has MFA enabled
+- If yes: return `{ mfaRequired: true, mfaToken: <short-lived-jwt> }` instead of access/refresh tokens
+- The mfaToken is a JWT with 5-minute expiry containing `{ userId, purpose: "mfa" }`
+- Client then calls `POST /api/auth/mfa/validate` with the mfaToken + TOTP code to get real tokens
+
+**Step 7: Register routes in index.ts**
+
+Add to `backend/src/index.ts`:
+```typescript
+import mfaRoutes from "./routes/mfaRoutes";
+// ...
+app.use("/api/auth/mfa", mfaRoutes);
+```
+
+**Step 8: Apply requireMFA to critical endpoints**
+
+Add `requireMFA` middleware to:
+- `walletRoutes.ts` — `POST /withdraw`
+- `authRoutes.ts` — `PUT /change-password`
+
+**Step 9: Commit**
+
+```bash
+git add backend/src/controllers/mfaController.ts backend/src/routes/mfaRoutes.ts backend/src/middleware/mfa.ts backend/src/controllers/authController.ts backend/src/config/env.ts backend/src/index.ts backend/package.json backend/package-lock.json
+git commit -m "feat: add TOTP MFA authentication
+
+Setup, verify, validate, disable MFA flows.
+Obrigatorio para admins no login.
+requireMFA middleware para acoes criticas (saques, senha)."
+```
+
+---
+
+## Phase 6: Circuit Breaker, Health Checks, Audit Log
+
+### Task 12: Add Circuit Breaker for MercadoPago
 
 **Files:**
 - Create: `backend/src/lib/circuitBreaker.ts`
 - Modify: `backend/src/services/mercadopagoService.ts`
 
-**Step 1: Instalar opossum**
+**Step 1: Install opossum**
 
-```bash
-cd backend && npm install opossum
-npm install -D @types/opossum
-```
+Run: `cd /home/levybonito/faztudo-main/backend && npm install opossum`
+Run: `cd /home/levybonito/faztudo-main/backend && npm install -D @types/opossum`
 
-**Step 2: Criar circuitBreaker.ts**
+**Step 2: Create circuit breaker wrapper**
+
+Create `backend/src/lib/circuitBreaker.ts`:
 
 ```typescript
 import CircuitBreaker from "opossum";
@@ -1880,268 +1849,165 @@ import { createLogger } from "./logger";
 
 const log = createLogger("circuitBreaker");
 
+const DEFAULT_OPTIONS: CircuitBreaker.Options = {
+  timeout: 10000,       // 10s timeout per call
+  errorThresholdPercentage: 50,
+  resetTimeout: 30000,  // Try again after 30s
+  volumeThreshold: 5,   // Min 5 calls before tripping
+};
+
 export function createCircuitBreaker<T>(
   fn: (...args: any[]) => Promise<T>,
   name: string,
-  options?: Partial<CircuitBreaker.Options>,
-): CircuitBreaker {
+  options?: Partial<CircuitBreaker.Options>
+): CircuitBreaker<any[], T> {
   const breaker = new CircuitBreaker(fn, {
-    timeout: 10000,         // 10s timeout
-    errorThresholdPercentage: 50, // Open after 50% failures
-    resetTimeout: 30000,    // Try again after 30s
-    volumeThreshold: 5,     // Min 5 requests before evaluating
+    ...DEFAULT_OPTIONS,
     ...options,
+    name,
   });
 
-  breaker.on("open", () => log.warn({ name }, "Circuit breaker OPENED"));
-  breaker.on("halfOpen", () => log.info({ name }, "Circuit breaker HALF-OPEN"));
-  breaker.on("close", () => log.info({ name }, "Circuit breaker CLOSED"));
-  breaker.on("fallback", () => log.warn({ name }, "Circuit breaker fallback triggered"));
+  breaker.on("open", () => log.warn({ name }, "Circuit OPEN — failing fast"));
+  breaker.on("halfOpen", () => log.info({ name }, "Circuit HALF-OPEN — testing"));
+  breaker.on("close", () => log.info({ name }, "Circuit CLOSED — recovered"));
+  breaker.on("fallback", () => log.warn({ name }, "Circuit fallback triggered"));
 
   return breaker;
 }
 ```
 
-**Step 3: Wrapping MercadoPago com circuit breaker**
+**Step 3: Wrap MercadoPago calls with circuit breaker**
 
-No `mercadopagoService.ts`, wrap as funções que chamam a API do MP:
-
-```typescript
-import { createCircuitBreaker } from "../lib/circuitBreaker";
-
-const mpBreaker = createCircuitBreaker(
-  async (fn: () => Promise<any>) => fn(),
-  "mercadopago",
-  { timeout: 15000, resetTimeout: 60000 },
-);
-
-// Uso:
-export async function getMPPaymentStatus(mpPaymentId: string) {
-  return mpBreaker.fire(async () => {
-    const payment = getPaymentClient();
-    const response = await payment.get({ id: mpPaymentId });
-    return { /* ... campos ... */ };
-  });
-}
-```
+In `mercadopagoService.ts`, wrap `getMPPaymentStatus`, `createCardPayment`, `createPixPayment`, `createBoletoPayment` with circuit breakers.
 
 **Step 4: Commit**
 
 ```bash
 git add backend/src/lib/circuitBreaker.ts backend/src/services/mercadopagoService.ts backend/package.json backend/package-lock.json
-git commit -m "feat: add circuit breaker for MercadoPago API calls"
+git commit -m "feat: add circuit breaker for MercadoPago API calls
+
+Uses opossum with 50% error threshold, 30s reset.
+Prevents cascading failures when MP is down."
 ```
 
 ---
 
-## Task 11: Health Checks Estendidos + Metrics
+### Task 13: Extend Health Checks and add Metrics endpoint
 
 **Files:**
-- Modify: `backend/src/index.ts` (health check)
+- Modify: `backend/src/index.ts` (health endpoint)
 - Create: `backend/src/lib/metrics.ts`
 
-**Step 1: Instalar prom-client**
+**Step 1: Install prom-client**
 
-```bash
-cd backend && npm install prom-client
-```
+Run: `cd /home/levybonito/faztudo-main/backend && npm install prom-client`
 
-**Step 2: Criar metrics.ts**
+**Step 2: Create metrics module**
 
-Criar `backend/src/lib/metrics.ts`:
+Create `backend/src/lib/metrics.ts` with Prometheus counters for:
+- `http_requests_total` (method, path, status)
+- `http_request_duration_seconds` (histogram)
+- `bullmq_jobs_completed_total` (queue)
+- `bullmq_jobs_failed_total` (queue)
+- `payment_transitions_total` (from_status, to_status)
 
-```typescript
-import client from "prom-client";
+**Step 3: Update /health to include Redis and queue status**
 
-// Coletar métricas default do Node.js
-client.collectDefaultMetrics();
+**Step 4: Add GET /metrics endpoint (localhost only)**
 
-// Custom metrics
-export const httpRequestDuration = new client.Histogram({
-  name: "http_request_duration_seconds",
-  help: "Duration of HTTP requests in seconds",
-  labelNames: ["method", "route", "status_code"],
-  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
-});
-
-export const httpRequestTotal = new client.Counter({
-  name: "http_requests_total",
-  help: "Total number of HTTP requests",
-  labelNames: ["method", "route", "status_code"],
-});
-
-export const queueJobsTotal = new client.Counter({
-  name: "queue_jobs_total",
-  help: "Total number of queue jobs processed",
-  labelNames: ["queue", "status"],
-});
-
-export const paymentEventsTotal = new client.Counter({
-  name: "payment_events_total",
-  help: "Total number of payment events",
-  labelNames: ["event_type", "source"],
-});
-
-export const register = client.register;
-```
-
-**Step 3: Atualizar health check no index.ts**
-
-Adicionar Redis e queue status ao `/health`:
-
-```typescript
-import { getRedisClient } from "./queues/connection";
-import { notificationQueue, emailQueue, paymentQueue } from "./queues/queues";
-import { register } from "./lib/metrics";
-
-// Health check estendido
-app.get("/health", localOnlyMiddleware, async (_req, res) => {
-  const checks: Record<string, string> = {};
-
-  // Database
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    checks.database = "ok";
-  } catch {
-    checks.database = "error";
-  }
-
-  // Redis
-  try {
-    const redis = getRedisClient();
-    await redis.ping();
-    checks.redis = "ok";
-  } catch {
-    checks.redis = "error";
-  }
-
-  // Queues
-  try {
-    const [notifCounts, emailCounts, paymentCounts] = await Promise.all([
-      notificationQueue.getJobCounts(),
-      emailQueue.getJobCounts(),
-      paymentQueue.getJobCounts(),
-    ]);
-    checks.queues = JSON.stringify({
-      notifications: notifCounts,
-      emails: emailCounts,
-      payments: paymentCounts,
-    });
-  } catch {
-    checks.queues = "error";
-  }
-
-  const isHealthy = checks.database === "ok" && checks.redis === "ok";
-
-  res.status(isHealthy ? 200 : 503).json({
-    status: isHealthy ? "healthy" : "degraded",
-    ...checks,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// Prometheus metrics endpoint
-app.get("/metrics", localOnlyMiddleware, async (_req, res) => {
-  res.set("Content-Type", register.contentType);
-  res.end(await register.metrics());
-});
-```
-
-**Step 4: Commit**
+**Step 5: Commit**
 
 ```bash
 git add backend/src/lib/metrics.ts backend/src/index.ts backend/package.json backend/package-lock.json
-git commit -m "feat: add extended health checks (Redis, queues) and Prometheus metrics"
+git commit -m "feat: add Prometheus metrics and extended health checks
+
+/health includes Redis, PostgreSQL, and queue status.
+/metrics serves Prometheus-format metrics (localhost only)."
 ```
 
 ---
 
-## Task 12: Audit Log
+### Task 14: Add Audit Log Middleware
 
 **Files:**
-- Modify: `backend/prisma/schema.prisma` (adicionar AuditLog)
 - Create: `backend/src/middleware/auditLog.ts`
+- Modify: `backend/src/routes/adminRoutes.ts`
+- Modify: `backend/src/routes/walletRoutes.ts`
 
-**Step 1: Adicionar model AuditLog ao schema.prisma**
+**Step 1: Create audit log middleware**
 
-```prisma
-model AuditLog {
-  id          Int      @id @default(autoincrement())
-  action      String
-  actorId     Int
-  actor       User     @relation("auditLogs", fields: [actorId], references: [id])
-  targetType  String
-  targetId    Int
-  metadata    Json?
-  ipAddress   String?
-  createdAt   DateTime @default(now())
-
-  @@index([actorId, createdAt])
-  @@index([targetType, targetId])
-}
-```
-
-Adicionar relação no model `User`:
-```prisma
-auditLogs AuditLog[] @relation("auditLogs")
-```
-
-**Step 2: Criar middleware auditLog.ts**
+Create `backend/src/middleware/auditLog.ts`:
 
 ```typescript
+import { Response, NextFunction } from "express";
 import prisma from "../lib/prisma";
 import type { AuthRequest } from "./auth";
 import { createLogger } from "../lib/logger";
 
-const log = createLogger("audit");
+const log = createLogger("auditLog");
 
-export async function createAuditLog(params: {
-  actorId: number;
-  action: string;
-  targetType: string;
-  targetId: number;
-  metadata?: Record<string, any>;
-  ipAddress?: string;
-}): Promise<void> {
-  try {
-    await prisma.auditLog.create({ data: params });
-    log.info(
-      { action: params.action, actorId: params.actorId, targetType: params.targetType, targetId: params.targetId },
-      "Audit log created",
-    );
-  } catch (err) {
-    log.error({ err, params }, "Failed to create audit log");
-  }
+export function auditAction(action: string, targetType: string) {
+  return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    // Store original json method to intercept response
+    const originalJson = res.json.bind(res);
+
+    res.json = function (body: any) {
+      // Only log successful actions (2xx responses)
+      if (res.statusCode >= 200 && res.statusCode < 300 && req.user) {
+        const targetId = parseInt(req.params.id || req.params.userId || "0", 10);
+
+        prisma.auditLog.create({
+          data: {
+            action,
+            actorId: req.user.id,
+            targetType,
+            targetId: targetId || 0,
+            metadata: {
+              method: req.method,
+              path: req.path,
+              statusCode: res.statusCode,
+              body: req.body ? Object.keys(req.body) : undefined, // Log field names, not values
+            },
+            ipAddress: req.ip || req.socket?.remoteAddress || null,
+          },
+        }).catch((err) => {
+          log.error({ err, action, actorId: req.user?.id }, "Failed to create audit log");
+        });
+      }
+
+      return originalJson(body);
+    } as any;
+
+    next();
+  };
 }
 ```
 
-**Step 3: Aplicar nos controllers admin e financeiros**
+**Step 2: Apply to admin routes and financial routes**
 
-Adicionar `createAuditLog()` em:
-- `adminController.ts` — approve/reject verification, ban user
-- `walletController.ts` — withdraw
-- `paymentController.ts` — release payment
-- `mfaController.ts` — enable/disable MFA
-
-**Step 4: Push schema, testar e commit**
+**Step 3: Commit**
 
 ```bash
-cd backend && npx prisma db push && npx prisma generate
-cd backend && npx tsc --noEmit
-cd backend && npm test
-git add .
-git commit -m "feat: add audit log for admin and financial actions"
+git add backend/src/middleware/auditLog.ts backend/src/routes/adminRoutes.ts backend/src/routes/walletRoutes.ts
+git commit -m "feat: add audit log middleware for admin and financial actions
+
+Logs action, actor, target, IP for all admin operations.
+Applied to admin routes and wallet withdrawal."
 ```
 
 ---
 
-## Task 13: Secrets Management
+## Phase 7: Secrets Management
+
+### Task 15: Create Secrets Management Module
 
 **Files:**
 - Create: `backend/src/config/secrets.ts`
-- Modify: `backend/src/config/env.ts` (integrar com secrets)
+- Modify: `backend/src/config/env.ts`
 
-**Step 1: Criar secrets.ts**
+**Step 1: Create secrets.ts**
+
+Create `backend/src/config/secrets.ts`:
 
 ```typescript
 import { createLogger } from "../lib/logger";
@@ -2150,76 +2016,72 @@ const log = createLogger("secrets");
 
 type SecretsProvider = "env" | "aws" | "gcp" | "azure";
 
-const SECRETS_PROVIDER = (process.env.SECRETS_PROVIDER || "env") as SecretsProvider;
+interface SecretsConfig {
+  provider: SecretsProvider;
+  region?: string;
+  prefix?: string;
+}
 
 const secretsCache = new Map<string, string>();
-let lastReload = 0;
-const RELOAD_INTERVAL_MS = 60 * 60 * 1000; // 1h
+let lastRefresh = 0;
+const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 /**
- * Obtém um secret do provider configurado.
- * Em dev: lê de process.env (comportamento atual).
- * Em prod: lê do cloud provider secrets manager.
+ * Get a secret value. In dev, reads from process.env.
+ * In production, reads from configured cloud provider.
  */
 export async function getSecret(key: string): Promise<string> {
-  // Check cache
-  if (secretsCache.has(key) && Date.now() - lastReload < RELOAD_INTERVAL_MS) {
-    return secretsCache.get(key)!;
+  const provider = (process.env.SECRETS_PROVIDER as SecretsProvider) || "env";
+
+  // Check cache first
+  const cached = secretsCache.get(key);
+  if (cached && Date.now() - lastRefresh < REFRESH_INTERVAL_MS) {
+    return cached;
   }
 
   let value: string;
 
-  switch (SECRETS_PROVIDER) {
+  switch (provider) {
+    case "env":
+      value = process.env[key] || "";
+      break;
     case "aws":
-      value = await getAWSSecret(key);
+      // Future: AWS Secrets Manager SDK
+      value = process.env[key] || "";
+      log.warn("AWS Secrets Manager not yet implemented, falling back to env");
       break;
     case "gcp":
-      value = await getGCPSecret(key);
+      // Future: GCP Secret Manager SDK
+      value = process.env[key] || "";
+      log.warn("GCP Secret Manager not yet implemented, falling back to env");
       break;
-    case "azure":
-      value = await getAzureSecret(key);
-      break;
-    case "env":
     default:
       value = process.env[key] || "";
   }
 
   secretsCache.set(key, value);
-  lastReload = Date.now();
+  lastRefresh = Date.now();
   return value;
 }
 
-async function getAWSSecret(key: string): Promise<string> {
-  // Placeholder — implementar com @aws-sdk/client-secrets-manager quando em produção
-  log.info({ key }, "AWS Secrets Manager — using env fallback for now");
-  return process.env[key] || "";
-}
-
-async function getGCPSecret(key: string): Promise<string> {
-  log.info({ key }, "GCP Secret Manager — using env fallback for now");
-  return process.env[key] || "";
-}
-
-async function getAzureSecret(key: string): Promise<string> {
-  log.info({ key }, "Azure Key Vault — using env fallback for now");
-  return process.env[key] || "";
-}
-
 /**
- * Pre-carrega todos os secrets no boot.
+ * Preload all secrets at application startup.
  */
-export async function preloadSecrets(): Promise<void> {
-  const keys = [
-    "JWT_SECRET", "JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET",
-    "MP_ACCESS_TOKEN", "MP_CLIENT_SECRET", "MP_WEBHOOK_SECRET",
-    "SMTP_PASS", "MFA_ENCRYPTION_KEY",
-  ];
-
+export async function preloadSecrets(keys: string[]): Promise<void> {
+  log.info({ count: keys.length }, "Preloading secrets...");
   for (const key of keys) {
     await getSecret(key);
   }
+  log.info("Secrets preloaded");
+}
 
-  log.info({ provider: SECRETS_PROVIDER, count: keys.length }, "Secrets preloaded");
+/**
+ * Clear secrets cache (for rotation support).
+ */
+export function clearSecretsCache(): void {
+  secretsCache.clear();
+  lastRefresh = 0;
+  log.info("Secrets cache cleared");
 }
 ```
 
@@ -2227,31 +2089,36 @@ export async function preloadSecrets(): Promise<void> {
 
 ```bash
 git add backend/src/config/secrets.ts
-git commit -m "feat: add secrets management with cloud provider support"
+git commit -m "feat: add secrets management with cloud provider support
+
+Unified getSecret() interface. Env fallback for dev.
+Cache with 1h TTL. Extensible for AWS/GCP/Azure."
 ```
 
 ---
 
-## Task 14: Rate Limiting para Webhooks
+## Phase 8: Webhook Rate Limiting
+
+### Task 16: Add Webhook Rate Limiting
 
 **Files:**
 - Modify: `backend/src/middleware/rateLimiter.ts`
 - Modify: `backend/src/routes/paymentRoutes.ts`
 
-**Step 1: Adicionar webhook rate limiter**
+**Step 1: Add webhook rate limiter**
 
-No `backend/src/middleware/rateLimiter.ts`, adicionar:
+Add to `rateLimiter.ts`:
 
 ```typescript
-/**
- * Rate limiter for webhooks.
- * 100 webhooks per minute per IP — prevents flood attacks.
- */
 export const webhookLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    // Rate limit by external_reference or IP
+    return (req.query.external_reference as string) || req.ip || "unknown";
+  },
   message: {
     success: false,
     message: "Too many webhook requests",
@@ -2260,108 +2127,141 @@ export const webhookLimiter = rateLimit({
 });
 ```
 
-**Step 2: Aplicar na rota de webhook**
-
-No `paymentRoutes.ts`, adicionar `webhookLimiter` antes do handler do webhook.
+**Step 2: Apply to webhook route**
 
 **Step 3: Commit**
 
 ```bash
 git add backend/src/middleware/rateLimiter.ts backend/src/routes/paymentRoutes.ts
-git commit -m "feat: add rate limiting for webhook endpoints"
+git commit -m "feat: add rate limiting for MercadoPago webhooks
+
+100 webhooks/min per external_reference.
+Prevents webhook flood attacks."
 ```
 
 ---
 
-## Task 15: Testes
+## Phase 9: Testing
+
+### Task 17: Write Tests for New Components
 
 **Files:**
 - Create: `backend/tests/queues/producers.test.ts`
 - Create: `backend/tests/lib/paymentStateMachine.test.ts`
 - Create: `backend/tests/middleware/mfa.test.ts`
-- Create: `backend/tests/workers/reconciliation.test.ts`
+- Create: `backend/tests/lib/circuitBreaker.test.ts`
 
-**Step 1: Teste do payment state machine**
+**Step 1: Write payment state machine tests**
 
-```typescript
-import { describe, it, expect, beforeEach } from "vitest";
-// Mock Prisma + Redis, test:
-// - Transição válida PENDING → HELD funciona
-// - Transição inválida PENDING → RELEASED é rejeitada
-// - Idempotency key duplicada retorna { success: true, duplicate: true }
-// - Evento é criado com campos corretos
-```
+Test cases:
+- Valid transitions (PENDING → HELD, HELD → RELEASED, etc.)
+- Invalid transitions (PENDING → RELEASED should fail)
+- Duplicate idempotency key returns `isDuplicate: true`
+- Concurrent transitions with same idempotency key (race condition)
 
-**Step 2: Teste do MFA**
+**Step 2: Write producer tests**
 
-```typescript
-import { describe, it, expect } from "vitest";
-// Mock otplib, test:
-// - Setup gera QR code válido
-// - Verify aceita código correto
-// - Verify rejeita código inválido
-// - Backup code funciona uma vez
-// - Admin sem MFA é bloqueado
-```
+Test cases:
+- `enqueueNotification` returns true when Redis available
+- `enqueueNotification` returns false when Redis unavailable (graceful degradation)
+- Job data is correctly structured
 
-**Step 3: Rodar todos os testes**
+**Step 3: Write MFA tests**
 
-```bash
-cd backend && npm test
-```
+Test cases:
+- TOTP secret generation and QR code URL
+- Valid TOTP code accepted
+- Invalid TOTP code rejected
+- Backup code works and is consumed
+- MFA required for admin login
 
-**Step 4: Commit**
+**Step 4: Write circuit breaker tests**
+
+Test cases:
+- Circuit opens after threshold failures
+- Circuit half-opens after reset timeout
+- Successful call closes circuit
+
+**Step 5: Run all tests**
+
+Run: `cd /home/levybonito/faztudo-main/backend && npm test`
+Expected: All tests pass
+
+**Step 6: Commit**
 
 ```bash
 git add backend/tests/
-git commit -m "test: add tests for payment state machine, MFA, and queue producers"
+git commit -m "test: add tests for payment state machine, producers, MFA, circuit breaker"
 ```
 
 ---
 
-## Task 16: Atualizar CLAUDE.md
+## Phase 10: Integration and Final Validation
+
+### Task 18: Update CLAUDE.md
 
 **Files:**
 - Modify: `CLAUDE.md`
 
-**Step 1: Atualizar seções relevantes**
+**Step 1: Update documentation**
 
-Atualizar as seções:
-- **Comandos Essenciais**: adicionar `npm run worker`, `npm run scheduler`
-- **Arquitetura**: atualizar diagrama com Worker e Scheduler
-- **Banco de Dados**: PostgreSQL em vez de SQLite
-- **Variáveis de Ambiente**: adicionar `REDIS_URL`, `MFA_ENCRYPTION_KEY`, `SECRETS_PROVIDER`
-- **Gotchas**: remover ponto sobre SQLite, adicionar pontos sobre BullMQ, MFA, filas
-- **O Que Precisa Ser Melhorado**: marcar itens resolvidos
+Update CLAUDE.md to reflect:
+- New tech stack additions (BullMQ, Redis, PostgreSQL)
+- New commands (`npm run worker`, `npm run scheduler`)
+- Updated architecture diagram (3 processes)
+- New env vars (REDIS_URL, MFA_ENCRYPTION_KEY, SECRETS_PROVIDER)
+- New files map
+- Updated gotchas
 
 **Step 2: Commit**
 
 ```bash
 git add CLAUDE.md
-git commit -m "docs: update CLAUDE.md with PostgreSQL, BullMQ, MFA, and new architecture"
+git commit -m "docs: update CLAUDE.md with async processing, MFA, PostgreSQL architecture"
 ```
 
 ---
 
-## Resumo de Ordem de Execução
+### Task 19: End-to-End Validation
 
-| # | Task | Dependências | Estimativa |
-|---|------|-------------|-----------|
-| 1 | PostgreSQL + Redis (Docker/local) | Nenhuma | 15 min |
-| 2 | Migrar Prisma SQLite → PostgreSQL | Task 1 | 20 min |
-| 3 | BullMQ infra (connection, queues, producers) | Task 1 | 15 min |
-| 4 | Workers (notification, email, payment, reconciliation, anti-fraud) | Task 3 | 30 min |
-| 5 | Scheduler (node-cron → BullMQ repeat jobs) | Tasks 3, 4 | 15 min |
-| 6 | Payment Event Store + State Machine + Idempotência | Tasks 2, 3 | 45 min |
-| 7 | Migrar Notificações/Emails para filas | Tasks 3, 4 | 30 min |
-| 8 | MFA TOTP | Task 2 | 45 min |
-| 9 | Reconciliação diária | Tasks 6, 4 | 20 min |
-| 10 | Circuit Breaker MercadoPago | Nenhuma | 15 min |
-| 11 | Health Checks + Metrics | Tasks 3, 2 | 20 min |
-| 12 | Audit Log | Task 2 | 15 min |
-| 13 | Secrets Management | Nenhuma | 15 min |
-| 14 | Rate Limiting Webhooks | Nenhuma | 10 min |
-| 15 | Testes | Tasks 6, 8 | 30 min |
-| 16 | Atualizar CLAUDE.md | Todas | 10 min |
+**Step 1: Start all services**
 
-**Total estimado: ~6 horas**
+```bash
+# Terminal 1: PostgreSQL + Redis
+docker compose up -d postgres redis
+
+# Terminal 2: API Server
+cd backend && npm run dev
+
+# Terminal 3: Worker
+cd backend && npm run worker
+
+# Terminal 4: Scheduler
+cd backend && npm run scheduler
+
+# Terminal 5: Frontend
+cd frontend && npm run dev
+```
+
+**Step 2: Verify health endpoint**
+
+Run: `curl http://localhost:3001/health`
+Expected: `{ "status": "healthy", "database": "connected", "redis": "connected", "queues": {...} }`
+
+**Step 3: Run full test suite**
+
+Run: `cd backend && npm test`
+Expected: All tests pass
+
+**Step 4: Test MFA flow manually**
+
+1. Login as admin
+2. Setup MFA → scan QR code
+3. Verify setup with TOTP code
+4. Logout and login again → should require MFA
+
+**Step 5: Final commit**
+
+```bash
+git commit -m "chore: end-to-end validation complete for async + security hardening"
+```
