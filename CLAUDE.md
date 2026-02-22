@@ -1,10 +1,10 @@
 # CLAUDE.md - FazTudo Marketplace
 
 > **Projeto**: FazTudo - Marketplace de Servicos
-> **Stack**: Express 5 + React 19 + TypeScript + Prisma + SQLite
+> **Stack**: Express 5 + React 19 + TypeScript + Prisma + PostgreSQL + Redis/BullMQ
 > **Repo**: git@github.com:levygamer200-ux/faztudo.git
 > **Branch principal**: main
-> **Ultima atualizacao**: 2026-02-20
+> **Ultima atualizacao**: 2026-02-21
 
 ---
 
@@ -19,6 +19,11 @@
 | Backend | prisma / @prisma/client | 7.4.0 |
 | Backend | pino | 10.3.1 |
 | Backend | vitest | 4.0.18 |
+| Backend | bullmq | 5.x |
+| Backend | ioredis | 5.x |
+| Backend | opossum | 9.x |
+| Backend | otplib | 13.x |
+| Backend | prom-client | 15.x |
 | **Frontend** | react / react-dom | 19.2.4 |
 | Frontend | react-router | 7.13.0 (era `react-router-dom@6`) |
 | Frontend | vite | 7.3.1 |
@@ -51,6 +56,8 @@
 ```bash
 # Backend
 cd backend && npm run dev          # Inicia servidor em http://localhost:3001
+cd backend && npm run worker       # Inicia workers BullMQ (notificacao, email, pagamento, reconciliacao, anti-fraude)
+cd backend && npm run scheduler    # Inicia scheduler BullMQ (jobs recorrentes)
 cd backend && npm test             # Roda testes com Vitest
 cd backend && npm run test:watch   # Testes em modo watch
 cd backend && npm run test:security # Apenas testes de seguranca
@@ -66,9 +73,11 @@ cd frontend && npm run lint        # ESLint
 cd frontend && npx tsc --noEmit    # Checa tipos sem compilar
 
 # Docker (dev)
-docker compose up                  # Sobe backend + frontend
+docker compose up                  # Sobe backend + frontend + PostgreSQL + Redis
 docker compose up backend          # Apenas backend
 docker compose up frontend         # Apenas frontend
+docker compose up postgres         # Apenas PostgreSQL
+docker compose up redis            # Apenas Redis
 ```
 
 ---
@@ -79,17 +88,20 @@ docker compose up frontend         # Apenas frontend
 faztudo-main/
 ├── backend/                    # API REST Express 5 + TypeScript
 │   ├── src/
-│   │   ├── index.ts            # Entry point, middlewares, rotas
-│   │   ├── config/             # env.ts, mercadopago.ts
-│   │   ├── controllers/        # 23 controllers (auth, admin, service/*)
+│   │   ├── index.ts            # Entry point, middlewares, rotas, /health, /metrics
+│   │   ├── config/             # env.ts, mercadopago.ts, secrets.ts
+│   │   ├── controllers/        # 24 controllers (auth, admin, mfa, service/*)
 │   │   ├── routes/             # 15 route files (divididos por dominio)
 │   │   ├── services/           # 4 services (escrow, mercadopago, notification, recommendation)
-│   │   ├── middleware/         # 7 middlewares (auth, validate, sanitize, chatFilter, rateLimiter, error, auditLog)
-│   │   └── lib/prisma.ts       # Prisma client singleton
+│   │   ├── middleware/         # 8 middlewares (auth, mfa, validate, sanitize, chatFilter, rateLimiter, error, auditLog)
+│   │   ├── queues/             # BullMQ: connection.ts, queues.ts, producers.ts
+│   │   ├── workers/            # BullMQ workers: notification, email, payment, reconciliation, anti-fraud
+│   │   ├── scheduler/          # BullMQ scheduler: jobs recorrentes
+│   │   └── lib/                # prisma.ts, logger.ts, circuitBreaker.ts, metrics.ts, paymentStateMachine.ts
 │   ├── prisma/
-│   │   ├── schema.prisma       # 21 modelos
+│   │   ├── schema.prisma       # 24 modelos (inclui PaymentEvent, UserMFA, AuditLog)
 │   │   └── seed.ts             # Dados de teste
-│   ├── tests/                  # 11 arquivos de teste
+│   ├── tests/                  # 40 arquivos de teste (337 tests)
 │   └── uploads/chat/           # Uploads do chat
 │
 ├── frontend/                   # SPA React 18 + Vite + TailwindCSS
@@ -153,6 +165,14 @@ faztudo-main/
   - Request logging: pino-http middleware em `src/middleware/requestLog.ts`
   - **NUNCA usar console.log/error** — sempre usar `log.info/error/warn/debug`
 - **Novas rotas**: criar arquivo separado em `routes/` (NAO adicionar a um arquivo existente)
+- **Filas BullMQ**: producers em `queues/producers.ts`, workers em `workers/`. Para enfileirar: `import { enqueueNotification, enqueueEmail } from "../queues/producers"`
+- **MFA**: Middleware `requireMFA` em `middleware/mfa.ts`. Aplicar em rotas admin e acoes criticas. Segredos TOTP criptografados com AES-256-GCM via `mfaController.ts`
+- **Circuit Breaker**: Todas chamadas MercadoPago passam pelo circuit breaker (opossum). Status via `getCircuitBreakerStatus()` em `services/mercadopagoService.ts`
+- **Payment State Machine**: Transicoes de pagamento via `transitionPaymentStatus()` em `lib/paymentStateMachine.ts`. Idempotencia dupla: Redis NX SET + UNIQUE constraint DB
+- **Audit Log**: Middleware automatico em `middleware/auditLog.ts` + funcao `createAuditLog()` para uso direto em controllers
+- **Secrets**: Abstracted via `config/secrets.ts`. `getSecret("KEY")` com cache TTL 1h. Suporta env/aws/gcp/azure
+- **Metricas**: Prometheus via `lib/metrics.ts`. Endpoint `/metrics` (localhost only). Custom: HTTP, queues, payments, circuit breaker, MFA
+- **Health Check**: `/health` retorna status de database, Redis, queues, circuit breaker
 
 ### Frontend
 - Paginas em `src/pages/` organizadas por dominio (client/, professional/, admin/, checkout/, services/, orders/)
@@ -198,9 +218,10 @@ faztudo-main/
 
 ## Banco de Dados
 
-- **ORM**: Prisma 7.3 com SQLite (arquivo: `backend/dev.db`)
-- **21 modelos**: User, ServiceCategory, ServiceListing, ServiceOrder, Payment, Transaction, Message, Notification, Review, Address, OrderBrief, Proposal, ProfessionalSchedule, ScheduleBlock, Dispute, File, Certification, VerificationSubmission, EscrowConfig, SystemConfig, ProfessionalCategory
+- **ORM**: Prisma 7.4 com PostgreSQL (via `@prisma/adapter-pg`)
+- **24 modelos**: User, ServiceCategory, ServiceListing, ServiceOrder, Payment, PaymentEvent, Transaction, Message, Notification, Review, Address, OrderBrief, Proposal, ProfessionalSchedule, ScheduleBlock, Dispute, File, Certification, VerificationSubmission, EscrowConfig, SystemConfig, ProfessionalCategory, UserMFA, AuditLog
 - **Seed**: `prisma/seed.ts` cria categorias, configs, 3 usuarios teste, 8 listings
+- **Redis**: IORedis para BullMQ (filas), idempotencia (NX SET), circuit breaker state
 
 ---
 
@@ -208,11 +229,14 @@ faztudo-main/
 
 ### Backend (`backend/.env`) - ver `backend/.env.example`
 ```
-NODE_ENV, PORT (3001), DATABASE_URL, JWT_SECRET, JWT_EXPIRES_IN, JWT_REFRESH_EXPIRES_IN,
+NODE_ENV, PORT (3001), DATABASE_URL (postgresql://...), JWT_SECRET, JWT_EXPIRES_IN, JWT_REFRESH_EXPIRES_IN,
 BCRYPT_SALT_ROUNDS, CORS_ORIGIN, DEFAULT_ESCROW_HOLD_DAYS, PLATFORM_FEE_PERCENTAGE,
-MP_PUBLIC_KEY, MP_ACCESS_TOKEN, MP_CLIENT_ID, MP_CLIENT_SECRET, MP_SANDBOX
+MP_PUBLIC_KEY, MP_ACCESS_TOKEN, MP_CLIENT_ID, MP_CLIENT_SECRET, MP_SANDBOX, MP_WEBHOOK_SECRET,
 SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME, SMTP_FROM_EMAIL,
-FRONTEND_URL
+FRONTEND_URL,
+REDIS_URL (redis://localhost:6379),
+MFA_ENCRYPTION_KEY (32-byte hex para AES-256-GCM),
+SECRETS_PROVIDER (env | aws | gcp | azure)
 ```
 
 ### Frontend (`frontend/.env`) - ver `frontend/.env.example`
@@ -224,12 +248,14 @@ VITE_API_URL=http://localhost:3001
 
 ## Testes
 
-11 arquivos de teste no backend (33 arquivos no total após expansão da suite):
-- **Integration**: orderFlow, chatMensagens, professionalCalendar, professionalCrm, professionalFinance, professionalReputation, systemMessage, emailVerification, passwordReset
-- **Unit**: emailService, envSmtp, scheduler
-- **Middleware**: chatFilter, sanitize
-- **Security**: xss, validation
-- **Bug conhecido**: ~~`validation.test.ts` > `createPaymentSchema` > `accepts valid payment method` falha~~ → **RESOLVIDO**: Teste corrigido para incluir todos os campos obrigatórios.
+40 arquivos de teste no backend (337 tests):
+- **Integration**: orderFlow, orderConfirmationFlow, chatMensagens, professionalCalendar, professionalCrm, professionalFinance, professionalReputation, systemMessage, emailVerification, passwordReset
+- **Unit**: emailService, envSmtp, scheduler, cpfValidator
+- **Lib**: paymentStateMachine (11 tests), circuitBreaker (6 tests)
+- **Config**: secrets (6 tests)
+- **Middleware**: chatFilter, sanitize, mfa (7 tests)
+- **Security**: xss, validation, rateLimiting, inputValidation, idor, dataLeak, authBypass, webhook
+- **E2E**: storefront, companyFlow, companyInvite, companyStorefront, companyChannels, companyOrderFlow, companyAnalytics, adminCompanyVerification, professionalStorefront, geocodingValidation, rescheduleService, bearing
 - **Frontend**: SEM TESTES (apenas playwright-test.js na raiz)
 
 ---
@@ -240,7 +266,7 @@ VITE_API_URL=http://localhost:3001
 
 2. **ToastContainer fora do AuthProvider**: No App.tsx, `<ToastContainer />` esta fora do `<AuthProvider>`, o que funciona mas e fragil.
 
-3. **SQLite em producao**: O banco e SQLite (arquivo local). NAO e adequado para producao com multiplos usuarios simultaneos.
+3. **PostgreSQL + Redis obrigatorios**: O banco agora e PostgreSQL e filas usam Redis via BullMQ. Ambos devem estar rodando para o backend funcionar. Usar `docker compose up postgres redis` para subir.
 
 4. **Sem WebSocket**: Chat usa polling (requests periodicos), nao real-time.
 
@@ -262,6 +288,20 @@ VITE_API_URL=http://localhost:3001
 11. **Tour posicionamento cross-route**: `TourSpotlight` usa retry automático (100ms → 300ms → 600ms) para encontrar
     `data-tour` elementos após `navigate()`. Páginas que são alvo de tour podem chamar `onTourTargetReady()` (via
     `useTour()`) no seu `useEffect` de mount para sinalizar que o elemento está pronto mais rapidamente.
+
+12. **BullMQ workers separados**: Workers e scheduler rodam como processos separados (`npm run worker`, `npm run scheduler`), NAO junto com a API. Isso evita disputa de CPU e permite escalar independentemente.
+
+13. **MFA obrigatorio para admins**: O middleware `requireMFA` bloqueia admins sem MFA configurado (403 com `mfaSetupRequired: true`). Usuarios normais sem MFA passam direto. Header `x-mfa-code` para enviar codigo TOTP.
+
+14. **Payment state machine**: Transicoes de status de pagamento sao validadas. Transicoes invalidas (ex: PENDING → RELEASED) sao rejeitadas. Ver `VALID_TRANSITIONS` em `lib/paymentStateMachine.ts`.
+
+15. **Idempotencia dupla em pagamentos**: Primeiro check via Redis NX SET (5min TTL), segundo via UNIQUE constraint no DB (`idempotencyKey` em PaymentEvent). Se Redis cair, DB garante idempotencia sozinho.
+
+16. **Circuit breaker MercadoPago**: Todas chamadas MP passam por um circuit breaker (opossum). Se >50% das chamadas falharem, circuito abre por 60s. Status disponivel em `/health` e `getCircuitBreakerStatus()`.
+
+17. **otplib v13 API**: NAO exporta `authenticator`. Usar `import { generateSecret, generateURI, verifySync } from "otplib"`. `verifySync` retorna `{ valid: boolean, delta: number }`.
+
+18. **jwt.sign expiresIn type**: `@types/jsonwebtoken` mais recente exige `StringValue`, nao `string`. Usar `as any` para contornar: `{ expiresIn: env.JWT_EXPIRES_IN as any }`. Padrao ja usado no codebase.
 
 ---
 
@@ -285,6 +325,13 @@ VITE_API_URL=http://localhost:3001
 | **Dashboard** | `controllers/dashboardController.ts`, `controllers/reputationController.ts`, `routes/dashboardRoutes.ts` | SIM |
 | **Admin** | `controllers/adminController.ts`, `routes/adminRoutes.ts` | SIM |
 | **Wallet** | `controllers/walletController.ts`, `routes/walletRoutes.ts` | SIM |
+| **Queues/Workers** | `queues/connection.ts`, `queues/queues.ts`, `queues/producers.ts`, `workers/*`, `scheduler/*` | SIM (mas workers dependem de producers) |
+| **MFA** | `controllers/mfaController.ts`, `middleware/mfa.ts` | SIM |
+| **Metrics/Health** | `lib/metrics.ts`, `/health` e `/metrics` em `index.ts` | SIM |
+| **Secrets** | `config/secrets.ts` | SIM |
+| **Circuit Breaker** | `lib/circuitBreaker.ts` (usado por `services/mercadopagoService.ts`) | SIM |
+| **Payment State Machine** | `lib/paymentStateMachine.ts` | CUIDADO - conecta com payments e reconciliacao |
+| **Audit Log** | `middleware/auditLog.ts` | SIM |
 
 ### FRONTEND - Zonas Independentes
 
@@ -319,6 +366,8 @@ VITE_API_URL=http://localhost:3001
 5. **`backend/src/controllers/service/index.ts`** - Re-exporta todos os controllers de servico.
 6. **`backend/src/middleware/validation.ts`** - Schemas Zod centralizados.
 7. **`backend/src/index.ts`** - Entry point. Novos routers sao registrados aqui.
+8. **`backend/src/queues/producers.ts`** - Producers de filas. Novas filas vao aqui.
+9. **`backend/src/lib/paymentStateMachine.ts`** - State machine de pagamentos. Mudancas afetam todo fluxo financeiro.
 
 ---
 
@@ -377,7 +426,7 @@ git push origin feat/nome-da-feature
 
 ### Prioridade ALTA
 
-1. **SQLite nao escala**: Para producao com multiplos usuarios, migrar para PostgreSQL. O Prisma facilita essa migracao.
+1. ~~**SQLite nao escala**: Para producao com multiplos usuarios, migrar para PostgreSQL.~~ → **RESOLVIDO**: Migrado para PostgreSQL com Prisma adapter-pg. Redis/BullMQ para filas assincronas.
 
 ### Prioridade MEDIA (Qualidade de Codigo)
 
