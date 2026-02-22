@@ -18,7 +18,7 @@ function createRedisStore(prefix: string): { store?: Options["store"] } {
     return {
       store: new RedisStore({
         // Use the existing IORedis connection
-        sendCommand: (...args: string[]) => client.call(...args) as any,
+        sendCommand: (...args: string[]) => (client.call as any)(...args),
         prefix: `rl:${prefix}:`,
       }),
     };

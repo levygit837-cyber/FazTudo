@@ -146,6 +146,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     isCompany,
   } = useAuth();
 
+  const isDevMode = import.meta.env.DEV;
+
   // Se estiver carregando, mostrar loading
   if (isLoading) {
     return (
@@ -168,7 +170,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Se precisar de verificação de email e usuário não está verificado
-  if (requireVerified && user && !user.isVerified) {
+  // Em dev mode, pular verificação de email/KYC
+  if (!isDevMode && requireVerified && user && !user.isVerified) {
     return (
       <Navigate
         to="/verify-email"
@@ -214,7 +217,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Verificar se conta está ativa
-  if (user && user.status !== "ACTIVE") {
+  // Em dev mode, pular verificação de status para permitir acesso direto ao dashboard
+  if (!isDevMode && user && user.status !== "ACTIVE") {
     return <AccountStatusScreen user={user} navigate={navigate} />;
   }
 

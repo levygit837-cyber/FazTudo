@@ -10,6 +10,7 @@ import {
   AuthRequest,
 } from "../middleware/auth";
 import { env } from "../config/env";
+import { isDevelopment } from "../config/env";
 import { VerificationType } from "@prisma/client";
 import { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail } from "../services/emailService";
 
@@ -144,6 +145,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const hashedPassword = await hashPassword(password);
 
     // Create user
+    // In development mode, auto-activate and auto-verify new accounts
+    // to skip email verification, OTP, and KYC requirements
     const user = await prisma.user.create({
       data: {
         email,
@@ -152,8 +155,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         phone: phone || null,
         role,
         document: document || null,
-        status: "PENDING", // Default status
-        isVerified: false,
+        status: isDevelopment ? "ACTIVE" : "PENDING",
+        isVerified: isDevelopment ? true : false,
+        emailVerified: isDevelopment ? true : false,
         balance: 0.0,
         ratingAverage: 0.0,
         totalReviews: 0,
@@ -204,29 +208,39 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate email verification token
-    const verifyToken = crypto.randomBytes(32).toString("hex");
-    const hashedVerifyToken = crypto
-      .createHash("sha256")
-      .update(verifyToken)
-      .digest("hex");
+    // In development mode, skip email verification flow entirely
+    if (!isDevelopment) {
+      const verifyToken = crypto.randomBytes(32).toString("hex");
+      const hashedVerifyToken = crypto
+        .createHash("sha256")
+        .update(verifyToken)
+        .digest("hex");
 
-    // Save hashed token + 24h expiration + refresh token (single DB write)
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerifyToken: hashedVerifyToken,
-        emailVerifyExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-        refreshToken,
-      },
-    });
+      // Save hashed token + 24h expiration + refresh token (single DB write)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerifyToken: hashedVerifyToken,
+          emailVerifyExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          refreshToken,
+        },
+      });
 
-    // Send verification email (fire and forget — don't block registration)
-    const { env: envConfig } = await import("../config/env");
-    const verifyUrl = `${envConfig.FRONTEND_URL}/verify-email/${verifyToken}`;
+      // Send verification email (fire and forget — don't block registration)
+      const { env: envConfig } = await import("../config/env");
+      const verifyUrl = `${envConfig.FRONTEND_URL}/verify-email/${verifyToken}`;
 
-    sendVerificationEmail(user.email, user.name, verifyUrl).catch((err) => {
-      log.error({ err, email: user.email }, "Failed to send verification email");
-    });
+      sendVerificationEmail(user.email, user.name, verifyUrl).catch((err) => {
+        log.error({ err, email: user.email }, "Failed to send verification email");
+      });
+    } else {
+      // In dev mode, just save the refresh token (no email verification needed)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { refreshToken },
+      });
+      log.info({ userId: user.id, email: user.email }, "Dev mode: auto-verified user, skipping email verification");
+    }
 
     // Set httpOnly cookies for secure token storage
     res.cookie("accessToken", token, getCookieOptions(ACCESS_TOKEN_MAX_AGE));

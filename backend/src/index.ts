@@ -235,12 +235,12 @@ app.get("/health/ready", healthAuthMiddleware, async (_req, res) => {
       QUEUE_NAMES.RECONCILIATION, QUEUE_NAMES.ANTI_FRAUD, QUEUE_NAMES.ESCROW,
     ];
     const queueStatuses = await Promise.all(
-      queueNames.map(async (name) => {
+      queueNames.map(async (queueName) => {
         try {
-          const status = await getQueueStatus(name);
-          return { name, ...status };
+          const status = await getQueueStatus(queueName);
+          return status;
         } catch {
-          return { name, error: true };
+          return { name: queueName, error: true };
         }
       })
     );
