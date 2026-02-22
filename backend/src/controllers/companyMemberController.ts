@@ -81,7 +81,7 @@ export async function inviteMember(req: AuthRequest, res: Response) {
     if (existing) return res.status(400).json({ success: false, message: "Usuário já é membro desta empresa" });
 
     const member = await prisma.companyMember.create({
-      data: { companyId: req.companyId!, userId: targetUser.id, roleId: Number(roleId) },
+      data: { companyId: req.companyId!, userId: targetUser.id, roleId: roleId ? Number(roleId) : undefined },
       include: { user: { select: { id: true, name: true, email: true, profileImage: true } }, role: true },
     });
     return res.status(201).json({ success: true, message: "Membro adicionado", data: member });
