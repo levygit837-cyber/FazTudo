@@ -185,6 +185,7 @@ model User {
   createdInviteTokens    CompanyInviteToken[] @relation("InviteTokenCreator")
   usedInviteTokens       CompanyInviteToken[] @relation("InviteTokenUser")
   mfa                    UserMFA?
+  auditLogs              AuditLog[] @relation("AuditLogActor")
 
   @@index([email])
   @@index([role])
@@ -1203,4 +1204,25 @@ model UserMFA {
   lastUsedAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  action      String   // e.g. "ADMIN_CHANGE_USER_STATUS", "WITHDRAWAL_REQUEST"
+  actorId     Int
+  actor       User     @relation("AuditLogActor", fields: [actorId], references: [id])
+  targetType  String   // e.g. "User", "Payment", "Company"
+  targetId    Int
+  metadata    Json?    // Additional context (old/new values, etc.)
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@index([action, createdAt])
 }
