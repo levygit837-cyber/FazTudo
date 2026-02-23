@@ -425,10 +425,11 @@ const StorefrontViewPage: React.FC = () => {
         storefrontServiceId: service.id,
       });
       const draft = response.data.data.serviceOrder;
+      // Rota correta: /client/orders/:id/chat ou /professional/services/:id/chat
       const basePath =
         user?.role === "PROFESSIONAL"
           ? "/professional/services"
-          : "/client/services";
+          : "/client/orders";
       navigate(`${basePath}/${draft.id}/chat`);
     } catch (err: any) {
       toast.error(
