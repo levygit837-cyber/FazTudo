@@ -13,6 +13,15 @@ import {
   Verified,
   Share2,
   Loader2,
+  MapPin,
+  Clock,
+  Home,
+  Users,
+  Building2,
+  Globe,
+  Calendar,
+  Award,
+  TrendingUp,
 } from "lucide-react";
 import { Skeleton, SkeletonText } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -31,6 +40,8 @@ import {
   formatCurrency,
   formatRating,
 } from "../../utils/formatters";
+
+type VitrineTab = "servicos" | "sobre" | "avaliacoes";
 
 // ── Service Card (inside vitrine) ─────────────────────────
 interface ServiceItemProps {
@@ -81,6 +92,17 @@ const ServiceItem: React.FC<ServiceItemProps> = ({
 
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden hover:border-primary-300 dark:hover:border-primary-600 transition-colors bg-white dark:bg-slate-900 shadow-sm hover:shadow-md">
+      {/* Thumbnail if images available */}
+      {service.images && Array.isArray(service.images) && (service.images as string[]).length > 0 && (
+        <div className="w-full h-32 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+          <img
+            src={(service.images as string[])[0]}
+            alt={service.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full text-left p-5 md:p-6 flex items-start justify-between gap-4"
@@ -236,7 +258,7 @@ const CategorySection: React.FC<CategorySectionProps> = ({
           ({category.services.length} {category.services.length === 1 ? "servico" : "servicos"})
         </span>
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
         {category.services.map((service) => (
           <ServiceItem
             key={service.id}
@@ -269,8 +291,8 @@ const CartBar: React.FC<CartBarProps> = ({
   if (itemCount === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-lg">
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
+    <div className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-lg lg:hidden">
+      <div className="px-4 md:px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
             <ShoppingCart className="w-7 h-7 text-primary-600 dark:text-primary-400" />
@@ -307,6 +329,7 @@ const StorefrontViewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [activeTab, setActiveTab] = useState<VitrineTab>("servicos");
 
   const { cart, addItem, itemCount, clearCart, getCheckoutPayload } =
     useStorefrontCart();
@@ -380,7 +403,6 @@ const StorefrontViewPage: React.FC = () => {
       const order = await checkoutCart(payload);
       clearCart();
       toast.success("Pedido criado!", `Pedido #${order.id} criado com sucesso`);
-      // Navigate to the appropriate order details
       const basePath = user?.role === "PROFESSIONAL" ? "/professional" : "/client";
       navigate(`${basePath}/orders/${order.id}`);
     } catch (err: any) {
@@ -425,7 +447,6 @@ const StorefrontViewPage: React.FC = () => {
         storefrontServiceId: service.id,
       });
       const draft = response.data.data.serviceOrder;
-      // Rota correta: /client/orders/:id/chat ou /professional/services/:id/chat
       const basePath =
         user?.role === "PROFESSIONAL"
           ? "/professional/services"
@@ -457,11 +478,11 @@ const StorefrontViewPage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-800">
-        <div className="bg-gradient-to-br from-primary-500 to-primary-600 h-48 md:h-56" />
-        <div className="max-w-6xl mx-auto px-4 md:px-8 -mt-16">
+        <div className="bg-gradient-to-br from-primary-500 to-primary-600 h-56 md:h-72" />
+        <div className="px-4 md:px-8 lg:px-16 -mt-20">
           <div className="card p-6 md:p-8 space-y-4">
             <div className="flex items-start gap-5">
-              <Skeleton className="w-24 h-24 md:w-28 md:h-28 rounded-full shrink-0 -mt-14" />
+              <Skeleton className="w-28 h-28 md:w-32 md:h-32 rounded-2xl shrink-0 -mt-14" />
               <div className="flex-1 space-y-3 pt-2">
                 <Skeleton className="h-8 w-56 rounded" />
                 <Skeleton className="h-5 w-40 rounded" />
@@ -503,9 +524,10 @@ const StorefrontViewPage: React.FC = () => {
   const hasRating = storefront.totalReviews > 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-800 pb-24">
-      {/* Banner */}
-      <div className="bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 h-48 md:h-56 relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-800 pb-24 lg:pb-8">
+
+      {/* Banner — full-width, altura maior */}
+      <div className="bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 h-56 md:h-72 lg:h-80 relative">
         {storefront.banner && (
           <img
             src={storefront.banner}
@@ -532,113 +554,356 @@ const StorefrontViewPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Header card */}
-      <div className="max-w-6xl mx-auto px-4 md:px-8 -mt-16 relative z-10">
+      {/* Header card — sem max-w, full-width com padding */}
+      <div className="px-4 md:px-8 lg:px-16 xl:px-24 -mt-20 relative z-10">
         <div className="card p-6 md:p-8">
           <div className="flex flex-col sm:flex-row items-start gap-5">
-            {/* Logo */}
-            <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-lg flex items-center justify-center shrink-0 overflow-hidden -mt-14 md:-mt-18">
+            {/* Logo maior */}
+            <div className="w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-xl flex items-center justify-center shrink-0 overflow-hidden -mt-16 md:-mt-20">
               {storefront.logo ? (
                 <img
                   src={storefront.logo}
                   alt={storefront.name}
-                  className="w-full h-full object-cover rounded-full"
+                  className="w-full h-full object-cover rounded-2xl"
                 />
               ) : (
-                <Store className="w-10 h-10 md:w-12 md:h-12 text-primary-500" />
+                <Store className="w-12 h-12 md:w-14 md:h-14 text-primary-500" />
               )}
             </div>
 
-            {/* Info */}
+            {/* Info principal */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                {storefront.name}
-                {storefront.user.isVerified && (
-                  <Verified className="w-6 h-6 text-primary-500 shrink-0" />
-                )}
-              </h1>
-              <p className="text-base text-slate-500 dark:text-slate-400 mt-1">
-                {storefront.user.name}
-                {storefront.mainCategory && (
-                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
-                    {storefront.mainCategory.name}
-                  </span>
-                )}
-              </p>
-
-              {/* Stats */}
-              <div className="flex items-center gap-6 mt-3 text-sm">
-                {hasRating && (
-                  <span className="flex items-center gap-1.5 text-amber-500">
-                    <Star className="w-5 h-5 fill-current" />
-                    <span className="font-semibold text-base">
-                      {formatRating(storefront.ratingAverage)}
-                    </span>
-                    <span className="text-slate-400 dark:text-slate-500">
-                      ({storefront.totalReviews} {storefront.totalReviews === 1 ? "avaliacao" : "avaliacoes"})
-                    </span>
-                  </span>
-                )}
-                <span className="text-slate-500 dark:text-slate-400 font-medium">
-                  {storefront.totalServices} {storefront.totalServices === 1 ? "servico" : "servicos"}
-                </span>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h1 className="text-2xl md:text-4xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    {storefront.name}
+                    {storefront.user.isVerified && (
+                      <Verified className="w-7 h-7 text-primary-500 shrink-0" />
+                    )}
+                  </h1>
+                  <p className="text-base text-slate-500 dark:text-slate-400 mt-1">
+                    {storefront.user.name}
+                    {storefront.mainCategory && (
+                      <span className="ml-2 inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+                        {storefront.mainCategory.name}
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
+
+              {/* Stats row */}
+              <div className="flex flex-wrap items-center gap-4 mt-4 text-sm">
+                {hasRating && (
+                  <span className="flex items-center gap-1.5 text-amber-500 font-semibold text-base">
+                    <Star className="w-5 h-5 fill-current" />
+                    {formatRating(storefront.ratingAverage)}
+                    <span className="text-slate-400 dark:text-slate-500 font-normal text-sm">
+                      ({storefront.totalReviews} {storefront.totalReviews === 1 ? "avaliação" : "avaliações"})
+                    </span>
+                  </span>
+                )}
+                <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                  <TrendingUp className="w-4 h-4" />
+                  {storefront.totalServices} {storefront.totalServices === 1 ? "serviço" : "serviços"}
+                </span>
+                {storefront.serviceLocation && (
+                  <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                    {storefront.serviceLocation === "HOME" && <Home className="w-4 h-4" />}
+                    {storefront.serviceLocation === "CLIENT" && <MapPin className="w-4 h-4" />}
+                    {storefront.serviceLocation === "BOTH" && <Users className="w-4 h-4" />}
+                    {storefront.serviceLocation === "ONLINE" && <Globe className="w-4 h-4" />}
+                    {storefront.serviceLocation === "HOME" && "Atendo em domicílio"}
+                    {storefront.serviceLocation === "CLIENT" && "Atendo no local do cliente"}
+                    {storefront.serviceLocation === "BOTH" && "Domicílio ou local do cliente"}
+                    {storefront.serviceLocation === "ONLINE" && "Atendimento online"}
+                  </span>
+                )}
+              </div>
+
+              {/* Description */}
+              {storefront.description && (
+                <p className="mt-4 text-base text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
+                  {storefront.description}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs de navegação */}
+      <div className="sticky top-16 z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 mt-0">
+        <div className="px-4 md:px-8 lg:px-16 xl:px-24 flex gap-1 overflow-x-auto scrollbar-hide">
+          {(["servicos", "sobre", "avaliacoes"] as VitrineTab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-6 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab
+                  ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                  : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              {tab === "servicos" && "Serviços"}
+              {tab === "sobre" && "Sobre"}
+              {tab === "avaliacoes" && "Avaliações"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Layout principal: conteúdo + sidebar */}
+      <div className="px-4 md:px-8 lg:px-16 xl:px-24 mt-6 pb-28 lg:pb-8">
+        <div className="flex gap-8 items-start">
+
+          {/* CONTEÚDO PRINCIPAL */}
+          <div className="flex-1 min-w-0">
+
+            {/* Tab: Serviços */}
+            {activeTab === "servicos" && (
+              <>
+                {/* Category navigation pills */}
+                {storefront.categories.length > 1 && (
+                  <div ref={categoryNavRef} className="flex gap-2 overflow-x-auto pb-3 mb-6 scrollbar-hide">
+                    {storefront.categories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => scrollToCategory(cat.id)}
+                        className="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:border-primary-600 dark:hover:text-primary-400 dark:hover:bg-primary-900/20 transition-colors"
+                      >
+                        {cat.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {storefront.categories.length === 0 ? (
+                  <EmptyState
+                    icon="package"
+                    title="Nenhum serviço disponível"
+                    description="Esta vitrine ainda não possui serviços cadastrados"
+                  />
+                ) : (
+                  storefront.categories.map((cat) => (
+                    <CategorySection
+                      key={cat.id}
+                      category={cat as any}
+                      storefrontId={storefront.id}
+                      storefrontName={storefront.name}
+                      storefrontSlug={storefront.slug}
+                      onAddToCart={handleAddToCart}
+                      onAskQuestion={handleAskQuestion}
+                    />
+                  ))
+                )}
+              </>
+            )}
+
+            {/* Tab: Sobre */}
+            {activeTab === "sobre" && (
+              <div className="card p-6 md:p-8 space-y-6">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Sobre {storefront.name}</h2>
+                {storefront.description ? (
+                  <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
+                    {storefront.description}
+                  </p>
+                ) : (
+                  <p className="text-slate-400 italic">Nenhuma descrição cadastrada.</p>
+                )}
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Informações</h3>
+                  <dl className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <Award className="w-4 h-4 text-primary-500 shrink-0" />
+                      <span>Profissional {storefront.user.isVerified ? "verificado" : "não verificado"}</span>
+                    </div>
+                    {storefront.mainCategory && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-primary-500 shrink-0" />
+                        <span>Categoria: {storefront.mainCategory.name}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-primary-500 shrink-0" />
+                      <span>{storefront.totalServices} serviços disponíveis</span>
+                    </div>
+                    {hasRating && (
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span>{formatRating(storefront.ratingAverage)} de avaliação média ({storefront.totalReviews} avaliações)</span>
+                      </div>
+                    )}
+                  </dl>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Avaliações */}
+            {activeTab === "avaliacoes" && (
+              <div className="card p-6 md:p-8">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Avaliações</h2>
+                {!hasRating ? (
+                  <EmptyState
+                    icon="star"
+                    title="Sem avaliações ainda"
+                    description="Este profissional ainda não recebeu avaliações"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl">
+                      <div className="text-center">
+                        <div className="text-5xl font-bold text-amber-500">{formatRating(storefront.ratingAverage)}</div>
+                        <div className="flex justify-center mt-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star key={n} className={`w-4 h-4 ${n <= Math.round(storefront.ratingAverage) ? "text-amber-400 fill-current" : "text-slate-300"}`} />
+                          ))}
+                        </div>
+                        <div className="text-sm text-slate-500 mt-1">{storefront.totalReviews} avaliações</div>
+                      </div>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-4">
+                      Avaliações detalhadas em breve
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* SIDEBAR DIREITA — sticky, visível apenas em desktop */}
+          <div className="hidden lg:block w-72 xl:w-80 shrink-0">
+            <div className="sticky top-32 space-y-4">
+
+              {/* Card: Informações de atendimento */}
+              <div className="card p-5 space-y-3">
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm uppercase tracking-wider">
+                  Informações
+                </h3>
+                <dl className="space-y-3 text-sm">
+                  {storefront.serviceLocation && (
+                    <div className="flex items-start gap-2.5">
+                      <MapPin className="w-4 h-4 text-primary-500 mt-0.5 shrink-0" />
+                      <div>
+                        <dt className="font-medium text-slate-700 dark:text-slate-300">Atendimento</dt>
+                        <dd className="text-slate-500 dark:text-slate-400">
+                          {storefront.serviceLocation === "HOME" && "Atendo em domicílio"}
+                          {storefront.serviceLocation === "CLIENT" && "No local do cliente"}
+                          {storefront.serviceLocation === "BOTH" && "Domicílio ou local do cliente"}
+                          {storefront.serviceLocation === "ONLINE" && "Online / Remoto"}
+                        </dd>
+                      </div>
+                    </div>
+                  )}
+                  {storefront.workingHours && (() => {
+                    try {
+                      const wh = JSON.parse(storefront.workingHours);
+                      const monFrom = wh?.mon?.from || "08:00";
+                      const monTo = wh?.mon?.to || "18:00";
+                      return (
+                        <div className="flex items-start gap-2.5">
+                          <Clock className="w-4 h-4 text-primary-500 mt-0.5 shrink-0" />
+                          <div>
+                            <dt className="font-medium text-slate-700 dark:text-slate-300">Horários</dt>
+                            <dd className="text-slate-500 dark:text-slate-400 text-xs">
+                              Seg-Sex: {monFrom} – {monTo}
+                            </dd>
+                          </div>
+                        </div>
+                      );
+                    } catch {
+                      return null;
+                    }
+                  })()}
+                  {storefront.averageServiceTime && (
+                    <div className="flex items-start gap-2.5">
+                      <Calendar className="w-4 h-4 text-primary-500 mt-0.5 shrink-0" />
+                      <div>
+                        <dt className="font-medium text-slate-700 dark:text-slate-300">Duração média</dt>
+                        <dd className="text-slate-500 dark:text-slate-400">
+                          {storefront.averageServiceTime === "30min" && "~30 minutos"}
+                          {storefront.averageServiceTime === "1h" && "~1 hora"}
+                          {storefront.averageServiceTime === "2h" && "~2 horas"}
+                          {storefront.averageServiceTime === "half_day" && "Meio período"}
+                          {storefront.averageServiceTime === "full_day" && "Dia inteiro"}
+                          {storefront.averageServiceTime === "variable" && "Varia por serviço"}
+                        </dd>
+                      </div>
+                    </div>
+                  )}
+                  {storefront.teamSize != null && storefront.teamSize > 1 && (
+                    <div className="flex items-start gap-2.5">
+                      <Users className="w-4 h-4 text-primary-500 mt-0.5 shrink-0" />
+                      <div>
+                        <dt className="font-medium text-slate-700 dark:text-slate-300">Equipe</dt>
+                        <dd className="text-slate-500 dark:text-slate-400">{storefront.teamSize} profissionais</dd>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-2.5">
+                    <Award className="w-4 h-4 text-primary-500 mt-0.5 shrink-0" />
+                    <div>
+                      <dt className="font-medium text-slate-700 dark:text-slate-300">Status</dt>
+                      <dd className="text-slate-500 dark:text-slate-400">
+                        {storefront.user.isVerified ? "✓ Profissional verificado" : "Não verificado"}
+                      </dd>
+                    </div>
+                  </div>
+                </dl>
+              </div>
+
+              {/* Card: CTA — fazer pedido (sidebar desktop) */}
+              {cartItemCount > 0 && (
+                <div className="card p-5 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                      {cartItemCount} {cartItemCount === 1 ? "item" : "itens"} no carrinho
+                    </span>
+                    <span className="font-bold text-primary-600 dark:text-primary-400">
+                      {formatCurrency(cartTotalPrice)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleCheckout}
+                    disabled={checkingOut}
+                    className="btn btn-primary w-full py-3 font-semibold flex items-center justify-center gap-2"
+                  >
+                    {checkingOut ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Criando pedido...</>
+                    ) : (
+                      <><ShoppingCart className="w-4 h-4" /> Fazer pedido</>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Card: Reputação */}
+              {hasRating && (
+                <div className="card p-5">
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm uppercase tracking-wider mb-3">
+                    Reputação
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <div className="text-3xl font-bold text-amber-500">{formatRating(storefront.ratingAverage)}</div>
+                    <div>
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star key={n} className={`w-4 h-4 ${n <= Math.round(storefront.ratingAverage) ? "text-amber-400 fill-current" : "text-slate-200 dark:text-slate-700"}`} />
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">{storefront.totalReviews} avaliações</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
 
-          {/* Description */}
-          {storefront.description && (
-            <p className="mt-5 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              {storefront.description}
-            </p>
-          )}
         </div>
       </div>
 
-      {/* Category navigation */}
-      {storefront.categories.length > 1 && (
-        <div className="sticky top-16 z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 mt-6">
-          <div
-            ref={categoryNavRef}
-            className="max-w-6xl mx-auto px-4 md:px-8 flex gap-3 overflow-x-auto py-3 scrollbar-hide"
-          >
-            {storefront.categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => scrollToCategory(cat.id)}
-                className="px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:border-primary-600 dark:hover:text-primary-400 dark:hover:bg-primary-900/20 transition-colors"
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Services by category */}
-      <div className="max-w-6xl mx-auto px-4 md:px-8 mt-8">
-        {storefront.categories.length === 0 ? (
-          <EmptyState
-            icon="package"
-            title="Nenhum servico disponivel"
-            description="Esta vitrine ainda nao possui servicos cadastrados"
-          />
-        ) : (
-          storefront.categories.map((cat) => (
-            <CategorySection
-              key={cat.id}
-              category={cat as any}
-              storefrontId={storefront.id}
-              storefrontName={storefront.name}
-              storefrontSlug={storefront.slug}
-              onAddToCart={handleAddToCart}
-              onAskQuestion={handleAskQuestion}
-            />
-          ))
-        )}
-      </div>
-
-      {/* Floating cart bar */}
+      {/* Floating cart bar — apenas mobile (sidebar cuida do desktop) */}
       <CartBar
         itemCount={cartItemCount}
         totalPrice={cartTotalPrice}
