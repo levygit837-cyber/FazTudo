@@ -4,9 +4,6 @@ import {
   ArrowLeft,
   ShieldCheck,
   Loader2,
-  Calendar,
-  CreditCard,
-  CheckCircle,
   XCircle,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -31,74 +28,6 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 type PaymentMethod = "credit_card" | "pix" | "boleto";
 
 // =====================================
-// UNIFIED STEPPER
-// =====================================
-const STEPS = [
-  { label: "Horarios", icon: Calendar },
-  { label: "Pagamento", icon: CreditCard },
-];
-
-function UnifiedStepper({
-  currentStep,
-  scheduleCompleted,
-}: {
-  currentStep: 0 | 1;
-  scheduleCompleted: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      {STEPS.map((step, index) => {
-        const Icon = step.icon;
-        const isCompleted =
-          (index === 0 && scheduleCompleted) || index < currentStep;
-        const isActive = index === currentStep && !isCompleted;
-
-        return (
-          <div key={step.label} className="flex items-center gap-3 flex-1">
-            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  isCompleted
-                    ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 animate-stepComplete"
-                    : isActive
-                    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 animate-pulse-soft"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
-                }`}
-              >
-                {isCompleted ? (
-                  <CheckCircle className="w-5 h-5" />
-                ) : (
-                  <Icon className="w-5 h-5" />
-                )}
-              </div>
-              <span
-                className={`text-xs font-medium ${
-                  isCompleted
-                    ? "text-green-600 dark:text-green-400"
-                    : isActive
-                    ? "text-amber-600 dark:text-amber-400"
-                    : "text-slate-400 dark:text-slate-500"
-                }`}
-              >
-                {step.label}
-              </span>
-            </div>
-            {index < STEPS.length - 1 && (
-              <div className="flex-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden mb-5">
-                <div
-                  className="h-full bg-green-500 rounded-full transition-all duration-700 ease-out"
-                  style={{ width: scheduleCompleted ? "100%" : "0%" }}
-                />
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// =====================================
 // MAIN CHECKOUT COMPONENT
 // =====================================
 export default function Checkout() {
@@ -117,9 +46,8 @@ export default function Checkout() {
   const [order, setOrder] = useState<ServiceOrder | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Stepper
+  // Step control (0 = schedule, 1 = payment)
   const [currentStep, setCurrentStep] = useState<0 | 1>(0);
-  const [scheduleCompleted, setScheduleCompleted] = useState(false);
 
   // Step 0 — Schedule
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -191,7 +119,6 @@ export default function Checkout() {
 
       // Auto-skip to step 1 if scheduledDate already set
       if (data.scheduledDate) {
-        setScheduleCompleted(true);
         setCurrentStep(1);
       }
 
@@ -227,8 +154,6 @@ export default function Checkout() {
       await rescheduleOrder(order.id, {
         newDate: `${selectedDate}T${selectedTime}:00`,
       });
-
-      setScheduleCompleted(true);
 
       // Reload order to get updated scheduledDate
       const updatedOrder = await getOrderById(order.id);
@@ -478,14 +403,6 @@ export default function Checkout() {
             Pedido #{order.id} — {order.title}
           </p>
         </div>
-      </div>
-
-      {/* Stepper */}
-      <div className="card mb-6 p-5">
-        <UnifiedStepper
-          currentStep={currentStep}
-          scheduleCompleted={scheduleCompleted}
-        />
       </div>
 
       {/* MP Loading */}
