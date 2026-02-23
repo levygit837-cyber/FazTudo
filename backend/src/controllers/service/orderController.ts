@@ -539,7 +539,7 @@ export const acceptServiceOrder = async (
       return;
     }
 
-    if (req.user.role !== "PROFESSIONAL" && req.user.role !== "ADMIN") {
+    if (req.user.role !== "PROFESSIONAL" && req.user.role !== "COMPANY" && req.user.role !== "ADMIN") {
       res
         .status(403)
         .json(errorResponse("Only professionals can accept service orders"));
@@ -613,6 +613,17 @@ export const acceptServiceOrder = async (
           },
         },
         brief: true,
+        items: {
+          include: {
+            service: {
+              select: {
+                id: true,
+                title: true,
+                price: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -647,7 +658,7 @@ export const acceptServiceOrder = async (
         ),
       );
   } catch (error) {
-    log.error({ err: error }, "Accept service order error");
+    log.error({ err: error, orderId: req.params.id, userId: req.user?.id }, "Accept service order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
