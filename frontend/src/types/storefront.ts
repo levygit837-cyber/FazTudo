@@ -23,6 +23,11 @@ export interface Storefront {
   totalServices: number;
   categories?: StorefrontCategory[];
   user?: StorefrontOwner;
+  // Campos de informações adicionais
+  serviceLocation?: "HOME" | "CLIENT" | "BOTH" | "ONLINE" | null;
+  teamSize?: number | null;
+  workingHours?: string | null;
+  averageServiceTime?: "30min" | "1h" | "2h" | "half_day" | "full_day" | "variable" | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -128,6 +133,11 @@ export interface StorefrontDetail extends Storefront {
     })[];
   })[];
   user: StorefrontOwner;
+  // Campos de informações adicionais (adicionados pelo StorefrontWizard)
+  serviceLocation?: "HOME" | "CLIENT" | "BOTH" | "ONLINE" | null;
+  teamSize?: number | null;
+  workingHours?: string | null; // JSON string: {"mon": {"from": "08:00", "to": "18:00"}, ...}
+  averageServiceTime?: "30min" | "1h" | "2h" | "half_day" | "full_day" | "variable" | null;
 }
 
 // --- Form/Input Types ---
@@ -151,6 +161,10 @@ export interface UpdateStorefrontInput {
   banner?: string;
   mainCategoryId?: number;
   isActive?: boolean;
+  serviceLocation?: "HOME" | "CLIENT" | "BOTH" | "ONLINE";
+  teamSize?: number;
+  workingHours?: string;
+  averageServiceTime?: "30min" | "1h" | "2h" | "half_day" | "full_day" | "variable";
 }
 
 export interface CreateCategoryInput {
