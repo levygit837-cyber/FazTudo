@@ -358,17 +358,6 @@ const Layout: React.FC = () => {
                 </Link>
               )}
 
-              {/* CTA: Pedir Servico (clients only) */}
-              {isAuthenticated && isClient && (
-                <Link
-                  to="/client/orders/new"
-                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-lg font-medium text-sm shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:scale-[1.02] transition-all duration-200 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500"
-                >
-                  <FileText size={16} />
-                  Pedir Serviço
-                </Link>
-              )}
-
               {/* User menu or auth buttons */}
               {isAuthenticated ? (
                 <div className="relative" ref={userMenuRef}>
