@@ -429,6 +429,9 @@ const StorefrontManager: React.FC = () => {
     name: "",
     description: "",
     mainCategoryId: "",
+    serviceLocation: "" as "" | "HOME" | "CLIENT" | "BOTH" | "ONLINE",
+    averageServiceTime: "" as "" | "30min" | "1h" | "2h" | "half_day" | "full_day" | "variable",
+    teamSize: 1,
   });
 
   // ========== LOAD DATA ==========
@@ -446,6 +449,9 @@ const StorefrontManager: React.FC = () => {
         name: sf.name,
         description: sf.description || "",
         mainCategoryId: sf.mainCategoryId?.toString() || "",
+        serviceLocation: (sf.serviceLocation as "" | "HOME" | "CLIENT" | "BOTH" | "ONLINE") || "",
+        averageServiceTime: (sf.averageServiceTime as "" | "30min" | "1h" | "2h" | "half_day" | "full_day" | "variable") || "",
+        teamSize: sf.teamSize || 1,
       });
     } catch {
       toast.error("Erro ao carregar vitrine");
@@ -701,6 +707,9 @@ const StorefrontManager: React.FC = () => {
         mainCategoryId: settingsForm.mainCategoryId
           ? parseInt(settingsForm.mainCategoryId, 10)
           : undefined,
+        serviceLocation: settingsForm.serviceLocation || undefined,
+        averageServiceTime: settingsForm.averageServiceTime || undefined,
+        teamSize: settingsForm.teamSize > 0 ? settingsForm.teamSize : undefined,
       });
       toast.success("Vitrine atualizada");
       setSettingsModal(false);
@@ -834,6 +843,37 @@ const StorefrontManager: React.FC = () => {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Quick stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="card p-4 text-center">
+            <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+              {totalServices}
+            </div>
+            <div className="text-xs text-slate-500 mt-1">Serviços</div>
+          </div>
+          <div className="card p-4 text-center">
+            <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+              {categories.length}
+            </div>
+            <div className="text-xs text-slate-500 mt-1">Categorias</div>
+          </div>
+          <div className="card p-4 text-center col-span-2">
+            <div className={`text-sm font-semibold ${storefront.isPublished ? "text-green-600 dark:text-green-400" : "text-slate-500"}`}>
+              {storefront.isPublished ? "✓ Vitrine publicada" : "Rascunho (não publicada)"}
+            </div>
+            {storefront.isPublished && storefront.slug && (
+              <a
+                href={`/explorar/${storefront.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary-500 hover:underline mt-1 block"
+              >
+                Ver vitrine pública ↗
+              </a>
+            )}
           </div>
         </div>
 
@@ -1149,6 +1189,67 @@ const StorefrontManager: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {/* Local de atendimento */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Local de atendimento
+            </label>
+            <select
+              value={settingsForm.serviceLocation}
+              onChange={(e) =>
+                setSettingsForm((s) => ({ ...s, serviceLocation: e.target.value as typeof settingsForm.serviceLocation }))
+              }
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="">Não informado</option>
+              <option value="HOME">Atendo em domicílio</option>
+              <option value="CLIENT">No local do cliente</option>
+              <option value="BOTH">Domicílio ou local do cliente</option>
+              <option value="ONLINE">Online / Remoto</option>
+            </select>
+          </div>
+
+          {/* Duração média */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Duração média por serviço
+            </label>
+            <select
+              value={settingsForm.averageServiceTime}
+              onChange={(e) =>
+                setSettingsForm((s) => ({ ...s, averageServiceTime: e.target.value as typeof settingsForm.averageServiceTime }))
+              }
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="">Não informado</option>
+              <option value="30min">~30 minutos</option>
+              <option value="1h">~1 hora</option>
+              <option value="2h">~2 horas</option>
+              <option value="half_day">Meio período</option>
+              <option value="full_day">Dia inteiro</option>
+              <option value="variable">Varia por serviço</option>
+            </select>
+          </div>
+
+          {/* Tamanho da equipe */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Tamanho da equipe
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={settingsForm.teamSize}
+              onChange={(e) =>
+                setSettingsForm((s) => ({ ...s, teamSize: parseInt(e.target.value) || 1 }))
+              }
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+            <p className="text-xs text-slate-500 mt-1">Quantos profissionais fazem parte da sua equipe</p>
+          </div>
+
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setSettingsModal(false)}
