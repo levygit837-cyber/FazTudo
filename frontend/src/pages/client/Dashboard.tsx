@@ -15,6 +15,7 @@ import {
   Sunrise,
   Moon,
   Sparkles,
+  Star,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTour } from "../../context/TourContext";
@@ -22,7 +23,6 @@ import { StatsCard } from "../../components/dashboard/StatsCard";
 import { ActivityTimeline, ActivityItem } from "../../components/dashboard/ActivityTimeline";
 import { CategoryPills, CategoryPillItem } from "../../components/dashboard/CategoryPills";
 import { OrderCard } from "../../components/orders/OrderCard";
-import { ServiceCard } from "../../components/services/ServiceCard";
 import { SkeletonDashboard } from "../../components/common/Skeleton";
 import { EmptyState } from "../../components/common/EmptyState";
 import { QuickActionBar } from "../../components/dashboard/QuickActionBar";
@@ -133,7 +133,6 @@ const ClientDashboard: React.FC = () => {
 
   const greeting = useMemo(() => getGreeting(), []);
   const currentTip = TIPS[tipIndex];
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const tipDragRef = React.useRef<{ startX: number; isDragging: boolean }>({ startX: 0, isDragging: false });
 
   // Disparar tour na primeira visita
@@ -296,14 +295,14 @@ const ClientDashboard: React.FC = () => {
         />
       </div>
 
-      {/* ──────── RECOMENDAÇÕES — Scroll horizontal ──────── */}
+      {/* ──────── PROFISSIONAIS RECOMENDADOS ──────── */}
       {recommendations.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary-500" />
               <h2 className="font-display text-xl font-bold text-slate-900 dark:text-slate-100">
-                Recomendados para Voce
+                Profissionais para Você
               </h2>
             </div>
             <Link
@@ -315,40 +314,40 @@ const ClientDashboard: React.FC = () => {
             </Link>
           </div>
 
-          <div
-            ref={scrollContainerRef}
-            className="flex gap-4 overflow-x-auto scroll-snap-x scrollbar-hide pb-2 -mx-1 px-1"
-          >
-            {recommendations.map((rec, idx) => (
-              <div
-                key={rec.service.id}
-                className="min-w-[280px] max-w-[320px] flex-shrink-0"
-                style={{
-                  animation: `staggerFadeIn 250ms ease-out both`,
-                  animationDelay: `${idx * 60}ms`,
-                }}
-              >
-                <div className="relative">
-                  <ServiceCard
-                    id={rec.service.id}
-                    title={rec.service.title}
-                    description={rec.service.description}
-                    price={rec.service.price}
-                    estimatedHours={rec.service.estimatedHours}
-                    images={rec.service.images}
-                    professional={rec.service.professional}
-                    category={rec.service.category}
-                  />
-                  {rec.reasons.length > 0 && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <span className="badge bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold shadow-sm">
-                        {rec.reasons[0]}
-                      </span>
+          {/* Grid de profissionais — deduplica por professionalId, máximo 6 */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {Array.from(
+              new Map(recommendations.map((r) => [r.service.professional.id, r])).values()
+            ).slice(0, 6).map((rec) => {
+              const pro = rec.service.professional;
+              return (
+                <Link
+                  key={pro.id}
+                  to="/explorar"
+                  state={{ professional: pro.id }}
+                  className="card p-3 flex flex-col items-center text-center gap-2 hover:shadow-md hover:border-primary-300 dark:hover:border-primary-700 transition-all cursor-pointer no-underline"
+                >
+                  <div className="w-14 h-14 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center overflow-hidden ring-2 ring-white dark:ring-slate-800">
+                    {pro.profileImage
+                      ? <img src={pro.profileImage} alt={pro.name} className="w-full h-full object-cover" />
+                      : <span className="text-xl font-bold text-primary-600 dark:text-primary-400">{pro.name.charAt(0).toUpperCase()}</span>
+                    }
+                  </div>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight line-clamp-2">{pro.name}</p>
+                  {pro.totalReviews > 0 && (
+                    <div className="flex items-center gap-0.5 text-xs text-amber-500">
+                      <Star className="w-3 h-3 fill-current" />
+                      <span>{pro.ratingAverage.toFixed(1)}</span>
                     </div>
                   )}
-                </div>
-              </div>
-            ))}
+                  {rec.reasons[0] && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium line-clamp-1">
+                      {rec.reasons[0]}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}
