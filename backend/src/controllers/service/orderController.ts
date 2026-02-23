@@ -613,6 +613,17 @@ export const acceptServiceOrder = async (
           },
         },
         brief: true,
+        items: {
+          include: {
+            service: {
+              select: {
+                id: true,
+                title: true,
+                price: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -647,7 +658,7 @@ export const acceptServiceOrder = async (
         ),
       );
   } catch (error) {
-    log.error({ err: error }, "Accept service order error");
+    log.error({ err: error, orderId: req.params.id, userId: req.user?.id }, "Accept service order error");
     res.status(500).json(errorResponse("Internal server error", 500));
   }
 };
