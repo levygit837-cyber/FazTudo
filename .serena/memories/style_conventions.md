@@ -23,8 +23,8 @@
 - Commits: semantic `feat:`, `fix:`, `refactor:`, `test:`, `docs:` (English)
 
 ## Critical Files (High Conflict Risk)
-- `frontend/src/App.tsx` — central router
-- `frontend/src/components/Layout.tsx` — global shell
-- `backend/prisma/schema.prisma` — DB schema
-- `backend/src/index.ts` — entry point
-- `backend/src/middleware/validation.ts` — all Zod schemas
+- `apps/frontend/src/App.tsx` — central router
+- `apps/frontend/src/components/Layout.tsx` — global shell
+- `apps/backend/prisma/schema.prisma` — DB schema
+- `apps/backend/src/index.ts` — entry point
+- `apps/backend/src/middleware/validation.ts` — all Zod schemas

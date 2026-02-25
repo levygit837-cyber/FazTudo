@@ -7,7 +7,7 @@
  * 3. Convert each ServiceListing into a StorefrontService inside "Geral"
  * 4. Update totalServices counter
  *
- * Run: cd backend && npm run db:migrate-storefronts
+ * Run: cd apps/backend && npm run db:migrate-storefronts
  */
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";

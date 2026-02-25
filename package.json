@@ -1,6 +1,23 @@
 {
-  "dependencies": {
-    "bullmq": "^5.70.0",
-    "ioredis": "^5.9.3"
+  "name": "faztudo-main",
+  "private": true,
+  "version": "1.0.0",
+  "description": "FazTudo monorepo",
+  "packageManager": "npm@10.9.4",
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev:backend": "npm --prefix apps/backend run dev",
+    "dev:frontend": "npm --prefix apps/frontend run dev",
+    "dev:admin": "npm --prefix apps/admin run dev",
+    "build": "npm --prefix apps/backend run build && npm --prefix apps/frontend run build && npm --prefix apps/admin run build",
+    "typecheck": "npm --prefix apps/backend run typecheck && npm --prefix apps/frontend run typecheck && npm --prefix apps/admin run typecheck",
+    "test": "npm --prefix apps/backend run test",
+    "lint": "npm --prefix apps/frontend run lint && npm --prefix apps/admin run lint",
+    "db:push": "npm --prefix apps/backend run db:push",
+    "db:seed": "npm --prefix apps/backend run db:seed",
+    "db:studio": "npm --prefix apps/backend run db:studio"
   }
 }

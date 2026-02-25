@@ -8,6 +8,8 @@ dist/
 build/
 .next/
 out/
+apps/*/dist/
+apps/*/build/
 
 # Environment variables
 .env
@@ -23,6 +25,16 @@ out/
 *.db-journal
 *.sqlite
 *.sqlite3
+apps/backend/dev.db
+apps/backend/test.db
+
+# App dependencies
+apps/*/node_modules/
+
+# Runtime uploads
+apps/backend/uploads/**
+!apps/backend/uploads/listings/
+!apps/backend/uploads/listings/.gitkeep
 
 # IDE
 .vscode/

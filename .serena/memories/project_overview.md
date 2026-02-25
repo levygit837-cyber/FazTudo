@@ -7,7 +7,7 @@ FazTudo is a Brazilian services marketplace (similar to GetNinjas/Fiverr) connec
 - **Companies**: manage teams, assign work, track analytics
 
 ## Tech Stack
-- **Backend**: Express 5 + TypeScript 5.9 + Prisma 7.4 + SQLite (dev) + Socket.io
+- **Backend**: Express 5 + TypeScript 5.9 + Prisma 7.4 + PostgreSQL (dev/prod) + Socket.io
 - **Frontend**: React 19 + React Router 7 + Vite 7 + TailwindCSS 4 + TypeScript 5.9
 - **Auth**: JWT (dual-secret: access + refresh) + httpOnly cookies + bcrypt
 - **Payments**: MercadoPago (PIX, credit card, boleto) + Escrow model
@@ -20,7 +20,7 @@ FazTudo is a Brazilian services marketplace (similar to GetNinjas/Fiverr) connec
 - React Router v7: imports from `"react-router"` (NOT `react-router-dom`)
 - Zod v4: generic middleware in `validate.ts`
 - Socket.io initialized on same HTTP server
-- SQLite dev database at `backend/dev.db`
+- Local database via Docker/PostgreSQL in `apps/backend`
 - Company features: full RBAC, channels, salary automation, teams
 
 ## Repo

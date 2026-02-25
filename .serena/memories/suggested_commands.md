@@ -2,22 +2,22 @@
 
 ## Backend
 ```bash
-cd backend && npm run dev           # Dev server http://localhost:3001
-cd backend && npm test              # Run all tests (Vitest)
-cd backend && npm run test:watch    # Tests in watch mode
-cd backend && npm run test:security # Security tests only
-cd backend && npx tsc --noEmit     # Type check
-cd backend && npm run db:seed      # Seed test data
-cd backend && npm run db:push      # Apply schema to DB
-cd backend && npm run db:studio    # Prisma Studio UI
+cd apps/backend && npm run dev           # Dev server http://localhost:3001
+cd apps/backend && npm test              # Run all tests (Vitest)
+cd apps/backend && npm run test:watch    # Tests in watch mode
+cd apps/backend && npm run test:security # Security tests only
+cd apps/backend && npx tsc --noEmit      # Type check
+cd apps/backend && npm run db:seed       # Seed test data
+cd apps/backend && npm run db:push       # Apply schema to DB
+cd apps/backend && npm run db:studio     # Prisma Studio UI
 ```
 
 ## Frontend
 ```bash
-cd frontend && npm run dev          # Vite dev http://localhost:5173
-cd frontend && npm run build        # Production build
-cd frontend && npm run lint         # ESLint
-cd frontend && npx tsc --noEmit    # Type check
+cd apps/frontend && npm run dev          # Vite dev http://localhost:5173
+cd apps/frontend && npm run build        # Production build
+cd apps/frontend && npm run lint         # ESLint
+cd apps/frontend && npx tsc --noEmit     # Type check
 ```
 
 ## Docker

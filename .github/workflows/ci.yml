@@ -18,28 +18,28 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: apps/backend/package-lock.json
 
       - name: Install dependencies
-        working-directory: backend
+        working-directory: apps/backend
         run: npm ci
 
       - name: Generate Prisma Client
-        working-directory: backend
+        working-directory: apps/backend
         run: npx prisma generate
 
       - name: Create test database
-        working-directory: backend
+        working-directory: apps/backend
         run: npx prisma db push
         env:
           DATABASE_URL: file:./test.db
 
       - name: Type check
-        working-directory: backend
+        working-directory: apps/backend
         run: npx tsc --noEmit
 
       - name: Run tests
-        working-directory: backend
+        working-directory: apps/backend
         run: npm test
         env:
           NODE_ENV: test
@@ -55,7 +55,7 @@ jobs:
           MP_SANDBOX: "true"
 
       - name: Run security tests
-        working-directory: backend
+        working-directory: apps/backend
         run: npx vitest run tests/security/
         env:
           NODE_ENV: test
@@ -81,22 +81,49 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: apps/frontend/package-lock.json
 
       - name: Install dependencies
-        working-directory: frontend
+        working-directory: apps/frontend
         run: npm ci
 
       - name: Lint
-        working-directory: frontend
+        working-directory: apps/frontend
         run: npm run lint
 
       - name: Type check
-        working-directory: frontend
+        working-directory: apps/frontend
         run: npx tsc --noEmit
 
       - name: Build
-        working-directory: frontend
+        working-directory: apps/frontend
+        run: npm run build
+        env:
+          VITE_API_URL: http://localhost:3001
+
+  admin:
+    name: Admin (type check + build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/admin
+        run: npm ci
+
+      - name: Type check
+        working-directory: apps/admin
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: apps/admin
         run: npm run build
         env:
           VITE_API_URL: http://localhost:3001
@@ -113,12 +140,17 @@ jobs:
           node-version: 20
 
       - name: Backend dependency audit
-        working-directory: backend
+        working-directory: apps/backend
         run: npm audit --audit-level=high
         continue-on-error: true
 
       - name: Frontend dependency audit
-        working-directory: frontend
+        working-directory: apps/frontend
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Admin dependency audit
+        working-directory: apps/admin
         run: npm audit --audit-level=high
         continue-on-error: true
 

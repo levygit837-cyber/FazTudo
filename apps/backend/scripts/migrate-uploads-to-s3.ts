@@ -2,7 +2,7 @@
 /**
  * migrate-uploads-to-s3.ts
  *
- * Migrates files from local disk (backend/uploads/) to the configured S3-compatible
+ * Migrates files from local disk (apps/backend/uploads/) to the configured S3-compatible
  * object storage. Updates File records in the database to point to the new keys.
  *
  * Usage:
