@@ -25,8 +25,8 @@ apps/*/build/
 *.db-journal
 *.sqlite
 *.sqlite3
-apps/backend/dev.db
-apps/backend/test.db
+apps/backend/prisma/dev.db
+apps/backend/prisma/test.db
 
 # App dependencies
 apps/*/node_modules/
@@ -67,30 +67,3 @@ temp/
 *.key
 credentials.json
 service-account.json
-
-# Payment credentials
-VARIAVEIS/
-
-# Worktrees
-.worktrees/
-
-# Agent files
-AGENTS.md
-CLAUDE.md
-.co/
-.claude/
-.claude-flow/
-.coa/
-.opencode/
-.swarm/
-arms_cache/
-1mcpserver/
-agentql-mcp/
-agentrpc/
-coa-codesearch-mcp/
-FazTudoMelhorias/
-LOGO/
-.mcp.json
-Documentacao.MD
-GUIA-FRONTEND.md
-.codesearchignore
