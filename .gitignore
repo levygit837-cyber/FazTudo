@@ -129,3 +129,6 @@ __pycache__/
 .gitkeep
 # Build / Dist
 *.tsbuildinfo
+
+# System files
+skills-lock.json
