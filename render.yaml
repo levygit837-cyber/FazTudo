@@ -1,0 +1,120 @@
+# ============================================
+# Render Blueprint - FazTudo Backend
+# ============================================
+# Deploy automático no Render.com
+#
+# Para usar:
+# 1. Acesse https://dashboard.render.com/blueprints
+# 2. Clique "New Blueprint Instance"
+# 3. Conecte seu repositório
+# 4. O Render detectará este arquivo automaticamente
+#
+# OU crie manualmente um Web Service e cole as configurações.
+
+services:
+  - type: web
+    name: faztudo-backend
+    runtime: node
+    region: ohio
+    plan: free
+    branch: main
+    rootDir: apps/backend
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npm run start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: LOG_LEVEL
+        value: info
+
+      # Database (Supabase) - PREENCHER!
+      - key: DATABASE_URL
+        sync: false
+
+      # Redis (Upstash) - PREENCHER!
+      - key: REDIS_URL
+        sync: false
+
+      # JWT Secrets - GERE E PREENCHA MANUALMENTE! (veja scripts/generate-secrets.sh)
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 1h
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: BCRYPT_SALT_ROUNDS
+        value: "12"
+
+      # CORS - ATUALIZE COM AS URLS REAIS DO VERCEL!
+      - key: CORS_ORIGIN
+        value: "https://faztudo-frontend.vercel.app,https://faztudo-admin.vercel.app"
+
+      # Rate Limiting
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "500"
+      - key: AUTH_RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: AUTH_RATE_LIMIT_MAX_REQUESTS
+        value: "10"
+      - key: BODY_SIZE_LIMIT
+        value: 10kb
+      - key: TRUST_PROXY
+        value: "1"
+
+      # Escrow
+      - key: DEFAULT_ESCROW_HOLD_DAYS
+        value: "7"
+      - key: ESCROW_AUTO_RELEASE_DAYS
+        value: "2"
+      - key: PLATFORM_FEE_PERCENTAGE
+        value: "10.0"
+
+      # MercadoPago (opcional - deixar vazio inicialmente)
+      - key: MP_SANDBOX
+        value: "true"
+
+      # Email (opcional)
+      - key: ENABLE_EMAIL_NOTIFICATIONS
+        value: "false"
+      - key: SMTP_FROM_NAME
+        value: FazTudo
+      - key: SMTP_FROM_EMAIL
+        value: noreply@faztudo.com.br
+
+      # Frontend URL (atualizar após deploy do Vercel)
+      - key: FRONTEND_URL
+        value: "https://faztudo-frontend.vercel.app"
+
+      # Storage (local no tier gratuito)
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: S3_BUCKET
+        value: faztudo-uploads
+      - key: S3_REGION
+        value: us-east-1
+
+      # Health - GERE E PREENCHA MANUALMENTE!
+      - key: HEALTH_AUTH_TOKEN
+        sync: false
+
+      # Rate limiting adicional
+      - key: SENSITIVE_RATE_LIMIT_MAX
+        value: "5"
+      - key: FINANCIAL_RATE_LIMIT_MAX
+        value: "3"
+      - key: WEBHOOK_RATE_LIMIT_MAX
+        value: "100"
+      - key: MFA_RATE_LIMIT_MAX
+        value: "5"
+
+    # O Render free tier dorme após 15 min de inatividade.
+    # Use UpTimeBot (passo 6 do DEPLOY.md) para manter acordado.
