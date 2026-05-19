@@ -1,0 +1,1228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums
+enum UserRole {
+  CLIENT
+  PROFESSIONAL
+  COMPANY
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum ServiceOrderStatus {
+  DRAFT // Rascunho - conversa antes de formalizar pedido
+  PENDING // Aguardando aceitação do profissional
+  ACCEPTED // Aceito pelo profissional
+  IN_PROGRESS // Em andamento
+  AWAITING_CLIENT_CONFIRMATION // Serviço entregue pelo profissional, aguardando cliente confirmar conclusão
+  AWAITING_PROFESSIONAL_CONFIRMATION // Cliente confirmou, aguardando profissional confirmar conclusão
+  COMPLETED // Concluído
+  CANCELLED // Cancelado
+  EXPIRED // Prazo expirado
+  DISPUTED // Em disputa
+}
+
+enum PaymentStatus {
+  PENDING // Aguardando pagamento
+  HELD // Em escrow (aguardando conclusão)
+  RELEASED // Liberado para profissional
+  REFUNDED // Reembolsado
+  FAILED // Falhou
+  PARTIALLY_REFUNDED // Parcialmente reembolsado
+}
+
+enum PaymentEventType {
+  CREATED
+  WEBHOOK_RECEIVED
+  STATUS_CHANGED
+  HELD
+  RELEASED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  FAILED
+  FRAUD_FLAGGED
+  RECONCILED
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
+}
+
+enum EventSource {
+  WEBHOOK
+  INTERNAL
+  ADMIN
+  SCHEDULER
+}
+
+enum NotificationType {
+  ORDER_CREATED
+  ORDER_ACCEPTED
+  ORDER_COMPLETED
+  ORDER_CANCELLED
+  PAYMENT_RECEIVED
+  PAYMENT_RELEASED
+  DEADLINE_WARNING
+  DEADLINE_EXPIRED
+  NEW_MESSAGE
+  REVIEW_RECEIVED
+  SYSTEM_ALERT
+  PROFESSIONAL_EN_ROUTE
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum ServiceCategoryType {
+  HOME_SERVICES
+  BUSINESS_SERVICES
+  BOTH
+}
+
+enum VerificationType {
+  DOCUMENT
+  FACIAL
+}
+
+enum VerificationSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SalaryStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+
+enum StorefrontBlockType {
+  HERO
+  ABOUT
+  TESTIMONIALS
+}
+
+
+enum CompanyTier {
+  EMPRESA
+  PARCEIRO
+  ELITE
+}
+
+// Models
+model User {
+  id            Int        @id @default(autoincrement())
+  email         String     @unique
+  name          String
+  phone         String?
+  password      String
+  role          UserRole   @default(CLIENT)
+  status        UserStatus @default(PENDING)
+  document      String?    @unique // CPF/CNPJ
+  isVerified    Boolean    @default(false)
+  bio           String?
+  profileImage  String?
+  ratingAverage Float      @default(0.0)
+  totalReviews  Int        @default(0)
+  balance       Float      @default(0.0)
+  tokenVersion  Int        @default(0)
+  refreshToken         String?
+  resetPasswordToken   String?   @unique
+  resetPasswordExpires DateTime?
+  emailVerified          Boolean   @default(false)
+  emailVerifyToken       String?   @unique
+  emailVerifyExpires     DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Professional specific fields
+  categories      ProfessionalCategory[] // Categorias que o profissional atende
+  serviceListings ServiceListing[] // Catálogo de serviços oferecidos
+  certifications  Certification[] // Certificações do profissional
+
+  // Relations
+  addresses              Address[]
+  serviceOrders          ServiceOrder[] @relation("ClientOrders")
+  servicesProvided       ServiceOrder[] @relation("ProfessionalOrders")
+  reviewsGiven           Review[]       @relation("ReviewAuthor")
+  reviewsReceived        Review[]       @relation("ReviewTarget")
+  notifications          Notification[]
+  messagesSent           Message[]      @relation("Sender")
+  messagesReceived       Message[]      @relation("Recipient")
+  transactions           Transaction[]
+  paymentsAsClient       Payment[]      @relation("PaymentClient")
+  paymentsAsProfessional Payment[]      @relation("PaymentProfessional")
+  files                  File[]
+  verificationSubmissions VerificationSubmission[]
+  proposals              Proposal[]     @relation("ProposalProfessional")
+  schedule               ProfessionalSchedule[] @relation("ProfessionalSchedule")
+  scheduleBlocks         ScheduleBlock[]        @relation("ScheduleBlocks")
+  disputesInitiated      Dispute[]      @relation("DisputeInitiator")
+  sessions               UserSession[]
+  companyProfile         CompanyProfile?
+  companyMember          CompanyMember?
+  storefront             Storefront?
+
+  // Analytics relations (B1)
+  searchEvents           SearchEvent[]
+  listingViews           ServiceListingView[] @relation("ListingViewer")
+  orderEvents            ServiceOrderEvent[]  @relation("OrderEventActor")
+  devices                UserDevice[]
+  createdInviteTokens    CompanyInviteToken[] @relation("InviteTokenCreator")
+  usedInviteTokens       CompanyInviteToken[] @relation("InviteTokenUser")
+  mfa                    UserMFA?
+  auditLogs              AuditLog[] @relation("AuditLogActor")
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+model ServiceCategory {
+  id                     Int                    @id @default(autoincrement())
+  name                   String                 @unique
+  description            String?
+  icon                   String?
+  type                   ServiceCategoryType    @default(HOME_SERVICES)
+  parentCategoryId       Int?
+  parentCategory         ServiceCategory?       @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
+  subcategories          ServiceCategory[]      @relation("CategoryHierarchy")
+  serviceListings        ServiceListing[]
+  professionalCategories ProfessionalCategory[]
+  orderBriefs            OrderBrief[]
+  storefronts            Storefront[] @relation("StorefrontMainCategory")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentCategoryId])
+  @@index([type])
+}
+
+model ProfessionalCategory {
+  id              Int     @id @default(autoincrement())
+  userId          Int
+  categoryId      Int
+  experienceYears Int?    @default(0)
+  hourlyRate      Float?
+  isPrimary       Boolean @default(false)
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, categoryId])
+  @@index([userId])
+  @@index([categoryId])
+}
+
+model ServiceListing {
+  id             Int     @id @default(autoincrement())
+  title          String
+  description    String
+  price          Float
+  estimatedHours Int? // Tempo estimado em horas
+  isAvailable    Boolean @default(true)
+  images         Json // URLs das imagens (array como JSON)
+  tags           Json // Tags para busca (array como JSON)
+
+  // Relations
+  professionalId Int
+  categoryId     Int
+  serviceOrders  ServiceOrder[]
+  views          ServiceListingView[] // analytics
+  storefrontItems CompanyStorefrontItem[]
+
+  professional User            @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  category     ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([professionalId])
+  @@index([categoryId])
+  @@index([isAvailable])
+}
+
+model ServiceOrder {
+  id            Int                @id @default(autoincrement())
+  title         String
+  description   String?
+  price         Float
+  status        ServiceOrderStatus @default(PENDING)
+  scheduledDate DateTime? // Data agendada para o serviço
+  deadlineDays  Int                @default(7) // Prazo em dias para conclusão
+  deadlineDate  DateTime? // Data limite calculada
+  startedAt     DateTime?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+
+  // Confirmação dupla de conclusão
+  clientConfirmedAt       DateTime?
+  professionalConfirmedAt DateTime?
+
+  // DRAFT conversion flow
+  convertProposedBy Int?    // userId who proposed converting DRAFT to order
+  convertStatus     String? // "PROPOSED", "ACCEPTED", "REJECTED"
+
+  // Professional en-route tracking
+  enRouteAt DateTime?
+
+  // Localização do serviço
+  addressId    Int?
+  addressNotes String? // Informações adicionais sobre localização
+
+  // Relations
+  clientId         Int
+  professionalId   Int?
+  serviceListingId Int?
+  address          Address?        @relation(fields: [addressId], references: [id])
+  client           User            @relation("ClientOrders", fields: [clientId], references: [id], onDelete: Cascade)
+  professional     User?           @relation("ProfessionalOrders", fields: [professionalId], references: [id], onDelete: SetNull)
+  serviceListing   ServiceListing? @relation(fields: [serviceListingId], references: [id], onDelete: SetNull)
+
+  // Associated data
+  payments      Payment[]
+  reviews       Review[]
+  notifications Notification[]
+  messages      Message[]
+  files         File[]
+  brief         OrderBrief?
+  proposals     Proposal[]
+  scheduleBlock ScheduleBlock?
+  disputes      Dispute[]
+  team          ServiceTeam?
+  events        ServiceOrderEvent[] // analytics
+  items         ServiceOrderItem[]
+
+  // Storefront service (vitrine) reference for draft orders
+  storefrontServiceId Int?
+  storefrontService   StorefrontService? @relation("OrderStorefrontService", fields: [storefrontServiceId], references: [id])
+
+  // Reschedule approval flow
+  rescheduleProposedDate DateTime?
+  rescheduleReason       String?
+  rescheduleStatus       String?    // "PENDING", null (cleared after accept/reject)
+  rescheduleRequestedBy  Int?       // userId who requested
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([professionalId])
+  @@index([status])
+  @@index([deadlineDate])
+  @@index([createdAt])
+  @@index([professionalId, status])
+  @@index([clientId, status])
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  amount        Float
+  status        PaymentStatus @default(PENDING)
+  paymentMethod String // cartão, pix, boleto, etc.
+  transactionId String? // ID da transação no gateway
+  metadata      Json? // Dados adicionais do gateway
+
+  // Datas importantes
+  dueDate    DateTime? // Data de vencimento (para boleto)
+  paidAt     DateTime? // Quando foi pago
+  heldUntil  DateTime? // Data até quando fica em escrow
+  releasedAt DateTime? // Quando foi liberado para profissional
+  refundedAt DateTime? // Quando foi reembolsado
+
+  // Relations
+  serviceOrderId Int
+  clientId       Int
+  professionalId Int?
+
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  client       User         @relation("PaymentClient", fields: [clientId], references: [id], onDelete: Cascade)
+  professional User?        @relation("PaymentProfessional", fields: [professionalId], references: [id], onDelete: SetNull)
+
+  transactions Transaction[]
+  events       PaymentEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serviceOrderId])
+  @@index([clientId])
+  @@index([professionalId])
+  @@index([status])
+  @@index([paidAt])
+  @@index([serviceOrderId, status])
+}
+
+model Transaction {
+  id            Int    @id @default(autoincrement())
+  type          String // DEPOSIT, WITHDRAWAL, PAYMENT, REFUND, FEE
+  amount        Float
+  description   String
+  balanceBefore Float
+  balanceAfter  Float
+
+  // Relations
+  userId    Int
+  paymentId Int?
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([paymentId])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model Review {
+  id             Int     @id @default(autoincrement())
+  rating         Int
+  comment        String?
+  isProfessional Boolean // Se a review é sobre um profissional (true) ou cliente (false)
+
+  // Relations
+  authorId       Int
+  targetId       Int
+  serviceOrderId Int
+
+  author       User         @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  target       User         @relation("ReviewTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pinnedBy  CompanyPinnedTestimonial[]
+
+  @@unique([authorId, serviceOrderId])
+  @@index([targetId])
+  @@index([serviceOrderId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id       Int                @id @default(autoincrement())
+  type     NotificationType
+  title    String
+  message  String
+  status   NotificationStatus @default(UNREAD)
+  metadata Json? // Dados adicionais (IDs relacionados)
+
+  // Relations
+  userId         Int
+  serviceOrderId Int?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceOrder ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([userId])
+  @@index([serviceOrderId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, status])
+}
+
+model Address {
+  id           Int     @id @default(autoincrement())
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  zipCode      String
+  country      String  @default("Brasil")
+  latitude     Float?
+  longitude    Float?
+
+  // Relations
+  userId        Int
+  serviceOrders ServiceOrder[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([zipCode])
+  @@index([city, state])
+}
+
+model Message {
+  id      Int     @id @default(autoincrement())
+  content String
+  isRead  Boolean @default(false)
+  type    String  @default("TEXT") // TEXT, SYSTEM, ATTACHMENT, LOCATION
+
+  // Relations
+  senderId       Int
+  recipientId    Int
+  serviceOrderId Int
+
+  // Attachment fields (optional)
+  attachmentUrl  String?
+  attachmentName String?
+  attachmentType String? // MIME type
+  attachmentSize Int?    // bytes
+
+  // Location fields (optional)
+  locationLat    Float?
+  locationLng    Float?
+  locationLabel  String?
+
+  // Extra metadata (e.g. hire_proposal action, checkoutUrl)
+  metadata Json?
+
+  sender       User         @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient    User         @relation("Recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
+  isGroup    Boolean     @default(false)
+  isArchived Boolean     @default(false)
+  teamId     Int?
+  team       ServiceTeam? @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([serviceOrderId])
+  @@index([createdAt])
+  @@index([serviceOrderId, recipientId, isRead])
+}
+
+model File {
+  id           Int     @id @default(autoincrement())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int // Em bytes
+  url          String  @unique
+  description  String?
+
+  // Relations
+  userId         Int
+  serviceOrderId Int?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceOrder ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([serviceOrderId])
+  @@index([createdAt])
+}
+
+model Certification {
+  id              Int       @id @default(autoincrement())
+  title           String
+  issuer          String
+  issueDate       DateTime
+  expiryDate      DateTime?
+  credentialId    String?
+  verificationUrl String?
+
+  // Relations
+  professionalId Int
+
+  professional User @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([professionalId])
+}
+
+model VerificationSubmission {
+  id              Int                        @id @default(autoincrement())
+  userId          Int
+  type            VerificationType
+  status          VerificationSubmissionStatus @default(PENDING)
+  metadata        Json?
+  rejectionReason String?
+  submittedAt     DateTime                   @default(now())
+  reviewedAt      DateTime?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([submittedAt])
+}
+
+model EscrowConfig {
+  id                    Int     @id @default(autoincrement())
+  name                  String  @unique
+  description           String?
+  defaultHoldDays       Int     @default(7) // Dias padrão que o pagamento fica em escrow
+  autoReleaseDays       Int     @default(2) // Dias após conclusão para liberação automática
+  disputePeriodDays     Int     @default(3) // Período para abrir disputa após liberação
+  platformFeePercentage Float   @default(10.0) // Taxa da plataforma
+  minServiceValue       Float   @default(0.0)
+  maxServiceValue       Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Tabela de configuração do sistema
+model SystemConfig {
+  id          Int     @id @default(autoincrement())
+  key         String  @unique
+  value       Json
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+// ============================================
+// SMART BRIEF, PROPOSALS, SCHEDULING, DISPUTES
+// ============================================
+
+model OrderBrief {
+  id             Int      @id @default(autoincrement())
+  serviceOrderId Int      @unique
+  categoryId     Int?
+  urgencyLevel   String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  priceRangeMin  Float?
+  priceRangeMax  Float?
+  briefData      Json     // Category-specific form data as JSON
+  mediaUrls      Json?    // Array of photo/video URLs
+  notes          String?
+
+  serviceOrder ServiceOrder     @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  category     ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serviceOrderId])
+  @@index([categoryId])
+}
+
+model Proposal {
+  id              Int      @id @default(autoincrement())
+  serviceOrderId  Int
+  professionalId  Int
+  price           Float
+  estimatedDays   Int?
+  estimatedHours  Int?
+  description     String
+  guaranteeDays   Int?     // Warranty period in days
+  status          String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, WITHDRAWN
+  metadata        Json?
+
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  professional User         @relation("ProposalProfessional", fields: [professionalId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceOrderId, professionalId])
+  @@index([serviceOrderId])
+  @@index([professionalId])
+  @@index([status])
+}
+
+model ProfessionalSchedule {
+  id              Int      @id @default(autoincrement())
+  professionalId  Int
+  dayOfWeek       Int      // 0=Sunday, 6=Saturday
+  startTime       String   // "08:00"
+  endTime         String   // "18:00"
+  isAvailable     Boolean  @default(true)
+
+  professional User @relation("ProfessionalSchedule", fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@unique([professionalId, dayOfWeek])
+  @@index([professionalId])
+}
+
+model ScheduleBlock {
+  id              Int      @id @default(autoincrement())
+  professionalId  Int
+  startDateTime   DateTime
+  endDateTime     DateTime
+  reason          String?  // "Pedido #123", "Folga", etc.
+  serviceOrderId  Int?     @unique
+
+  professional   User          @relation("ScheduleBlocks", fields: [professionalId], references: [id], onDelete: Cascade)
+  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+
+  @@index([professionalId])
+  @@index([startDateTime, endDateTime])
+}
+
+model Dispute {
+  id              Int      @id @default(autoincrement())
+  serviceOrderId  Int
+  initiatorId     Int
+  reason          String
+  description     String
+  status          String   @default("OPEN") // OPEN, UNDER_REVIEW, RESOLVED, CLOSED
+  resolution      String?
+  attachments     Json?    // Array of file URLs
+  metadata        Json?
+
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  initiator    User         @relation("DisputeInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serviceOrderId])
+  @@index([initiatorId])
+  @@index([status])
+}
+
+// ============================================
+// ENTERPRISE / COMPANY MODELS
+// ============================================
+
+model CompanyProfile {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName  String
+  cnpj         String    @unique
+  description  String?
+  logo         String?
+  coverImage   String?
+  website      String?
+  phone        String?
+  address      Json?
+  isVerified   Boolean   @default(false)
+  industry     String?
+  foundedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  members  CompanyMember[]
+  roles    CompanyRole[]
+  channels CompanyChannel[]
+  storefrontSections  CompanyStorefrontSection[]
+  storefrontBlocks    CompanyStorefrontBlock[]
+  pinnedTestimonials  CompanyPinnedTestimonial[]
+
+  // Tier & onboarding
+  tier              CompanyTier        @default(EMPRESA)
+  onboardingStep    Int                @default(0)
+  onboardingDone    Boolean            @default(false)
+  inviteTokens      CompanyInviteToken[]
+  salaryRules       CompanySalaryRule[]
+}
+
+model CompanyRole {
+  id          Int            @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  level       Int
+  permissions Json
+  color       String?
+  createdAt   DateTime       @default(now())
+
+  members     CompanyMember[]
+  salaryRules CompanySalaryRule[]
+}
+
+model CompanyMember {
+  id                Int            @id @default(autoincrement())
+  companyId         Int
+  company           CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId            Int            @unique
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId            Int?
+  role              CompanyRole?   @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  customPermissions Json?
+  joinedAt          DateTime       @default(now())
+  isActive          Boolean        @default(true)
+
+  salaryHistory   CompanySalaryPayment[]
+  teamMemberships ServiceTeamMember[]
+  ledTeams        ServiceTeam[]          @relation("TeamLeader")
+  channelMemberships CompanyChannelMember[]
+}
+
+model CompanySalaryRule {
+  id          Int            @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  roleId      Int?
+  role        CompanyRole?   @relation(fields: [roleId], references: [id])
+  memberId    Int?
+  amount      Float
+  dayOfMonth  Int
+  description String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+
+  payments CompanySalaryPayment[]
+}
+
+model CompanySalaryPayment {
+  id       Int               @id @default(autoincrement())
+  ruleId   Int
+  rule     CompanySalaryRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  memberId Int
+  member   CompanyMember     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amount   Float
+  paidAt   DateTime
+  status   SalaryStatus
+  note     String?
+}
+
+model ServiceTeam {
+  id        Int           @id @default(autoincrement())
+  orderId   Int           @unique
+  order     ServiceOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  leaderId  Int
+  leader    CompanyMember @relation("TeamLeader", fields: [leaderId], references: [id])
+  createdAt DateTime      @default(now())
+
+  members  ServiceTeamMember[]
+  messages Message[]
+}
+
+model ServiceTeamMember {
+  id       Int           @id @default(autoincrement())
+  teamId   Int
+  team     ServiceTeam   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  memberId Int
+  member   CompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+
+model CompanyChannel {
+  id          Int            @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+
+  members     CompanyChannelMember[]
+}
+
+model CompanyChannelMember {
+  id        Int            @id @default(autoincrement())
+  channelId Int
+  channel   CompanyChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  memberId  Int
+  member    CompanyMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, memberId])
+}
+
+// ============================================
+// ANALYTICS / SESSION TRACKING
+// ============================================
+
+model UserSession {
+  id          String     @id @default(uuid())
+  userId      Int
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt   DateTime   @default(now())
+  endedAt     DateTime?
+  duration    Int?
+  pagesViewed Int        @default(0)
+  device      String?
+  pageViews   PageView[]
+  createdAt   DateTime   @default(now())
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+model PageView {
+  id        String      @id @default(uuid())
+  sessionId String
+  session   UserSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  path      String
+  enteredAt DateTime    @default(now())
+  duration  Int?
+
+  @@index([sessionId])
+  @@index([path])
+  @@index([enteredAt])
+}
+
+// ─── ANALYTICS MODELS (B1) ────────────────────────────────────────────────────
+
+/// Records every search performed on the platform for ranking and funnel analysis.
+model SearchEvent {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  query      String
+  categoryId Int?
+  city       String?
+  lat        Float?
+  lng        Float?
+  resultCount Int     @default(0)
+  clickedId  Int?     // ServiceListing.id that was clicked (null = no click)
+  device     String?  // "mobile" | "desktop" | "tablet"
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([query])
+  @@index([city])
+  @@index([createdAt])
+}
+
+/// Impressions of service listings — enables CTR and visibility analytics.
+model ServiceListingView {
+  id               Int            @id @default(autoincrement())
+  listingId        Int
+  listing          ServiceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  viewerId         Int?
+  viewer           User?          @relation("ListingViewer", fields: [viewerId], references: [id], onDelete: SetNull)
+  source           String?        // "search" | "category" | "recommendation" | "direct"
+  device           String?        // "mobile" | "desktop" | "tablet"
+  sessionDuration  Int?           // seconds on listing page
+  convertedToOrder Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+
+  @@index([listingId])
+  @@index([viewerId])
+  @@index([createdAt])
+  @@index([convertedToOrder])
+}
+
+/// State transitions for orders — enables funnel analysis and drop-off identification.
+model ServiceOrderEvent {
+  id        Int          @id @default(autoincrement())
+  orderId   Int
+  order     ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorId   Int?
+  actor     User?        @relation("OrderEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  fromStatus String?     // previous order status
+  toStatus  String       // new order status
+  durationMs Int?        // ms since last state transition
+  metadata  String?      // JSON blob for extra context
+  createdAt DateTime     @default(now())
+
+  @@index([orderId])
+  @@index([actorId])
+  @@index([toStatus])
+  @@index([createdAt])
+}
+
+/// Aggregated daily KPIs per city — pre-computed for dashboard performance.
+model CityMetrics {
+  id                    Int      @id @default(autoincrement())
+  city                  String
+  date                  DateTime // date only (stored as midnight UTC)
+  newUsers              Int      @default(0)
+  newProfessionals      Int      @default(0)
+  ordersCreated         Int      @default(0)
+  ordersCompleted       Int      @default(0)
+  ordersCancelled       Int      @default(0)
+  gmv                   Float    @default(0) // Gross Merchandise Value (R$)
+  platformFeeCollected  Float    @default(0)
+  avgOrderValue         Float    @default(0)
+  avgCompletionDays     Float    @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([city, date])
+  @@index([city])
+  @@index([date])
+}
+
+/// Tracks devices per user — enables cross-device analysis and mobile-first insights.
+model UserDevice {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceType  String   // "mobile" | "desktop" | "tablet"
+  os          String?  // "iOS" | "Android" | "Windows" | "macOS" | "Linux"
+  browser     String?
+  userAgent   String?
+  pushToken   String?  // FCM/APNs token for push notifications
+  isActive    Boolean  @default(true)
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([deviceType])
+  @@index([lastSeenAt])
+}
+
+// ============================================
+// ENTERPRISE STOREFRONT MODELS
+// ============================================
+
+model CompanyStorefrontSection {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  order       Int
+  isActive    Boolean  @default(true)
+  items       CompanyStorefrontItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([companyId, order])
+}
+
+model CompanyStorefrontItem {
+  id          Int      @id @default(autoincrement())
+  sectionId   Int
+  section     CompanyStorefrontSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  listingId   Int
+  listing     ServiceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  order       Int
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  @@unique([sectionId, listingId])
+  @@index([sectionId, order])
+}
+
+model CompanyStorefrontBlock {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type        StorefrontBlockType
+  order       Int
+  isActive    Boolean  @default(true)
+  content     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([companyId, type])
+  @@index([companyId])
+}
+
+model CompanyPinnedTestimonial {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reviewId    Int
+  review      Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  order       Int
+  createdAt   DateTime @default(now())
+  @@unique([companyId, reviewId])
+  @@index([companyId, order])
+}
+
+model CompanyInviteToken {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  role        String   @default("MEMBER")
+  createdById Int
+  createdBy   User     @relation("InviteTokenCreator", fields: [createdById], references: [id])
+  usedById    Int?
+  usedBy      User?    @relation("InviteTokenUser", fields: [usedById], references: [id])
+  usedAt      DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  @@index([companyId])
+  @@index([token])
+}
+
+// ============================================
+// VITRINE (STOREFRONT) MODELS — v2
+// ============================================
+
+model Storefront {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  slug        String   @unique
+  description String?
+  logo        String?
+  banner      String?
+
+  isActive    Boolean  @default(true)
+  isPublished Boolean  @default(false)
+
+  mainCategoryId  Int?
+  mainCategory    ServiceCategory? @relation("StorefrontMainCategory", fields: [mainCategoryId], references: [id])
+
+  ratingAverage   Float   @default(0.0)
+  totalReviews    Int     @default(0)
+  totalServices   Int     @default(0)
+
+  serviceLocation    String?
+  teamSize           Int?      @default(1)
+  workingHours       String?
+  averageServiceTime String?
+
+  categories  StorefrontCategory[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive, isPublished])
+  @@index([mainCategoryId])
+}
+
+model StorefrontCategory {
+  id           Int        @id @default(autoincrement())
+  storefrontId Int
+  storefront   Storefront @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
+
+  name         String
+  order        Int
+  isActive     Boolean    @default(true)
+
+  services     StorefrontService[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([storefrontId, order])
+}
+
+model StorefrontService {
+  id           Int                @id @default(autoincrement())
+  categoryId   Int
+  category     StorefrontCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  title        String
+  description  String?
+  price        Float
+  images       Json?
+  isAvailable  Boolean            @default(true)
+  serviceLocation    String?
+  order        Int
+
+  options      StorefrontServiceOption[]
+  orderItems   ServiceOrderItem[]
+  draftOrders  ServiceOrder[] @relation("OrderStorefrontService")
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([categoryId, order])
+  @@index([isAvailable])
+}
+
+model StorefrontServiceOption {
+  id         Int               @id @default(autoincrement())
+  serviceId  Int
+  service    StorefrontService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  name       String
+  price      Float?
+  isDefault  Boolean   @default(false)
+  order      Int
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([serviceId, order])
+}
+
+model ServiceOrderItem {
+  id              Int               @id @default(autoincrement())
+  serviceOrderId  Int
+  serviceOrder    ServiceOrder      @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceId       Int
+  service         StorefrontService @relation(fields: [serviceId], references: [id])
+
+  quantity        Int     @default(1)
+  unitPrice       Float
+  totalPrice      Float
+  optionsSnapshot Json?
+
+  createdAt       DateTime @default(now())
+
+  @@index([serviceOrderId])
+  @@index([serviceId])
+}
+
+// ==================== PAYMENT EVENT STORE ====================
+
+model PaymentEvent {
+  id              Int              @id @default(autoincrement())
+  paymentId       Int
+  payment         Payment          @relation(fields: [paymentId], references: [id])
+  eventType       PaymentEventType
+  previousStatus  String?
+  newStatus       String
+  idempotencyKey  String           @unique
+  amount          Float?
+  metadata        Json?
+  source          EventSource
+  actorId         Int?
+  ipAddress       String?
+  createdAt       DateTime         @default(now())
+
+  @@index([paymentId, createdAt])
+  @@index([eventType, createdAt])
+}
+
+// ==================== MFA ====================
+
+model UserMFA {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secret          String    // AES-256-GCM encrypted TOTP secret
+  isEnabled       Boolean   @default(false)
+  isVerified      Boolean   @default(false)
+  backupCodes     String?   // JSON array of hashed backup codes
+  backupCodesUsed Int       @default(0)
+  lastUsedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  action      String   // e.g. "ADMIN_CHANGE_USER_STATUS", "WITHDRAWAL_REQUEST"
+  actorId     Int
+  actor       User     @relation("AuditLogActor", fields: [actorId], references: [id])
+  targetType  String   // e.g. "User", "Payment", "Company"
+  targetId    Int
+  metadata    Json?    // Additional context (old/new values, etc.)
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@index([action, createdAt])
+}

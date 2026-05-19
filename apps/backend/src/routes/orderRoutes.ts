@@ -1,0 +1,172 @@
+import { Router } from "express";
+import * as serviceController from "../controllers/service";
+import {
+  verifyToken,
+  requireRole,
+  requireVerified,
+  authLogger,
+} from "../middleware/auth";
+import { validateBody } from "../middleware/validate";
+import {
+  createOrderSchema,
+  delayResponseSchema,
+  acceptOrderSchema,
+  startOrderSchema,
+  submitCompletionSchema,
+  confirmOrderSchema,
+  cancelOrderSchema,
+  rescheduleOrderSchema,
+} from "../middleware/validation";
+import { cartCheckoutSchema } from "../middleware/storefrontValidation";
+import { createOrderFromCart } from "../controllers/cartCheckoutController";
+
+const router = Router();
+
+// Middleware de log
+router.use(authLogger);
+
+// ============================================
+// ROTAS DE SERVICE ORDERS (PEDIDOS)
+// ============================================
+
+// Criar pedido a partir do carrinho da vitrine (clientes e profissionais verificados)
+router.post(
+  "/orders/from-cart",
+  verifyToken,
+  requireRole("CLIENT", "PROFESSIONAL"),
+  requireVerified,
+  validateBody(cartCheckoutSchema),
+  createOrderFromCart,
+);
+
+// Criar novo pedido de servico (clientes e profissionais verificados)
+router.post(
+  "/orders",
+  verifyToken,
+  requireRole("CLIENT", "PROFESSIONAL"),
+  requireVerified,
+  validateBody(createOrderSchema),
+  serviceController.createServiceOrder,
+);
+
+// Obter pedidos do usuario (como cliente ou profissional)
+router.get("/orders", verifyToken, serviceController.getUserServiceOrders);
+
+// Obter detalhes de um pedido especifico (envolvidos ou admin)
+router.get("/orders/:id", verifyToken, serviceController.getServiceOrder);
+
+// Aceitar pedido (apenas profissional designado ou admin)
+router.post(
+  "/orders/:id/accept",
+  verifyToken,
+  requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
+  requireVerified,
+  validateBody(acceptOrderSchema),
+  serviceController.acceptServiceOrder,
+);
+
+// Iniciar servico (apenas profissional designado ou admin)
+router.post(
+  "/orders/:id/start",
+  verifyToken,
+  requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
+  requireVerified,
+  validateBody(startOrderSchema),
+  serviceController.startServiceOrder,
+);
+
+// Cliente confirma que o serviço foi realizado (aguardando confirmacao do profissional)
+router.post(
+  "/orders/:id/submit-completion",
+  verifyToken,
+  requireRole("CLIENT", "ADMIN"),
+  requireVerified,
+  validateBody(submitCompletionSchema),
+  serviceController.completeServiceOrder,
+);
+
+// REMOVED: confirm-completion route — no longer needed.
+// New flow: Client → submit-completion → AWAITING_PROFESSIONAL_CONFIRMATION → confirm-professional → COMPLETED
+
+// Profissional confirma conclusao (apos cliente ja ter confirmado)
+router.post(
+  "/orders/:id/confirm-professional",
+  verifyToken,
+  requireRole("PROFESSIONAL", "COMPANY", "ADMIN"),
+  requireVerified,
+  validateBody(confirmOrderSchema),
+  serviceController.confirmProfessionalCompletion,
+);
+
+// Cancelar pedido (cliente, profissional envolvido ou admin)
+router.post(
+  "/orders/:id/cancel",
+  verifyToken,
+  requireVerified,
+  validateBody(cancelOrderSchema),
+  serviceController.cancelServiceOrder,
+);
+
+// Reagendar pedido
+router.post(
+  "/orders/:id/reschedule",
+  verifyToken,
+  requireVerified,
+  requireRole("CLIENT", "PROFESSIONAL", "COMPANY", "ADMIN"),
+  validateBody(rescheduleOrderSchema),
+  serviceController.rescheduleOrder,
+);
+
+// Aceitar reagendamento proposto (apenas cliente)
+router.post(
+  "/orders/:id/reschedule/accept",
+  verifyToken,
+  requireRole("CLIENT", "ADMIN"),
+  serviceController.acceptReschedule,
+);
+
+// Recusar reagendamento proposto (apenas cliente)
+router.post(
+  "/orders/:id/reschedule/reject",
+  verifyToken,
+  requireRole("CLIENT", "ADMIN"),
+  serviceController.rejectReschedule,
+);
+
+// Criar pedido rascunho (DRAFT) para conversar antes de formalizar
+// Profissionais também podem criar DRAFT para contatar outros profissionais (tirar dúvidas)
+router.post(
+  "/orders/draft",
+  verifyToken,
+  requireRole("CLIENT", "PROFESSIONAL"),
+  requireVerified,
+  serviceController.createDraftOrder,
+);
+
+// Converter DRAFT em pedido real (PENDING)
+router.post(
+  "/orders/:id/convert",
+  verifyToken,
+  requireVerified,
+  serviceController.convertDraftToOrder,
+);
+
+// Profissional marca que está a caminho
+router.post(
+  "/orders/:id/en-route",
+  verifyToken,
+  requireRole("PROFESSIONAL", "COMPANY"),
+  requireVerified,
+  serviceController.markEnRoute,
+);
+
+// Cliente responde sobre atraso do profissional
+router.post(
+  "/orders/:id/delay-response",
+  verifyToken,
+  requireVerified,
+  validateBody(delayResponseSchema),
+  serviceController.delayResponse,
+);
+
+export default router;

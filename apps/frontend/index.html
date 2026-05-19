@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="FazTudo - Marketplace de servicos domesticos e empresariais. Encontre profissionais qualificados para eletrica, encanamento, jardinagem, limpeza e muito mais." />
+    <meta name="keywords" content="servicos, profissionais, eletricista, encanador, jardineiro, limpeza, manutencao, reparos" />
+    <meta name="author" content="FazTudo" />
+
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' https://sdk.mercadopago.com;
+      style-src 'self' 'unsafe-inline' https://unpkg.com;
+      img-src 'self' data: https: blob:;
+      connect-src 'self'
+        http://localhost:3001
+        https://*.mercadopago.com
+        https://*.tile.openstreetmap.org
+        https://*.basemaps.cartocdn.com
+        https://nominatim.openstreetmap.org
+        https://router.project-osrm.org
+        https://overpass-api.de
+        https://demotiles.maplibre.org
+        https://*.mapbox.com;
+      font-src 'self' https://unpkg.com;
+      worker-src 'self' blob:;
+      frame-src 'none';
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+    " />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://faztudo.com.br/" />
+    <meta property="og:title" content="FazTudo - Servicos na palma da mao" />
+    <meta property="og:description" content="Encontre profissionais qualificados para servicos domesticos e empresariais" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://faztudo.com.br/" />
+    <meta property="twitter:title" content="FazTudo - Servicos na palma da mao" />
+    <meta property="twitter:description" content="Encontre profissionais qualificados para servicos domesticos e empresariais" />
+
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#3B82F6" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <title>FazTudo - Servicos na palma da mao</title>
+  </head>
+  <body class="light">
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

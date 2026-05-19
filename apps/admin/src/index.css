@@ -1,0 +1,313 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800,900&f[]=satoshi@400,500,700,900&display=swap');
+
+/* Tailwind v4 CSS-first */
+@import "tailwindcss";
+
+/* Dark mode via .dark class on <html> */
+@variant dark (&:where(.dark, .dark *));
+
+/* ============================================
+   Theme — migrated from tailwind.config.js
+   ============================================ */
+@theme {
+  /* Fonts */
+  --font-family-sans: "Satoshi", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-display: "Cabinet Grotesk", "Satoshi", sans-serif;
+  --font-family-mono: "DM Mono", "JetBrains Mono", "Fira Code", monospace;
+
+  /* Primary colors (blue) */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-primary-950: #172554;
+
+  /* Secondary colors (green) */
+  --color-secondary-50: #f0fdf4;
+  --color-secondary-100: #dcfce7;
+  --color-secondary-200: #bbf7d0;
+  --color-secondary-300: #86efac;
+  --color-secondary-400: #4ade80;
+  --color-secondary-500: #22c55e;
+  --color-secondary-600: #16a34a;
+  --color-secondary-700: #15803d;
+  --color-secondary-800: #166534;
+  --color-secondary-900: #14532d;
+
+  /* Slate extra */
+  --color-slate-950: #020617;
+
+  /* Semantic colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Border radius */
+  --radius-4xl: 2rem;
+
+  /* Custom box shadows */
+  --shadow-glow-blue: 0 0 20px rgba(37, 99, 235, 0.15);
+  --shadow-glow-blue-md: 0 0 30px rgba(37, 99, 235, 0.2);
+  --shadow-glow-blue-lg: 0 0 40px rgba(37, 99, 235, 0.3);
+
+  /* Animations */
+  --animate-fade-in: fade-in 0.5s ease-out;
+  --animate-slide-up: slide-up 0.5s ease-out;
+}
+
+/* Keyframes */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer base {
+  * {
+    @apply border-slate-200;
+  }
+
+  html.dark * {
+    @apply border-slate-800/50;
+  }
+
+  /* Tailwind v4 breaking change: o preflight v4 não define cursor padrão no body/html.
+     O browser usa cursor:auto que resolve para cursor:text em elementos com texto.
+     Esta regra restaura cursor:default (seta) como comportamento base. */
+  html {
+    @apply scroll-smooth;
+    cursor: default;
+  }
+
+  /* Tailwind v4 removeu cursor:pointer de <button> no preflight (breaking change vs v3).
+     Esta regra restaura o comportamento esperado globalmente. */
+  button,
+  [role="button"],
+  [type="button"],
+  [type="reset"],
+  [type="submit"],
+  ::file-selector-button {
+    cursor: pointer;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased font-sans;
+    line-height: 1.5;
+  }
+
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight text-slate-900;
+  }
+
+  html.dark h1,
+  html.dark h2,
+  html.dark h3,
+  html.dark h4,
+  html.dark h5,
+  html.dark h6 {
+    @apply text-slate-100;
+  }
+
+  a {
+    @apply text-primary-600 hover:text-primary-800 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded-sm;
+  }
+
+  html.dark a {
+    @apply text-primary-400 hover:text-primary-300;
+  }
+
+  button:focus {
+    @apply outline-none;
+  }
+
+  button:focus-visible {
+    @apply ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  html.dark button:focus-visible {
+    @apply ring-offset-slate-950;
+  }
+
+  html.dark input:focus,
+  html.dark textarea:focus,
+  html.dark select:focus {
+    @apply ring-offset-slate-950;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+  }
+
+  html.dark ::-webkit-scrollbar-track {
+    @apply bg-slate-950;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 hover:bg-slate-600;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97];
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500;
+  }
+
+  html.dark .btn-primary {
+    @apply shadow-glow-blue hover:shadow-glow-blue-md;
+  }
+
+  .btn-outline {
+    @apply border border-slate-300 bg-transparent text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-500;
+  }
+
+  html.dark .btn-outline {
+    @apply border-slate-700 text-slate-300 hover:bg-slate-800/50 bg-slate-900/50;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-500;
+  }
+
+  html.dark .btn-ghost {
+    @apply text-slate-300 hover:bg-slate-800;
+  }
+
+  .btn-danger {
+    @apply bg-error text-white hover:bg-red-600 focus-visible:ring-red-500;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-lg;
+  }
+
+  .input {
+    @apply w-full px-4 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500 transition-colors duration-200;
+  }
+
+  html.dark .input {
+    @apply bg-slate-900 border-slate-700 text-slate-100 placeholder-slate-500;
+  }
+
+  .input-error {
+    @apply border-error focus:border-error focus:ring-error;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-slate-700 mb-1;
+  }
+
+  html.dark .label {
+    @apply text-slate-300;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-md overflow-hidden border border-slate-200 p-5;
+  }
+
+  html.dark .card {
+    @apply bg-slate-900/60 border-slate-800/50 shadow-lg shadow-black/20 backdrop-blur-xl;
+  }
+
+  /* Premium glass card — dark-first, used in admin panel */
+  .glass-card {
+    @apply bg-white border border-slate-200/80 rounded-2xl shadow-sm;
+  }
+
+  html.dark .glass-card {
+    @apply bg-slate-900/70 border-slate-800/60 shadow-lg shadow-black/30 backdrop-blur-xl;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply bg-primary-100 text-primary-800;
+  }
+
+  html.dark .badge-primary {
+    @apply bg-primary-900/40 text-primary-300;
+  }
+
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  html.dark .badge-success {
+    @apply bg-green-900/40 text-green-300;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  html.dark .badge-warning {
+    @apply bg-yellow-900/40 text-yellow-300;
+  }
+
+  .badge-error {
+    @apply bg-red-100 text-red-800;
+  }
+
+  html.dark .badge-error {
+    @apply bg-red-900/40 text-red-300;
+  }
+
+  .badge-gray {
+    @apply bg-slate-100 text-slate-800;
+  }
+
+  html.dark .badge-gray {
+    @apply bg-slate-800 text-slate-300;
+  }
+
+  .loader {
+    @apply inline-block animate-spin rounded-full border-2 border-solid border-current border-r-transparent;
+  }
+
+  .skeleton {
+    @apply animate-pulse bg-slate-200 rounded;
+  }
+
+  html.dark .skeleton {
+    @apply bg-slate-800;
+  }
+}
