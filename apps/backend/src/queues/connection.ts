@@ -9,6 +9,22 @@ const REDIS_FALLBACK_PORT = 6380;
 let connection: IORedis | null = null;
 let resolvedUrl: string = REDIS_PRIMARY_URL;
 
+function isTlsUrl(url: string): boolean {
+  // Upstash (and other managed Redis providers) require TLS even when
+  // the URL starts with redis:// — redis-cli needs --tls flag.
+  // We force TLS for known cloud providers to avoid connection issues.
+  const lower = url.toLowerCase();
+  if (lower.startsWith("rediss://")) return true;
+  if (lower.includes(".upstash.io")) return true;
+  if (lower.includes(".redis-cloud.com")) return true;
+  if (lower.includes(".redislabs.com")) return true;
+  return false;
+}
+
+function getTlsOptions(url: string): { tls?: Record<string, unknown> } {
+  return isTlsUrl(url) ? { tls: {} } : {};
+}
+
 /**
  * Try to connect to primary Redis URL first.
  * If the primary port is occupied, fall back to REDIS_FALLBACK_PORT.
@@ -19,8 +35,9 @@ async function resolveRedisUrl(): Promise<string> {
     const probe = new IORedis(primary, {
       maxRetriesPerRequest: 1,
       enableReadyCheck: true,
-      connectTimeout: 2000,
+      connectTimeout: 5000,
       lazyConnect: true,
+      ...getTlsOptions(primary),
     });
     await probe.connect();
     const pong = await probe.ping();
@@ -37,12 +54,13 @@ async function resolveRedisUrl(): Promise<string> {
   try {
     const url = new URL(primary);
     url.port = String(REDIS_FALLBACK_PORT);
+    url.protocol = "redis:";
     const fallback = url.toString();
 
     const probe = new IORedis(fallback, {
       maxRetriesPerRequest: 1,
       enableReadyCheck: true,
-      connectTimeout: 2000,
+      connectTimeout: 5000,
       lazyConnect: true,
     });
     await probe.connect();
@@ -79,6 +97,7 @@ export function getRedisConnection(): IORedis {
         log.warn({ attempt: times, delay }, "Redis reconnecting...");
         return delay;
       },
+      ...getTlsOptions(resolvedUrl),
     });
 
     connection.on("connect", () => {
@@ -107,12 +126,13 @@ export async function initRedisConnection(): Promise<void> {
 /**
  * Returns a Redis connection config object suitable for BullMQ.
  */
-export function getRedisConnectionOpts(): { host: string; port: number; maxRetriesPerRequest: null } {
+export function getRedisConnectionOpts(): { host: string; port: number; maxRetriesPerRequest: null; tls?: Record<string, unknown> } {
   const url = new URL(resolvedUrl);
   return {
     host: url.hostname || "localhost",
     port: parseInt(url.port || "6379", 10),
     maxRetriesPerRequest: null,
+    ...getTlsOptions(resolvedUrl),
   };
 }
 
