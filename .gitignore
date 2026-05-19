@@ -10,7 +10,6 @@ build/
 out/
 apps/*/dist/
 apps/*/build/
-
 # Environment variables
 .env
 .env.local
@@ -19,7 +18,6 @@ apps/*/build/
 .env.production.local
 .env.*
 !.env.example
-
 # Database files
 *.db
 *.db-journal
@@ -27,46 +25,107 @@ apps/*/build/
 *.sqlite3
 apps/backend/prisma/dev.db
 apps/backend/prisma/test.db
-
 # App dependencies
 apps/*/node_modules/
-
 # Runtime uploads
 apps/backend/uploads/**
 !apps/backend/uploads/listings/
 !apps/backend/uploads/listings/.gitkeep
-
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
 # OS files
 .DS_Store
 Thumbs.db
-
 # Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
 # GitLab local tooling
 .gitlab-ci-local/
-
 # Test coverage
 coverage/
 .nyc_output/
-
 # Temporary files
 tmp/
 temp/
 .cache/
-
 # Secrets / credentials
 *.pem
 *.key
 credentials.json
 service-account.json
+# ============================
+# Portfolio protection rules
+# Logs e arquivos temporários
+*.txt
+!requirements.txt
+logs/
+# Arquivos de IA / Assistants
+.aidesigner/
+.aider/
+.agents/
+.archive/
+.bg-shell/
+.claude/
+.clinerules/
+.codex/
+.factory/
+.kiro/
+.mcp.json
+.planning/
+.playwright-cli/
+.qwen/
+.windsurf/
+codedb.snapshot
+# Status / Temp docs
+ANALISE*.md
+ANALISE-*.md
+CORRECAO*.md
+CORRECAO-*.md
+DECISAO*.md
+IMPLEMENTACAO*.md
+IMPLEMENTATION_*.md
+RESUMO*.md
+RESUMO-*.md
+SOLUCAO*.md
+STREAMING_FIX*.md
+SUCESSO*.md
+TESTE*.md
+SELFCODE-REVIEW*.md
+CODE-REVIEW*.md
+LIGHTPANDA*.md
+PROJECT_STRUCTURE.md
+FRONTEND_CONECTADO.md
+PHASE-*-TEST-RESULTS.md
+blocked.txt
+pytest_output.txt
+pytest_fail_details.txt
+# Arquivos binários / Artefatos
+*.docx
+*.doc
+*.xlsx
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+output/
+# IDE / Local
+# Secrets / Configs locais
+.env.*.local
+config.yaml
+config.local.yaml
+# Dependências
+vendor/
+__pycache__/
+*.pyc
+*.pyo
+.gitkeep
+# Build / Dist
+*.tsbuildinfo
