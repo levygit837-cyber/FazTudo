@@ -205,9 +205,10 @@ function getEnvConfig(): EnvConfig {
     MP_CLIENT_ID: process.env.CLIENT_ID || process.env.MP_CLIENT_ID || '',
     MP_CLIENT_SECRET: process.env.CLIENT_SECRET || process.env.MP_CLIENT_SECRET || '',
     MP_WEBHOOK_SECRET: (() => {
-      if (process.env.NODE_ENV === 'production' && !process.env.MP_WEBHOOK_SECRET) {
+      const hasMpIntegration = !!(process.env.MP_ACCESS_TOKEN || process.env.ACESS_TOKEN_MP);
+      if (process.env.NODE_ENV === 'production' && hasMpIntegration && !process.env.MP_WEBHOOK_SECRET) {
         throw new Error(
-          'FATAL: MP_WEBHOOK_SECRET must be set in production. '
+          'FATAL: MP_WEBHOOK_SECRET must be set in production when MP_ACCESS_TOKEN is configured. '
           + 'Without it, webhook signatures cannot be verified and payments can be forged.'
         );
       }
@@ -225,8 +226,8 @@ function getEnvConfig(): EnvConfig {
     SMTP_PASS: process.env.SMTP_PASS || '',
     SMTP_FROM_NAME: process.env.SMTP_FROM_NAME || 'FazTudo',
     SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL ||
-      (process.env.NODE_ENV === 'production'
-        ? (() => { throw new Error('FATAL: SMTP_FROM_EMAIL must be set in production'); })()
+      (process.env.NODE_ENV === 'production' && process.env.ENABLE_EMAIL_NOTIFICATIONS === 'true'
+        ? (() => { throw new Error('FATAL: SMTP_FROM_EMAIL must be set in production when email notifications are enabled'); })()
         : 'noreply@faztudo.local'),
 
     // File Upload
