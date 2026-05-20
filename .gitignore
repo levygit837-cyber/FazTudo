@@ -132,3 +132,26 @@ __pycache__/
 
 # System files
 skills-lock.json
+
+# Documentacoes tecnicas internas - nao commitar em repo publico
+docs/adr/
+docs/architecture/
+docs/design/
+docs/implementation/
+docs/analysis/
+docs/api/
+docs/guides/
+docs/plans/
+docs/summaries/
+docs/testing/
+docs/migration/
+docs/updates/
+docs/release/
+docs/workflows/
+docs/archive/
+docs/skills/
+design/
+AGENTS.md
+docker-compose.yml
+docker-compose.*.yml
+.github/workflows/*.yml
